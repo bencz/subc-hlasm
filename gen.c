@@ -1,6 +1,8 @@
 /*
  *	NMH's Simple C Compiler, 2011,2012
  *	Code generator (emitter)
+ *
+ *	genlab/genname moved to cg*.c by ALEXANDRE BENCZ
  */
 
 #include "defs.h"
@@ -73,10 +75,7 @@ void sgen(char *s, char *inst, char *s2) {
 	fputc('\n', Outfile);
 }
 
-void genlab(int id) {
-	if (NULL == Outfile) return;
-	fprintf(Outfile, "%c%d:", LPREFIX, id);
-}
+/* genlab moved to target-specific cg*.c files */
 
 char *labname(int id) {
 	static char	name[100];
@@ -116,10 +115,7 @@ void genpostlude(void) {
 	cgpostlude();
 }
 
-void genname(char *name) {
-	genraw(gsym(name));
-	genraw(":");
-}
+/* genname moved to target-specific cg*.c files */
 
 void genpublic(char *name) {
 	cgpublic(gsym(name));

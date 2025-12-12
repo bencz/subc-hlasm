@@ -172,7 +172,42 @@
 
 	Without "make" the compiler can be bootstrapped by running:
 
-	cc -o scc0 *.c
+	cc -o scc0 cexpr.c cg386.c decl.c error.c expr.c gen.c \
+	   main.c misc.c prep.c scan.c stmt.c sym.c
+
+
+	S/390 HLASM BACKEND
+
+	The compiler also supports generating IBM S/390 HLASM
+	(High Level Assembler) code for mainframe systems.
+
+	To build the S/390 version:
+
+	make scc-s390
+
+	Or manually:
+
+	cc -o scc-s390 cexpr.c cgs390.c decl.c error.c expr.c gen.c \
+	   main.c misc.c prep.c scan.c stmt.c sym.c
+
+	To compile a C program to HLASM:
+
+	./scc-s390 -S program.c
+
+	This generates program.s containing HLASM source code.
+
+	The S/390 backend uses the following register conventions:
+	- R2:  Primary accumulator (return value)
+	- R3:  Secondary operand
+	- R4:  Auxiliary register
+	- R11: Local base pointer (frame pointer)
+	- R12: Program base register (USING)
+	- R13: Save area pointer
+	- R14: Return address
+	- R15: Stack pointer
+
+	Note: The S/390 backend generates assembly only (-S flag).
+	Linking and runtime library for S/390 are not included.
 
 	To compile and package the runtime library:
 

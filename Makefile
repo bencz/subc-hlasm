@@ -1,9 +1,17 @@
+# S/390 HLASM target support added by ALEXANDRE BENCZ
+
 CC=	cc
 CFLAGS=	-O -m32
 LINT=	gcc -c -o /dev/null -ansi -pedantic -Wall 
-FILES=	cexpr.c cg386.c decl.c error.c expr.c gen.c main.c misc.c \
+
+# Target selection: 386 (default) or s390
+TARGET=	386
+
+# Source files - code generator is selected by TARGET
+CGFILE=	cg$(TARGET).c
+FILES=	cexpr.c $(CGFILE) decl.c error.c expr.c gen.c main.c misc.c \
 	prep.c scan.c stmt.c sym.c
-OBJS=	cexpr.o cg386.o decl.o error.o expr.o gen.o main.o misc.o \
+OBJS=	cexpr.o cg$(TARGET).o decl.o error.o expr.o gen.o main.o misc.o \
 	prep.o scan.o stmt.o sym.o
 
 all:	scc0 lib/crt0.o lib/libscc.a
@@ -41,7 +49,7 @@ gen.c:		cgen.h
 
 lint:
 	$(LINT) cexpr.c
-	$(LINT) cg386.c
+	$(LINT) $(CGFILE)
 	$(LINT) decl.c
 	$(LINT) error.c
 	$(LINT) expr.c
@@ -53,6 +61,11 @@ lint:
 	$(LINT) stmt.c
 	$(LINT) sym.c
 
+# Build for S/390 target (generates HLASM)
+scc-s390:
+	$(MAKE) TARGET=s390 scc0
+	mv scc0 scc-s390
+
 csums:
 	csum -u <_sums >_newsums ; mv -f _newsums _sums
 
@@ -60,7 +73,7 @@ sums:	clean
 	find . -type f | grep -v _sums | csum >_sums
 
 clean:
-	rm -f scc0 scc1 scc2 scc test.s *.o *.core core a.out lib/libscc.a \
+	rm -f scc0 scc1 scc2 scc scc-s390 test.s *.o *.core core a.out lib/libscc.a \
 		tests/*.o lib/*.o book/*.o libtest ptest systest stdio.ok \
 		subc-b2022.zip
 

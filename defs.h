@@ -14,6 +14,12 @@
 /* define when linking against host's LIBC */
 /* #define HOSTLIB */
 
+/* Target architecture selection */
+/* Define one of: TARGET_386, TARGET_S390 */
+#ifndef TARGET_S390
+ #define TARGET_386
+#endif
+
 #define PREFIX		'C'
 #define LPREFIX		'L'
 

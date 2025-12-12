@@ -1,6 +1,8 @@
 /*
  *	NMH's Simple C Compiler, 2011,2012,2022
- *	386 target description
+ *	GAS-386 target description
+ *
+ *	genlab/genname functions added by ALEXANDRE BENCZ
  */
 
 #include "defs.h"
@@ -13,6 +15,16 @@ void cgtext(void)	{ gen(".text"); }
 void cgprelude(void)	{ }
 void cgpostlude(void)	{ }
 void cgpublic(char *s)	{ ngen(".globl\t%s", s, 0); }
+
+void genlab(int id) {
+	if (NULL == Outfile) return;
+	fprintf(Outfile, "%c%d:", LPREFIX, id);
+}
+
+void genname(char *name) {
+	genraw(gsym(name));
+	genraw(":");
+}
 
 void cglit(int v)	{ ngen("%s\t$%d,%%eax", "movl", v); }
 void cgclear(void)	{ gen("xorl\t%eax,%eax"); }

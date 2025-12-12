@@ -1,0 +1,289 @@
+*
+*        NMH's Simple C Compiler, 2011,2012,2014,2022
+*        C runtime module for IBM S/390
+*        HLASM version
+*
+*        S/390 HLASM runtime by ALEXANDRE BENCZ
+*
+*        This is a skeleton runtime for S/390 mainframes.
+*        Actual implementation depends on the target OS:
+*        - z/OS: Use system macros (WTO, GET, PUT, etc.)
+*        - Linux on Z: Use SVC instructions
+*
+*        Register conventions:
+*        R0      - Work register
+*        R1      - Parameter list pointer
+*        R2      - Primary accumulator / return value
+*        R3      - Secondary operand
+*        R4      - Auxiliary register
+*        R5-R10  - Temporaries (callee-saved)
+*        R11     - Local base pointer (frame pointer)
+*        R12     - Program base register
+*        R13     - Save area pointer
+*        R14     - Return address
+*        R15     - Stack pointer / entry point
+*
+         PRINT NOGEN
+SUBCRT   CSECT
+         USING SUBCRT,R12
+*
+* Register equates
+R0       EQU   0
+R1       EQU   1
+R2       EQU   2
+R3       EQU   3
+R4       EQU   4
+R5       EQU   5
+R6       EQU   6
+R7       EQU   7
+R8       EQU   8
+R9       EQU   9
+R10      EQU   10
+R11      EQU   11
+R12      EQU   12
+R13      EQU   13
+R14      EQU   14
+R15      EQU   15
+*
+***********************************************************************
+*        Program entry point
+***********************************************************************
+         ENTRY CSTART
+CSTART   DS    0H
+         STM   R14,R12,12(R13)    Save caller's registers
+         LR    R12,R15            Establish base register
+         USING CSTART,R12
+         LA    R15,SAVEAREA       Point to our save area
+         ST    R13,4(R15)         Chain save areas (backward)
+         ST    R15,8(R13)         Chain save areas (forward)
+         LR    R13,R15            R13 -> our save area
+*
+*        Initialize runtime
+         BAS   R14,C_INIT
+*
+*        Call main(argc, argv)
+*        For standalone: argc=0, argv=NULL
+         SR    R2,R2              argc = 0
+         SR    R3,R3              argv = NULL
+         AHI   R15,-8             Allocate stack space
+         ST    R2,0(R15)          Push argc
+         ST    R3,4(R15)          Push argv
+         BAS   R14,CMAIN          Call main()
+         AHI   R15,8              Clean stack
+*
+*        Exit with return code from main
+         LR    R3,R2              Save return code
+         BAS   R14,CEXIT          Call exit()
+*
+*        Should not return, but just in case
+         L     R13,4(R13)         Restore caller's save area
+         LM    R14,R12,12(R13)    Restore registers
+         SR    R15,R15            Return code 0
+         BR    R14                Return to caller
+*
+SAVEAREA DS    18F                Standard save area
+*
+***********************************************************************
+*        Switch table handler
+*        Entry: R2 = switch expression value
+*               R4 = address of switch table
+*        Table format:
+*               DC F'count'       Number of cases
+*               DC F'value1'      Case value
+*               DC A(label1)      Case label
+*               ...
+*               DC A(default)     Default label
+***********************************************************************
+         ENTRY @SWITCH
+@SWITCH  DS    0H
+         L     R5,0(R4)           R5 = case count
+         LA    R4,4(R4)           Point to first case
+@SWLOOP  LTR   R5,R5              Any cases left?
+         BZ    @SWDEF             No, go to default
+         L     R6,0(R4)           R6 = case value
+         CR    R2,R6              Compare with expression
+         BE    @SWFND             Found match
+         LA    R4,8(R4)           Next case entry
+         BCT   R5,@SWLOOP         Decrement and loop
+@SWDEF   L     R4,0(R4)           Load default address
+         BR    R4                 Jump to default
+@SWFND   L     R4,4(R4)           Load case label address
+         BR    R4                 Jump to case
+*
+***********************************************************************
+*        setjmp - Save environment for non-local goto
+*        int setjmp(int env[])
+*        Entry: env address at 0(R15)
+*        Returns: 0 on initial call, non-zero from longjmp
+***********************************************************************
+         ENTRY CSETJMP
+CSETJMP  DS    0H
+         L     R4,0(R15)          R4 = env address
+         ST    R11,0(R4)          Save frame pointer
+         ST    R13,4(R4)          Save save area pointer
+         ST    R14,8(R4)          Save return address
+         ST    R15,12(R4)         Save stack pointer
+         SR    R2,R2              Return 0
+         BR    R14
+*
+***********************************************************************
+*        longjmp - Restore environment and jump
+*        void longjmp(int env[], int val)
+*        Entry: env address at 0(R15), val at 4(R15)
+***********************************************************************
+         ENTRY CLONGJMP
+CLONGJMP DS    0H
+         L     R4,0(R15)          R4 = env address
+         L     R2,4(R15)          R2 = return value
+         LTR   R2,R2              Is val zero?
+         BNZ   @LJOK              No, use it
+         LA    R2,1               Yes, make it 1
+@LJOK    L     R11,0(R4)          Restore frame pointer
+         L     R13,4(R4)          Restore save area pointer
+         L     R14,8(R4)          Restore return address
+         L     R15,12(R4)         Restore stack pointer
+         BR    R14                Return to setjmp caller
+*
+***********************************************************************
+*        _exit - Terminate program
+*        void _exit(int rc)
+*        Note: This is OS-dependent. Skeleton uses SVC.
+***********************************************************************
+         ENTRY C_EXIT
+C_EXIT   DS    0H
+         L     R2,0(R15)          Load return code
+*        For z/OS, would use:
+*        SVC   3                  EXCP or EXIT
+*        For Linux on Z:
+*        SVC   1                  exit syscall
+         BR    R14                Fallback: just return
+*
+***********************************************************************
+*        sbrk - Extend data segment
+*        void *sbrk(int size)
+*        Note: This is OS-dependent. Returns -1 on failure.
+***********************************************************************
+         ENTRY CSBRK
+CSBRK    DS    0H
+         L     R3,0(R15)          R3 = size requested
+         L     R2,CURBRK          R2 = current break
+         AR    R3,R2              R3 = new break
+         ST    R3,CURBRK          Update break
+*        Actual memory allocation is OS-dependent
+*        For z/OS: GETMAIN macro
+*        For Linux: brk syscall
+         BR    R14                Return old break in R2
+*
+CURBRK   DC    A(HEAPEND)         Current break pointer
+HEAPSTRT DS    0F                 Start of heap
+         DS    65536X             64K initial heap
+HEAPEND  DS    0F                 End of heap
+*
+***********************************************************************
+*        write - Write to file descriptor
+*        int write(int fd, char *buf, int len)
+*        Note: OS-dependent. Skeleton for z/OS or Linux on Z.
+***********************************************************************
+         ENTRY CWRITE
+CWRITE   DS    0H
+         L     R3,0(R15)          fd
+         L     R4,4(R15)          buf
+         L     R5,8(R15)          len
+*        For z/OS: Use PUT macro or QSAM
+*        For Linux on Z: SVC 4 (write syscall)
+         LR    R2,R5              Return bytes written
+         BR    R14
+*
+***********************************************************************
+*        read - Read from file descriptor
+*        int read(int fd, char *buf, int len)
+***********************************************************************
+         ENTRY CREAD
+CREAD    DS    0H
+         L     R3,0(R15)          fd
+         L     R4,4(R15)          buf
+         L     R5,8(R15)          len
+*        For z/OS: Use GET macro or QSAM
+*        For Linux on Z: SVC 3 (read syscall)
+         LR    R2,R5              Return bytes read
+         BR    R14
+*
+***********************************************************************
+*        open - Open file
+*        int open(char *path, int flags)
+***********************************************************************
+         ENTRY COPEN
+COPEN    DS    0H
+         L     R3,0(R15)          path
+         L     R4,4(R15)          flags
+*        OS-dependent implementation
+         LHI   R2,-1              Return -1 (not implemented)
+         BR    R14
+*
+***********************************************************************
+*        close - Close file descriptor
+*        int close(int fd)
+***********************************************************************
+         ENTRY CCLOSE
+CCLOSE   DS    0H
+         L     R3,0(R15)          fd
+*        OS-dependent implementation
+         SR    R2,R2              Return 0
+         BR    R14
+*
+***********************************************************************
+*        creat - Create file
+*        int creat(char *path, int mode)
+***********************************************************************
+         ENTRY CCREAT
+CCREAT   DS    0H
+         L     R3,0(R15)          path
+         L     R4,4(R15)          mode
+*        OS-dependent implementation
+         LHI   R2,-1              Return -1 (not implemented)
+         BR    R14
+*
+***********************************************************************
+*        lseek - Seek in file
+*        int lseek(int fd, int offset, int whence)
+***********************************************************************
+         ENTRY CLSEEK
+CLSEEK   DS    0H
+         L     R3,0(R15)          fd
+         L     R4,4(R15)          offset
+         L     R5,8(R15)          whence
+*        OS-dependent implementation
+         LHI   R2,-1              Return -1 (not implemented)
+         BR    R14
+*
+***********************************************************************
+*        unlink - Delete file
+*        int unlink(char *path)
+***********************************************************************
+         ENTRY CUNLINK
+CUNLINK  DS    0H
+         L     R3,0(R15)          path
+*        OS-dependent implementation
+         LHI   R2,-1              Return -1 (not implemented)
+         BR    R14
+*
+***********************************************************************
+*        rename - Rename file
+*        int rename(char *old, char *new)
+***********************************************************************
+         ENTRY CRENAME
+CRENAME  DS    0H
+         L     R3,0(R15)          old path
+         L     R4,4(R15)          new path
+*        OS-dependent implementation
+         LHI   R2,-1              Return -1 (not implemented)
+         BR    R14
+*
+***********************************************************************
+*        External references
+***********************************************************************
+         EXTRN CMAIN              Main program
+         EXTRN C_INIT             Runtime initialization
+         EXTRN CEXIT              Exit handler
+*
+         END   CSTART
