@@ -1,0 +1,22 @@
+2022-04-19 Fix: replaced syscall.h by unistd.h
+2022-04-19 Fix: removed leading '_' from system call names
+2022-01-27 Fix: synchronization after syntax error. (Paul Edwards)
+2021-08-16 Fix: bug in malloc()'s defrag(). (Jean-Marc Lienher)
+2016-02-16 Fix: precedence error in freopen(). (Quan Tran)
+2014-12-07 Fix: strncpy() should pad destination. (Alexey Frunze)
+2014-12-07 Fix: fseek() should return 0 on success. (Alexey Frunze)
+2014-12-07 Fix: longjmp() may not pass 0 to setjmp(). (Alexey Frunze)
+2014-03-21 Fix: sizeof(void) was not an error.
+2014-03-13 Fix: realloc() did not work properly.
+2014-03-11 Fix: _vformat() crashed on unknown % sequences.
+2014-03-11 Fix: limited octal escape sequences to three digits.
+2014-02-17 Fix: wrong return value in fread().
+2014-02-15 Fix: %p in *printf functions printed signed value.
+2013-09-25 Fix: missing error messge in linker invocation.
+2013-02-28 Fix: fread() returned wrong length for partially filled buffers.
+2013-02-27 Fix: setjmp()/longjmp() did not work properly.
+2013-02-19 Fix: p+=n and p-=n with int *p yielded wrong result.
+2013-02-18 Fix: wrong output of printf("%d", INT_MIN);
+2012-05-14 Fix: reporting non-existent source files without .[sc] suffix.
+2012-05-07 Fix: middle argument of ?: is an expr (not a logic op).
+2012-04-16 Fix: off-by-one error in getenv().
