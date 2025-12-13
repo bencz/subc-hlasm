@@ -69,13 +69,17 @@ static void stats(void) {
 		Nbot, POOLSIZE);
 }
 
-static void compile(char *file, char *def) {
+static void compile(char *file, char *def, char *outfile) {
 	char	*ofile;
 
 	init();
 	defarg(def);
 	if (file) {
-		ofile = newfilename(file, 's');
+		/* Use explicit output file if provided, otherwise derive from input */
+		if (outfile && O_asmonly)
+			ofile = outfile;
+		else
+			ofile = newfilename(file, 's');
 		if ((Infile = fopen(file, "r")) == NULL)
 			cmderror("no such file: %s", file);
 		Basefile = File = file;
@@ -220,7 +224,7 @@ int main(int argc, char *argv[]) {
 	for (i=1; i<argc; i++) {
 		if (*argv[i] != '-') break;
 		if (!strcmp(argv[i], "-")) {
-			compile(NULL, def);
+			compile(NULL, def, NULL);
 			exit(Errors? EXIT_FAILURE: EXIT_SUCCESS);
 		}
 		for (j=1; argv[i][j]; j++) {
@@ -264,7 +268,7 @@ int main(int argc, char *argv[]) {
 	Nf = 0;
 	while (i < argc) {
 		if (filetype(argv[i]) == 'c') {
-			compile(argv[i], def);
+			compile(argv[i], def, O_outfile);
 			if (Errors && !O_testonly)
 				cmderror("compilation stopped", NULL);
 			if (!O_asmonly && !O_testonly)

@@ -1,2 +1,36 @@
+# macOS
 .DS_Store
 
+# Compiled executables
+scc
+scc0
+scc1
+scc2
+scc-s370
+scc-s390
+a.out
+
+# Object files
+*.o
+*.core
+core
+
+# Generated test output directories
+tests-s370/
+tests-s390/
+
+# Library
+lib/libscc.a
+lib/*.o
+
+# Test outputs
+tests/*.o
+book/*.o
+libtest
+ptest
+systest
+stdio.ok
+test.s
+
+# Archive
+subc-b2022.zip
