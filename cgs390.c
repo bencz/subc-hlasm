@@ -96,27 +96,36 @@
  * R2      - Primary accumulator (internal use for expression evaluation)
  * R3      - Secondary operand register (internal use)
  * R4-R5   - Register pair for multiply/divide operations
- * R6-R10  - Callee-saved temporaries (preserved across calls)
- * R11     - Local frame base pointer (points to local variables)
+ * R6-R9   - Callee-saved temporaries (preserved across calls)
+ * R10     - Expression stack pointer (grows UPWARD, NAB-style)
+ * R11     - Local frame base pointer (points to local variables in DSA)
  * R12     - Program base register (addressability via USING)
- * R13     - Save area chain pointer (standard OS/390 linkage)
+ * R13     - DSA/Save area chain pointer (standard OS/390 linkage)
  * R14     - Return address register
- * R15     - Entry point / return value / stack pointer
+ * R15     - Entry point / return value (volatile, NOT used as stack ptr)
  *
- * STACK FRAME LAYOUT (Dynamic Storage Area):
- * -----------------------------------------
- *         +----------------------+ High addresses
- *         | Caller's save area   | (72 bytes, pointed by old R13)
+ * DSA LAYOUT (Dynamic Storage Area - stack grows UPWARD):
+ * ------------------------------------------------------
+ *         +----------------------+ <- R10 (expression stack, grows UP)
+ *         | Expression stack     | (temporaries pushed during eval)
  *         +----------------------+
- *         | Parameter list       | (built by caller before call)
- *         +----------------------+
- *         | Our save area        | (72 bytes)
- *         +----------------------+ <- R13 (our save area)
  *         | Local variables      |
- *         +----------------------+ <- R11 (frame pointer)
- *         | Dynamic stack area   |
- *         +----------------------+ <- R15 (stack pointer)
- *         | ...                  | Low addresses
+ *         +----------------------+ <- R11 (frame pointer, start of locals)
+ *         | Parm list ptr save   | +76
+ *         +----------------------+
+ *         | R0-R12 save area     | +20 to +68
+ *         +----------------------+
+ *         | R15 save             | +16
+ *         +----------------------+
+ *         | R14 save             | +12
+ *         +----------------------+
+ *         | NAB (fwd chain)      | +8  (Next Available Byte)
+ *         +----------------------+
+ *         | Back chain           | +4  (pointer to caller's DSA)
+ *         +----------------------+
+ *         | Reserved             | +0
+ *         +----------------------+ <- R13 (our DSA)
+ *         | Caller's DSA         | Low addresses
  *
  * HLASM SOURCE FORMAT:
  * -------------------
@@ -145,14 +154,43 @@
 #define S390_USE_ESA390 1
 #endif
 
+/*
+ * Data section state tracking for branch-around-data.
+ * In MVS, there's no separate data section, so we must branch
+ * around inline data to avoid executing it as code.
+ */
+static int DataSectionLabel = 0;  /* Label to branch to after data */
+static int InDataSection = 0;     /* Are we currently in data section? */
+
 /* ========================================================================
  * SECTION DIRECTIVES
  * ========================================================================
- * These functions emit comments to mark data and code sections.
- * In HLASM, we use a single CSECT, so these are informational only.
+ * In HLASM/MVS, code and data are in the same CSECT. When switching
+ * to data section, we emit a branch to skip over the data.
+ * When switching back to code, we emit the target label.
  */
-void cgdata(void)	{ genraw("*\n* DATA SECTION\n*\n"); }
-void cgtext(void)	{ genraw("*\n* CODE SECTION\n*\n"); }
+void cgdata(void) {
+	if (NULL == Outfile) return;
+	if (!InDataSection) {
+		/* Entering data section - emit branch to skip over data */
+		DataSectionLabel = label();
+		fprintf(Outfile, "         B     %c%d              Branch around data\n",
+		        LPREFIX, DataSectionLabel);
+		genraw("*\n* DATA SECTION\n*\n");
+		InDataSection = 1;
+	}
+}
+
+void cgtext(void) {
+	if (NULL == Outfile) return;
+	if (InDataSection) {
+		/* Leaving data section - emit target label */
+		genraw("*\n* CODE SECTION\n*\n");
+		fprintf(Outfile, "%c%-7d DS    0H              End of data section\n",
+		        LPREFIX, DataSectionLabel);
+		InDataSection = 0;
+	}
+}
 
 /*
  * cgprelude - Emit program prologue
@@ -183,12 +221,13 @@ void cgprelude(void) {
 	genraw("*   R1      Parameter list pointer on entry\n");
 	genraw("*   R2-R3   Expression evaluation\n");
 	genraw("*   R4-R5   Multiply/divide register pair\n");
-	genraw("*   R6-R10  Preserved across calls\n");
+	genraw("*   R6-R9   Preserved across calls\n");
+	genraw("*   R10     Expression stack pointer (grows UP)\n");
 	genraw("*   R11     Local frame base pointer\n");
 	genraw("*   R12     Program base register\n");
-	genraw("*   R13     Save area chain pointer\n");
+	genraw("*   R13     DSA/Save area chain pointer\n");
 	genraw("*   R14     Return address\n");
-	genraw("*   R15     Entry point / Return value / Stack\n");
+	genraw("*   R15     Entry point / Return value (volatile)\n");
 	genraw("*\n");
 	genraw("*=====================================================================\n");
 	genraw("*\n");
@@ -210,12 +249,12 @@ void cgprelude(void) {
 	genraw("R7       EQU   7                    Preserved\n");
 	genraw("R8       EQU   8                    Preserved\n");
 	genraw("R9       EQU   9                    Preserved\n");
-	genraw("R10      EQU   10                   Preserved\n");
+	genraw("R10      EQU   10                   Expression stack ptr\n");
 	genraw("R11      EQU   11                   Frame base pointer\n");
 	genraw("R12      EQU   12                   Program base register\n");
 	genraw("R13      EQU   13                   Save area chain pointer\n");
 	genraw("R14      EQU   14                   Return address\n");
-	genraw("R15      EQU   15                   Entry/Return/Stack pointer\n");
+	genraw("R15      EQU   15                   Entry/Return value\n");
 	genraw("*\n");
 	genraw("*---------------------------------------------------------------------\n");
 	genraw("* Runtime: Switch/Case Dispatch Routine\n");
@@ -476,62 +515,63 @@ void cgldlab(int id) {
 /* ========================================================================
  * STACK OPERATIONS
  * ========================================================================
- * The stack grows downward (toward lower addresses).
- * R15 is the stack pointer.
+ * The expression stack grows UPWARD (toward higher addresses).
+ * R10 is the expression stack pointer (NAB-style).
+ * This follows MVS conventions where the stack grows up.
  */
 
 /*
  * cgpush - Push R2 (accumulator) onto the stack
  *
- * Decrements stack pointer by 4 (fullword) and stores R2.
- * Used for saving intermediate results and building parameter lists.
+ * Stack grows DOWN (towards lower addresses).
+ * Pre-decrement R10, then store.
  */
 void cgpush(void) {
 	if (NULL == Outfile) return;
+	fprintf(Outfile, "* Push R2 to stack\n");
 #ifdef S390_USE_ESA390
-	fprintf(Outfile, "         AHI   R15,-4             Decrement stack ptr\n");
+	fprintf(Outfile, "         AHI   R10,-4             Decrement stack ptr\n");
 #else
-	fprintf(Outfile, "         S     R15,=F'4'          Decrement stack ptr\n");
+	fprintf(Outfile, "         S     R10,=F'4'          Decrement stack ptr\n");
 #endif
-	fprintf(Outfile, "         ST    R2,0(,R15)         Push R2 to stack\n");
+	fprintf(Outfile, "         ST    R2,0(,R10)         Store R2\n");
 }
 
 /*
  * cgpushlit - Push a literal (immediate) value onto the stack
- *
- * Loads the value into R0 and pushes it. Used for passing
- * constant values as function arguments.
  */
 void cgpushlit(int n) {
 	if (NULL == Outfile) return;
 	fprintf(Outfile, "* Push literal value %d\n", n);
 #ifdef S390_USE_ESA390
+	fprintf(Outfile, "         AHI   R10,-4             Decrement stack ptr\n");
 	if (n >= -32768 && n <= 32767) {
 		fprintf(Outfile, "         LHI   R0,%d              Load immediate\n", n);
 	} else {
 		fprintf(Outfile, "         L     R0,=F'%d'          Load from literal\n", n);
 	}
-	fprintf(Outfile, "         AHI   R15,-4             Decrement stack ptr\n");
 #else
+	fprintf(Outfile, "         S     R10,=F'4'          Decrement stack ptr\n");
 	fprintf(Outfile, "         L     R0,=F'%d'          Load from literal\n", n);
-	fprintf(Outfile, "         S     R15,=F'4'          Decrement stack ptr\n");
 #endif
-	fprintf(Outfile, "         ST    R0,0(,R15)         Push to stack\n");
+	fprintf(Outfile, "         ST    R0,0(,R10)         Store to stack\n");
 }
 
 /*
  * cgpop2 - Pop from stack into R3 (secondary operand register)
  *
+ * Stack grows DOWN.
+ * Load from R10, then Post-increment.
  * Used to retrieve the left operand for binary operations.
  * After pop: R3 = left operand, R2 = right operand
  */
 void cgpop2(void) {
 	if (NULL == Outfile) return;
-	fprintf(Outfile, "         L     R3,0(,R15)         Pop left operand to R3\n");
+	fprintf(Outfile, "         L     R3,0(,R10)         Pop left operand to R3\n");
 #ifdef S390_USE_ESA390
-	fprintf(Outfile, "         AHI   R15,4              Increment stack ptr\n");
+	fprintf(Outfile, "         AHI   R10,4              Increment stack ptr\n");
 #else
-	fprintf(Outfile, "         A     R15,=F'4'          Increment stack ptr\n");
+	fprintf(Outfile, "         LA    R10,4(,R10)        Increment stack ptr\n");
 #endif
 }
 
@@ -1263,13 +1303,14 @@ void cgcase(int v, int l) {
  * cgpopptr - Pop pointer from stack into R4
  *
  * Used before indirect stores to get the destination address.
+ * Stack grows down, so load then increment.
  */
 void cgpopptr(void) {
-	gen("L     R4,0(,R15)");
+	gen("L     R4,0(,R10)");
 #ifdef S390_USE_ESA390
-	gen("AHI   R15,4");
+	gen("AHI   R10,4");
 #else
-	gen("A     R15,=F'4'");
+	gen("LA    R10,4(,R10)");
 #endif
 }
 
@@ -1355,66 +1396,62 @@ void cginitlw(int v, int a) {
 /*
  * cgcall - Call a function by name using OS/390 standard linkage
  *
- * The parameter list has been built on the stack by cgpush operations.
- * R1 is loaded with the address of this parameter list.
- * BAS saves return address in R14 and branches to the function.
+ * The parameter list has been built on the expression stack (R10).
+ * Note: SubC pushes args onto R10 stack.
+ * We emulate stack-based calling convention within OS Linkage.
  */
 void cgcall(char *s) {
 	if (NULL == Outfile) return;
 	fprintf(Outfile, "*\n");
 	fprintf(Outfile, "* Call function: %s\n", s);
 	fprintf(Outfile, "*\n");
-	fprintf(Outfile, "         LR    R1,R15            R1 -> parameter list\n");
+	/* Set NAB for callee's DSA - R10 is current stack top */
+	fprintf(Outfile, "         ST    R10,8(,R13)       Set NAB (Stack Ptr)\n");
 	fprintf(Outfile, "         BAS   R14,%s            Branch and save\n", s);
+	/* Stack pointer R10 is callee-preserved or restored by callee?
+	   In our convention, callee restores R10 to Frame Pointer, but
+	   args are still on stack. Caller must deallocate args.
+	   R10 should be valid here. */
+	fprintf(Outfile, "         LR    R2,R15            Move return value to R2\n");
 }
 
 /*
  * cgcalr - Call function via pointer in R2 (indirect call)
- *
- * Used for function pointer calls. R15 receives the entry point
- * from R2, and BALR performs the call saving return in R14.
  */
 void cgcalr(void) {
 	if (NULL == Outfile) return;
 	fprintf(Outfile, "*\n");
 	fprintf(Outfile, "* Indirect function call via pointer\n");
 	fprintf(Outfile, "*\n");
-	fprintf(Outfile, "         LR    R1,R15            R1 -> parameter list\n");
+	fprintf(Outfile, "         ST    R10,8(,R13)       Set NAB (Stack Ptr)\n");
 	fprintf(Outfile, "         LR    R15,R2            Entry point to R15\n");
 	fprintf(Outfile, "         BALR  R14,R15           Branch and link\n");
+	fprintf(Outfile, "         LR    R2,R15            Move return value to R2\n");
 }
 
 /*
- * cgstack - Adjust stack pointer by n bytes
+ * cgstack - Adjust expression stack pointer by n bytes
  *
- * Positive n: deallocate stack space (cleanup after call)
- * Negative n: allocate stack space (for locals or params)
+ * Stack grows DOWN.
+ * Positive n: deallocate (ADD to R10 to move up)
  */
 void cgstack(int n) {
 	if (NULL == Outfile) return;
 	if (n == 0) return;
 	
+	/* n > 0 means deallocate n bytes (after call cleanup) */
 	if (n > 0) {
 		fprintf(Outfile, "* Deallocate %d bytes from stack\n", n);
-	} else {
-		fprintf(Outfile, "* Allocate %d bytes on stack\n", -n);
-	}
-	
 #ifdef S390_USE_ESA390
-	if (n >= -32768 && n <= 32767) {
-		fprintf(Outfile, "         AHI   R15,%d\n", n);
-	} else {
-		if (n > 0)
-			fprintf(Outfile, "         A     R15,=F'%d'\n", n);
-		else
-			fprintf(Outfile, "         S     R15,=F'%d'\n", -n);
-	}
+		if (n <= 32767) {
+			fprintf(Outfile, "         AHI   R10,%d\n", n);
+		} else {
+			fprintf(Outfile, "         A     R10,=F'%d'\n", n);
+		}
 #else
-	if (n > 0)
-		fprintf(Outfile, "         A     R15,=F'%d'\n", n);
-	else
-		fprintf(Outfile, "         S     R15,=F'%d'\n", -n);
+		fprintf(Outfile, "         A     R10,=F'%d'\n", n);
 #endif
+	}
 }
 
 /* ========================================================================
@@ -1423,67 +1460,141 @@ void cgstack(int n) {
  */
 
 /*
- * cgentry - Function prologue (OS/390 standard entry linkage)
+ * ==========================================================================
+ * HYBRID STACK MODEL IMPLEMENTATION
+ * ==========================================================================
  *
- * Implements the standard OS/390 function entry sequence:
+ * MVS Standard Linkage vs. SubC Compiler Model:
+ * ---------------------------------------------
+ * 1. MVS Standard (Up-Growing):
+ *    - R13 points to a Save Area (72 bytes).
+ *    - The "Next Available Byte" (NAB) is usually at R13 + Size.
+ *    - Stack frames are allocated at higher addresses (Upward).
  *
- * On entry from caller:
- *   R1  = Address of parameter address list
- *   R13 = Address of caller's 72-byte save area
- *   R14 = Return address
- *   R15 = Entry point address of this function
+ * 2. SubC Compiler (Down-Growing):
+ *    - Expects a classic stack frame (x86 style).
+ *    - Local variables accessed via negative offsets from FP (R11).
+ *    - Arguments pushed to stack (decrement SP) before call.
  *
- * Entry sequence:
- *   1. Save registers R14-R12 in caller's save area (offset 12)
- *   2. Establish base register (R12) for addressability
- *   3. Allocate our own save area and local storage
- *   4. Chain save areas (back pointer at offset 4)
- *   5. Set up frame pointer (R11) for local variable access
- *   6. Save R1 (parameter list pointer) for later access
+ * The Conflict:
+ *    Using MVS standard layout strictly would cause local variables (negative
+ *    offsets) to overwrite the caller's Save Area (R13), crashing the program.
+ *
+ * The Solution: Hybrid Model
+ * --------------------------
+ * We maintain the MVS Linked Save Areas for system compatibility/debugging,
+ * but implement a Down-Growing stack *inside* the allocated area.
+ *
+ * 1. Global Stack Area (STKAREA):
+ *    - A large memory block (e.g., 64KB) allocated by crt0.
+ *    - R10 (Stack Pointer) is initialized to the END (High Address) of this block.
+ *    - R10 grows DOWN (decrements) as data is pushed.
+ *
+ * 2. Stack Frame Layout (Down-Growing):
+ *    High Addr -> +----------------------+
+ *                 | Previous Frames      |
+ *                 +----------------------+
+ *                 | Arguments (Arg N..1) | <- Pushed by caller
+ *                 +----------------------+
+ *                 | Return Address (R14) |
+ *                 +----------------------+
+ *                 | Old Frame Ptr (R11)  |
+ *    R11 (BP) ->  +----------------------+
+ *                 | Local Variables      | <- Accessed as -N(R11)
+ *                 +----------------------+
+ *    R10 (SP) ->  | Expression Stack     | <- Grows down
+ *                 +----------------------+
+ *
+ * 3. MVS Save Area Integration:
+ *    - We allocate a standard 72-byte Save Area *below* the active stack data.
+ *    - R13 always points to this valid Save Area.
+ *    - Chains (Forward/Back) are maintained correctly.
+ *    - This satisfies OS conventions (e.g., for SNAP dumps or Language Environment).
+ *
+ * ==========================================================================
+ */
+
+/*
+ * cgentry - Function prologue (OS/390 standard entry linkage + SubC Stack Frame)
+ *
+ * Implements OS/390 linkage but maintains a x86-style stack frame for SubC.
+ * Stack grows DOWN.
+ *
+ * Frame Layout:
+ *   [Arg N]
+ *   ...
+ *   [Arg 1]
+ *   [Ret Addr (R14)]  <-- Pushed by Prologue
+ *   [Old BP (R11)]    <-- Pushed by Prologue
+ *   [Locals]          <-- R11 Points here (New BP)
+ *   ...
+ *   [Expr Stack]      <-- R10 Points here
+ *   [Gap]
+ *   [Save Area (R13)] <-- Standard OS Save Area (72 bytes)
  */
 void cgentry(void) {
 	if (NULL == Outfile) return;
 	fprintf(Outfile, "*\n");
-	fprintf(Outfile, "* Function entry - OS/390 standard linkage\n");
-	fprintf(Outfile, "* On entry: R1=parmlist, R13=caller SA, R14=return, R15=entry\n");
+	fprintf(Outfile, "* Function entry - OS/390 linkage + Down-Stack Frame\n");
 	fprintf(Outfile, "*\n");
 	fprintf(Outfile, "         STM   R14,R12,12(R13)   Save registers in caller SA\n");
 	fprintf(Outfile, "         LR    R12,R15           Establish base register\n");
-	fprintf(Outfile, "         LR    R2,R1             Save parm list pointer\n");
-	fprintf(Outfile, "         LR    R11,R15           Frame pointer = entry point\n");
+	fprintf(Outfile, "         LR    R0,R1             Save parm list pointer\n");
+	fprintf(Outfile, "         L     R10,8(,R13)       Get Stack Ptr (NAB) from caller\n");
+	fprintf(Outfile, "*\n");
+	fprintf(Outfile, "* Build Stack Frame (x86 style)\n");
 #ifdef S390_USE_ESA390
-	fprintf(Outfile, "         AHI   R15,-80           Allocate save area (72+8)\n");
+	fprintf(Outfile, "         AHI   R10,-4            Push R14\n");
+	fprintf(Outfile, "         ST    R14,0(,R10)\n");
+	fprintf(Outfile, "         AHI   R10,-4            Push R11 (Old BP)\n");
+	fprintf(Outfile, "         ST    R11,0(,R10)\n");
 #else
-	fprintf(Outfile, "         S     R15,=F'80'        Allocate save area (72+8)\n");
+	fprintf(Outfile, "         S     R10,=F'4'\n");
+	fprintf(Outfile, "         ST    R14,0(,R10)\n");
+	fprintf(Outfile, "         S     R10,=F'4'\n");
+	fprintf(Outfile, "         ST    R11,0(,R10)\n");
 #endif
-	fprintf(Outfile, "         ST    R13,4(,R15)       Chain: back ptr to caller SA\n");
-	fprintf(Outfile, "         ST    R15,8(,R13)       Chain: fwd ptr from caller SA\n");
-	fprintf(Outfile, "         LR    R13,R15           R13 -> our save area\n");
-	fprintf(Outfile, "         ST    R2,72(,R13)       Save parm list at SA+72\n");
+	fprintf(Outfile, "         LR    R11,R10           R11 = Frame Pointer\n");
+	fprintf(Outfile, "*\n");
+	fprintf(Outfile, "* Setup OS Save Area (preserving space for locals)\n");
+	fprintf(Outfile, "         LR    R15,R13           Save Old SA ptr\n");
+	/* Reserve space for locals/stack (2KB safety gap) + 72 byte SA */
+#ifdef S390_USE_ESA390
+	fprintf(Outfile, "         AHI   R10,-2120         Alloc SA + Locals Gap\n");
+#else
+	fprintf(Outfile, "         S     R10,=F'2120'\n");
+#endif
+	fprintf(Outfile, "         LR    R13,R10           R13 -> New Save Area\n");
+	fprintf(Outfile, "         ST    R15,4(,R13)       Back chain\n");
+	fprintf(Outfile, "         ST    R13,8(,R15)       Fwd chain\n");
+	fprintf(Outfile, "         ST    R0,72(,R13)       Save parm list (Standard Linkage)\n");
 }
 
 /*
- * cgexit - Function epilogue (OS/390 standard return linkage)
+ * cgexit - Function epilogue
  *
- * Implements the standard OS/390 function exit sequence:
- *
- *   1. Move return value from R2 to R15 (OS/390 convention)
- *   2. Restore caller's save area pointer from back chain
- *   3. Restore all registers from caller's save area
- *   4. Return to caller via BR R14
- *
- * Note: The return value is kept in R2 internally during expression
- * evaluation, but OS/390 convention expects it in R15 on return.
+ * Restores stack frame and OS registers.
  */
 void cgexit(void) {
 	if (NULL == Outfile) return;
 	fprintf(Outfile, "*\n");
-	fprintf(Outfile, "* Function exit - OS/390 standard linkage\n");
-	fprintf(Outfile, "* Return value in R2 -> moved to R15 for caller\n");
+	fprintf(Outfile, "* Function exit\n");
 	fprintf(Outfile, "*\n");
 	fprintf(Outfile, "         LR    R15,R2            Return value to R15\n");
 	fprintf(Outfile, "         L     R13,4(,R13)       Restore caller's SA pointer\n");
-	fprintf(Outfile, "         L     R14,12(,R13)      Restore return address\n");
+	fprintf(Outfile, "         LR    R10,R11           Restore Stack Ptr to BP\n");
+	/* Pop Old BP and Ret Addr */
+	fprintf(Outfile, "         L     R11,0(,R10)       Pop Old BP\n");
+#ifdef S390_USE_ESA390
+	fprintf(Outfile, "         AHI   R10,4\n");
+	fprintf(Outfile, "         L     R14,0(,R10)       Pop Return Address\n");
+	fprintf(Outfile, "         AHI   R10,4\n");
+#else
+	fprintf(Outfile, "         LA    R10,4(,R10)\n");
+	fprintf(Outfile, "         L     R14,0(,R10)\n");
+	fprintf(Outfile, "         LA    R10,4(,R10)\n");
+#endif
+	/* Restore registers from Old SA */
 	fprintf(Outfile, "         LM    R0,R12,20(R13)    Restore R0-R12\n");
 	fprintf(Outfile, "         BR    R14               Return to caller\n");
 }

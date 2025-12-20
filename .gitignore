@@ -16,8 +16,8 @@ a.out
 core
 
 # Generated test output directories
-tests-s370/
-tests-s390/
+# tests-s370/
+# tests-s390/
 
 # Library
 lib/libscc.a
