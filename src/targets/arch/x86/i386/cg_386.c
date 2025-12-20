@@ -228,6 +228,14 @@ void cg386_public(char *s) {
     ngen(".globl\t%s", s, 0);
 }
 
+void cg386_name(char *s) {
+    sgen("%s:", s, "");
+}
+
+void cg386_funcname(char *s) {
+    sgen("%s:", s, "");
+}
+
 void cg386_align(void) {
     /* Alignment not typically needed for 386 */
 }
@@ -728,7 +736,8 @@ void cg386_stack(int n) {
     ngen("%s\t$%d,%%esp", "addl", n);
 }
 
-void cg386_entry(void) {
+void cg386_entry(int lsize) {
+    (void)lsize;  /* Not used for x86 */
     gen("pushl\t%ebp");
     gen("movl\t%esp,%ebp");
 }

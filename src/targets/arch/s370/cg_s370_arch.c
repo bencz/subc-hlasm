@@ -75,6 +75,8 @@ struct cg_vtable cg_s370_vtable = {
     cgs370_prelude,
     cgs370_postlude,
     cgs370_public,
+    cgs370_name,
+    cgs370_funcname,
     cgs370_align,
     
     /* Literal and Clear */

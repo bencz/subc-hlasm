@@ -16,6 +16,8 @@ void cgx64_text(void);
 void cgx64_prelude(void);
 void cgx64_postlude(void);
 void cgx64_public(char *s);
+void cgx64_name(char *s);
+void cgx64_funcname(char *s);
 void cgx64_align(void);
 
 /* Literal and clear */
@@ -162,7 +164,7 @@ void cgx64_initlw(int v, int a);
 void cgx64_call(char *s);
 void cgx64_calr(void);
 void cgx64_stack(int n);
-void cgx64_entry(void);
+void cgx64_entry(int lsize);
 void cgx64_exit(void);
 
 /* Data definition */

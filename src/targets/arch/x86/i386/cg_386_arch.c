@@ -64,6 +64,8 @@ struct cg_vtable cg_386_vtable = {
     cg386_prelude,
     cg386_postlude,
     cg386_public,
+    cg386_name,
+    cg386_funcname,
     cg386_align,
     
     /* Literal and Clear */

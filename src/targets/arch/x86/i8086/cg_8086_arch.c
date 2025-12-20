@@ -60,6 +60,8 @@ struct cg_vtable cg_8086_vtable = {
     cg86_prelude,
     cg86_postlude,
     cg86_public,
+    cg86_name,
+    cg86_funcname,
     cg86_align,
     
     /* Literal and Clear */

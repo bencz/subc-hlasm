@@ -65,9 +65,18 @@
     │       ├── cg_8086_arch.c      Arch/vtable definitions
     │       └── cg_8086_dos.c       DOS target
     │
-    └── arm/                    ARM family
-        └── armv6/              ARMv6 (Raspberry Pi)
-            └── ...
+    ├── arm/                    ARM family
+    │   └── armv6/              ARMv6 (Raspberry Pi)
+    │       └── ...
+    │
+    └── s370/                   IBM System/370 family
+        ├── cg_s370.c               Code generation (HLASM syntax)
+        ├── cg_s370_funcs.h         Function prototypes
+        ├── cg_s370_arch.h          Arch/vtable declarations
+        ├── cg_s370_arch.c          S/370 arch (24-bit, big-endian)
+        ├── cg_s370_mvs.c           S/370 MVS target
+        ├── cg_s370xa_arch.c        S/370-XA arch (31-bit)
+        └── cg_s370xa_mvs.c         S/370-XA MVS target
 
 
     COMPOSABLE ARCHITECTURE
@@ -186,8 +195,9 @@
         bpw             Bytes Per Word
         endian          ENDIAN_LITTLE or ENDIAN_BIG
         stack_dir       STACK_DOWN or STACK_UP
-        asm_syntax      ASM_GAS, ASM_TASM, ASM_HLASM
-        call_conv       CC_CDECL, CC_SYSV_AMD64, etc.
+        asm_syntax      ASM_GAS, ASM_TASM, ASM_HLASM, ASM_ARM
+        call_conv       CC_CDECL, CC_SYSV_AMD64, CC_HLASM, etc.
+        float_format    FLOAT_IEEE754, FLOAT_IBM_HEX, etc.
         reg_accum       Primary accumulator name
         reg_aux         Auxiliary register name
         dir_text        Text section directive
@@ -195,8 +205,8 @@
         ...
 
     struct cg_os_config:
-        target_os       OS_LINUX, OS_FREEBSD, OS_DOS, etc.
-        obj_format      OBJ_ELF, OBJ_MACHO, OBJ_PE, OBJ_OMF
+        target_os       OS_LINUX, OS_FREEBSD, OS_DOS, OS_MVS, etc.
+        obj_format      OBJ_ELF, OBJ_MACHO, OBJ_PE, OBJ_OMF, OBJ_GOFF
         underscore_sym  1 if symbols need underscore prefix
         os_name         Display name
         asm_cmd         Assembler command template
@@ -215,11 +225,52 @@
         ext_data        Extension data for special needs
 
 
+    IBM SYSTEM/370 TARGETS
+
+    The S/370 target generates HLASM (High Level Assembler) code for
+    IBM mainframes running MVS. Key characteristics:
+
+    - Big-endian architecture
+    - Stack grows upward (STACK_UP)
+    - IBM Hexadecimal floating point (FLOAT_IBM_HEX)
+    - HLASM assembly syntax
+    - GOFF object format
+    - MVS calling convention (CC_HLASM)
+
+    Two variants are supported:
+
+    s370     - Original System/370 with 24-bit addressing
+    s370-xa  - System/370-XA with 31-bit addressing
+
+    The code generator detects TARGET_OS == OS_MVS and generates
+    MVS-compatible code with:
+    - COPY PDPTOP header
+    - CSECT directive
+    - LTORG for literal pools
+    - Page tables (@@PGT0, @@PGT1, etc.)
+    - Standard MVS prologue/epilogue
+
+    Example output:
+             COPY  PDPTOP
+             CSECT
+    * Program text area
+             DS    0F
+    FUNC     B     L1
+             LTORG
+    L1:      DROP  12
+             BALR  12,0
+             USING *,12
+             LR    11,1
+             ...
+
+
     USAGE
 
     Command line:
         scc --target=386-linux program.c
         scc --target=x86-64-freebsd program.c
+        scc --target=s370 program.c
+        scc --target=s370-xa program.c
         scc --list-targets
 
     In code:

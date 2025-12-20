@@ -27,6 +27,8 @@ void cgs370_text(void);
 void cgs370_prelude(void);
 void cgs370_postlude(void);
 void cgs370_public(char *s);
+void cgs370_name(char *s);
+void cgs370_funcname(char *s);
 void cgs370_align(void);
 
 /* Literal and Clear */
@@ -173,7 +175,7 @@ void cgs370_initlw(int v, int a);
 void cgs370_call(char *s);
 void cgs370_calr(void);
 void cgs370_stack(int n);
-void cgs370_entry(void);
+void cgs370_entry(int lsize);
 void cgs370_exit(void);
 
 /* Data Definition */

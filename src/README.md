@@ -62,8 +62,14 @@ src/
 │   │   │   ├── i386/           # Intel 386 targets
 │   │   │   ├── x86_64/         # AMD64/x86-64 targets
 │   │   │   └── i8086/          # 8086 (DOS) targets
-│   │   └── arm/
-│   │       └── armv6/          # ARMv6 targets
+│   │   ├── arm/
+│   │   │   └── armv6/          # ARMv6 targets
+│   │   └── s370/               # IBM System/370 targets
+│   │       ├── cg_s370.c           # S/370 code generation (HLASM)
+│   │       ├── cg_s370_arch.c/h    # S/370 architecture (24-bit)
+│   │       ├── cg_s370_mvs.c       # S/370 MVS target
+│   │       ├── cg_s370xa_arch.c    # S/370-XA architecture (31-bit)
+│   │       └── cg_s370xa_mvs.c     # S/370-XA MVS target
 │   ├── os/                     # OS-specific files (crt0, sys headers)
 │   ├── include/                # Target-specific headers
 │   └── lib/                    # Target-specific library files

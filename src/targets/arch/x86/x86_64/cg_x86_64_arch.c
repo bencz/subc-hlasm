@@ -60,6 +60,8 @@ struct cg_vtable cg_x86_64_vtable = {
     cgx64_prelude,
     cgx64_postlude,
     cgx64_public,
+    cgx64_name,
+    cgx64_funcname,
     cgx64_align,
     
     /* Literal and Clear */

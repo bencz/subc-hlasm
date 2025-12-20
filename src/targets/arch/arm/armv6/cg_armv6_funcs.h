@@ -13,6 +13,8 @@ void cgarm_text(void);
 void cgarm_prelude(void);
 void cgarm_postlude(void);
 void cgarm_public(char *s);
+void cgarm_name(char *s);
+void cgarm_funcname(char *s);
 void cgarm_align(void);
 
 /* Literal and clear */
@@ -159,7 +161,7 @@ void cgarm_initlw(int v, int a);
 void cgarm_call(char *s);
 void cgarm_calr(void);
 void cgarm_stack(int n);
-void cgarm_entry(void);
+void cgarm_entry(int lsize);
 void cgarm_exit(void);
 
 /* Data definition */

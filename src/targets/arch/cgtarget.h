@@ -148,6 +148,8 @@ struct cg_vtable {
     void (*cgprelude)(void);
     void (*cgpostlude)(void);
     void (*cgpublic)(char *s);
+    void (*cgname)(char *s);
+    void (*cgfuncname)(char *s);
     void (*cgalign)(void);
     
     /* Literal and Clear */
@@ -294,7 +296,7 @@ struct cg_vtable {
     void (*cgcall)(char *s);
     void (*cgcalr)(void);
     void (*cgstack)(int n);
-    void (*cgentry)(void);
+    void (*cgentry)(int lsize);
     void (*cgexit)(void);
     
     /* Data Definition */

@@ -31,6 +31,8 @@ void cg386_text(void);
 void cg386_prelude(void);
 void cg386_postlude(void);
 void cg386_public(char *s);
+void cg386_name(char *s);
+void cg386_funcname(char *s);
 void cg386_align(void);
 
 /* Literal and clear */
@@ -177,7 +179,7 @@ void cg386_initlw(int v, int a);
 void cg386_call(char *s);
 void cg386_calr(void);
 void cg386_stack(int n);
-void cg386_entry(void);
+void cg386_entry(int lsize);
 void cg386_exit(void);
 
 /* Data definition */

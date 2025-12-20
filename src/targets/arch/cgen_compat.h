@@ -29,6 +29,8 @@
 #define cgprelude()     (CG->vtable->cgprelude())
 #define cgpostlude()    (CG->vtable->cgpostlude())
 #define cgpublic(s)     (CG->vtable->cgpublic(s))
+#define cgname(s)       (CG->vtable->cgname(s))
+#define cgfuncname(s)   (CG->vtable->cgfuncname(s))
 #define cgalign()       (CG->vtable->cgalign())
 
 /*
@@ -247,7 +249,7 @@
 #define cgcall(s)       (CG->vtable->cgcall(s))
 #define cgcalr()        (CG->vtable->cgcalr())
 #define cgstack(n)      (CG->vtable->cgstack(n))
-#define cgentry()       (CG->vtable->cgentry())
+#define cgentry(n)      (CG->vtable->cgentry(n))
 #define cgexit()        (CG->vtable->cgexit())
 
 /*

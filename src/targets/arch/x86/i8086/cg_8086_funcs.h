@@ -13,6 +13,8 @@ void cg86_text(void);
 void cg86_prelude(void);
 void cg86_postlude(void);
 void cg86_public(char *s);
+void cg86_name(char *s);
+void cg86_funcname(char *s);
 void cg86_align(void);
 
 /* Literal and clear */
@@ -159,7 +161,7 @@ void cg86_initlw(int v, int a);
 void cg86_call(char *s);
 void cg86_calr(void);
 void cg86_stack(int n);
-void cg86_entry(void);
+void cg86_entry(int lsize);
 void cg86_exit(void);
 
 /* Data definition */

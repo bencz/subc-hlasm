@@ -159,8 +159,14 @@ static int pmtrdecls(void) {
 		return 0;
 	na = 0;
 	/* Parameters are above frame pointer for STACK_DOWN,
-	 * below frame pointer for STACK_UP */
-	addr = (STACK_DIR == STACK_DOWN) ? 2*BPW : -2*BPW;
+	 * below frame pointer for STACK_UP.
+	 * For MVS, parameters are accessed via R11 (parameter list pointer)
+	 * with positive offsets starting at 0. */
+	if (TARGET_OS == OS_MVS) {
+		addr = 0;  /* MVS: params via R11 at offsets 0, 4, 8, ... */
+	} else {
+		addr = (STACK_DIR == STACK_DOWN) ? 2*BPW : -2*BPW;
+	}
 	for (;;) {
 		utype = 0;
 		if (na > 0 && ELLIPSIS == Token) {
@@ -200,8 +206,13 @@ static int pmtrdecls(void) {
 			type = TVARIABLE;
 		}
 		addloc(name, prim, type, CAUTO, size, addr, 0);
-		/* Move to next parameter slot based on stack direction */
-		addr += (STACK_DIR == STACK_DOWN) ? BPW : -BPW;
+		/* Move to next parameter slot based on stack direction.
+		 * For MVS, parameters are always at positive offsets. */
+		if (TARGET_OS == OS_MVS) {
+			addr += BPW;  /* MVS: always positive offsets */
+		} else {
+			addr += (STACK_DIR == STACK_DOWN) ? BPW : -BPW;
+		}
 		na++;
 		if (COMMA == Token)
 			Token = scan();
@@ -401,6 +412,12 @@ static int localdecls(void) {
 
 	Nli = 0;
 	utype = 0;
+	
+	/* For MVS, local variables start after save area (72 bytes) + 
+	 * reserved area (16 bytes) = offset 88 */
+	if (TARGET_OS == OS_MVS) {
+		addr = 88;
+	}
 	while ( AUTO == Token || EXTERN == Token || REGISTER == Token ||
 		STATIC == Token || VOLATILE == Token ||
 		INT == Token || CHAR == Token || VOID == Token ||
@@ -549,8 +566,8 @@ void decl(int clss, int prim, int utype) {
 				gentext();
 				if (CPUBLIC == clss) genpublic(name);
 				genaligntext();
-				genname(name);
-				genentry();
+				genfuncname(name);
+				genentry(lsize);
 				genstack(lsize);
 				genlocinit();
 				Retlab = label();

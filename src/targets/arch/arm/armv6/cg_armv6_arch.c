@@ -57,6 +57,8 @@ struct cg_vtable cg_armv6_vtable = {
     cgarm_prelude,
     cgarm_postlude,
     cgarm_public,
+    cgarm_name,
+    cgarm_funcname,
     cgarm_align,
     
     /* Literal and Clear */
