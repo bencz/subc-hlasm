@@ -1,0 +1,31 @@
+/*
+ *	NMH's Simple C Compiler, 2011--2025
+ *	AST operator definitions
+ *
+ *	Extracted from defs.h for modular organization.
+ */
+
+#ifndef AST_OPS_H
+#define AST_OPS_H
+
+/* AST operators */
+enum {
+	OP_GLUE, OP_ADD, OP_ADDR, OP_ASSIGN, OP_BINAND, OP_BINIOR,
+	OP_BINXOR, OP_BOOL, OP_BRFALSE, OP_BRTRUE, OP_CALL, OP_CALR,
+	OP_COMMA, OP_DEC, OP_DIV, OP_EQUAL, OP_GREATER, OP_GTEQ,
+	OP_IDENT, OP_IFELSE, OP_LAB, OP_LDLAB, OP_LESS, OP_LIT,
+	OP_LOGNOT, OP_LSHIFT, OP_LTEQ, OP_MOD, OP_MUL, OP_NEG,
+	OP_NOT, OP_NOTEQ, OP_PLUS, OP_PREDEC, OP_PREINC, OP_POSTDEC,
+	OP_POSTINC, OP_RSHIFT, OP_RVAL, OP_SCALE, OP_SCALEBY, OP_SUB
+};
+
+/* AST node */
+struct node_stc {
+	int		op;
+	struct node_stc	*left, *right;
+	int		args[1];
+};
+
+#define node	struct node_stc
+
+#endif /* AST_OPS_H */

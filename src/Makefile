@@ -4,11 +4,57 @@ SCCDIR=	$(PREFIX)/scc
 BINDIR=	$(PREFIX)/bin
 SC86DIR=$(PREFIX)/scc86
 
-LINT=	gcc -std=c89-O3 -c -o /dev/null -ansi -pedantic -Wall
+LINT=	gcc -std=c89 -O3 -c -o /dev/null -ansi -pedantic -Wall
 
-# Core compiler sources
-SRC=	decl.c error.c expr.c gen.c main.c misc.c \
-	opt.c prep.c scan.c stmt.c sym.c tree.c
+# Include paths for headers
+INCLUDES=	-Iinclude -Itargets/arch \
+		-Itargets/arch/x86/i386 -Itargets/arch/x86/x86_64 \
+		-Itargets/arch/x86/i8086 -Itargets/arch/arm/armv6
+
+# Modular structure sources
+# Frontend - Lexer
+SRC_LEXER=	frontend/lexer/scan.c
+
+# Frontend - Preprocessor
+SRC_PREP=	frontend/preprocessor/prep.c
+
+# Frontend - Parser
+SRC_PARSER=	frontend/parser/decl.c \
+		frontend/parser/expr.c \
+		frontend/parser/stmt.c
+
+# AST
+SRC_AST=	ast/tree.c
+
+# Optimizer
+SRC_OPT=	optimizer/opt.c
+
+# Code Generator
+SRC_CODEGEN=	codegen/gen.c
+
+# Symbols
+SRC_SYM=	symbols/sym.c
+
+# Common utilities
+SRC_COMMON=	common/error.c \
+		common/misc.c
+
+# All compiler sources
+SRC=	main.c \
+		$(SRC_LEXER) $(SRC_PREP) $(SRC_PARSER) \
+		$(SRC_AST) $(SRC_OPT) $(SRC_CODEGEN) \
+		$(SRC_SYM) $(SRC_COMMON)
+
+# Modular headers
+HDRS_MODULAR=	frontend/lexer/tokens.h frontend/lexer/scan.h \
+		frontend/preprocessor/prep.h \
+		frontend/parser/decl.h frontend/parser/expr.h \
+		frontend/parser/stmt.h frontend/parser/prec.h \
+		ast/ops.h ast/tree.h \
+		optimizer/opt.h \
+		codegen/gen.h \
+		symbols/types.h symbols/sym.h \
+		common/error.h common/misc.h
 
 # Cross-compiler target architecture sources
 # Core framework
@@ -45,32 +91,38 @@ TGTARM=	targets/arch/arm/armv6/cg_armv6.c \
 # All target sources
 TGTSRC=	$(TGTCORE) $(TGT386) $(TGTX64) $(TGT86) $(TGTARM)
 
-# All sources
+# All sources (compiler + targets)
 ALLSRC=	$(SRC) $(TGTSRC)
 
-HDRS=	data.h decl.h defs.h prec.h \
-	targets/arch/cgtarget.h targets/arch/cgen_compat.h
+HDRS=	include/data.h include/decl.h include/defs.h \
+	include/prec.h include/types.h include/tokens.h include/ops.h \
+	include/cgtarget.h include/cgen_compat.h
 
-LIBOBJS=lib/init.o lib/abort.o lib/abs.o lib/atexit.o lib/atoi.o \
-	lib/bsearch.o lib/calloc.o lib/clearerr.o lib/ctime.o \
-	lib/ctype.o lib/difftime.o lib/exit.o lib/fclose.o \
-	lib/fdopen.o lib/feof.o lib/ferror.o lib/fflush.o lib/fgetc.o \
-	lib/fgetpos.o lib/fgets.o lib/fileno.o lib/fopen.o \
-	lib/fprintf.o lib/fputc.o lib/fputs.o lib/fread.o lib/free.o \
-	lib/freopen.o lib/fscanf.o lib/fseek.o lib/fsetpos.o \
-	lib/ftell.o lib/fwrite.o lib/getchar.o lib/getenv.o \
-	lib/kprintf.o lib/malloc.o lib/memchr.o lib/memcmp.o \
-	lib/memcpy.o lib/memmove.o lib/memset.o lib/perror.o \
-	lib/printf.o lib/putchar.o lib/puts.o lib/qsort.o lib/rand.o \
-	lib/realloc.o lib/remove.o lib/rename.o lib/rewind.o \
-	lib/scanf.o lib/setbuf.o lib/setvbuf.o lib/sprintf.o \
-	lib/sscanf.o lib/strcat.o lib/strchr.o lib/strcmp.o \
-	lib/strcpy.o lib/strcspn.o lib/strdup.o lib/strerror.o \
-	lib/strlen.o lib/strncat.o lib/strncmp.o lib/strncpy.o \
-	lib/strpbrk.o lib/strrchr.o lib/strspn.o lib/strtok.o \
-	lib/strtol.o lib/system.o lib/time.o lib/tmpfile.o \
-	lib/tmpnam.o lib/ungetc.o lib/varargs.o lib/vformat.o \
-	lib/vfprintf.o lib/vprintf.o lib/vscan.o lib/vsprintf.o
+# Runtime library directory (outside src/)
+RUNTIME=	../runtime
+LIBDIR=		$(RUNTIME)/lib
+INCDIR=		$(RUNTIME)/include
+
+LIBOBJS=$(LIBDIR)/init.o $(LIBDIR)/abort.o $(LIBDIR)/abs.o $(LIBDIR)/atexit.o $(LIBDIR)/atoi.o \
+	$(LIBDIR)/bsearch.o $(LIBDIR)/calloc.o $(LIBDIR)/clearerr.o $(LIBDIR)/ctime.o \
+	$(LIBDIR)/ctype.o $(LIBDIR)/difftime.o $(LIBDIR)/exit.o $(LIBDIR)/fclose.o \
+	$(LIBDIR)/fdopen.o $(LIBDIR)/feof.o $(LIBDIR)/ferror.o $(LIBDIR)/fflush.o $(LIBDIR)/fgetc.o \
+	$(LIBDIR)/fgetpos.o $(LIBDIR)/fgets.o $(LIBDIR)/fileno.o $(LIBDIR)/fopen.o \
+	$(LIBDIR)/fprintf.o $(LIBDIR)/fputc.o $(LIBDIR)/fputs.o $(LIBDIR)/fread.o $(LIBDIR)/free.o \
+	$(LIBDIR)/freopen.o $(LIBDIR)/fscanf.o $(LIBDIR)/fseek.o $(LIBDIR)/fsetpos.o \
+	$(LIBDIR)/ftell.o $(LIBDIR)/fwrite.o $(LIBDIR)/getchar.o $(LIBDIR)/getenv.o \
+	$(LIBDIR)/kprintf.o $(LIBDIR)/malloc.o $(LIBDIR)/memchr.o $(LIBDIR)/memcmp.o \
+	$(LIBDIR)/memcpy.o $(LIBDIR)/memmove.o $(LIBDIR)/memset.o $(LIBDIR)/perror.o \
+	$(LIBDIR)/printf.o $(LIBDIR)/putchar.o $(LIBDIR)/puts.o $(LIBDIR)/qsort.o $(LIBDIR)/rand.o \
+	$(LIBDIR)/realloc.o $(LIBDIR)/remove.o $(LIBDIR)/rename.o $(LIBDIR)/rewind.o \
+	$(LIBDIR)/scanf.o $(LIBDIR)/setbuf.o $(LIBDIR)/setvbuf.o $(LIBDIR)/sprintf.o \
+	$(LIBDIR)/sscanf.o $(LIBDIR)/strcat.o $(LIBDIR)/strchr.o $(LIBDIR)/strcmp.o \
+	$(LIBDIR)/strcpy.o $(LIBDIR)/strcspn.o $(LIBDIR)/strdup.o $(LIBDIR)/strerror.o \
+	$(LIBDIR)/strlen.o $(LIBDIR)/strncat.o $(LIBDIR)/strncmp.o $(LIBDIR)/strncpy.o \
+	$(LIBDIR)/strpbrk.o $(LIBDIR)/strrchr.o $(LIBDIR)/strspn.o $(LIBDIR)/strtok.o \
+	$(LIBDIR)/strtol.o $(LIBDIR)/system.o $(LIBDIR)/time.o $(LIBDIR)/tmpfile.o \
+	$(LIBDIR)/tmpnam.o $(LIBDIR)/ungetc.o $(LIBDIR)/varargs.o $(LIBDIR)/vformat.o \
+	$(LIBDIR)/vfprintf.o $(LIBDIR)/vprintf.o $(LIBDIR)/vscan.o $(LIBDIR)/vsprintf.o
 
 AS=	as
 AR=	ar -rc
@@ -81,34 +133,34 @@ all:	scc0 crt0 ncrt0 lib
 scc:	scc1 $(ALLSRC)
 	./scc1 -o scc $(ALLSRC)
 
-scc1:	scc0 lib/crt0.o lib/libscc.a $(ALLSRC)
+scc1:	scc0 $(LIBDIR)/crt0.o $(LIBDIR)/libscc.a $(ALLSRC)
 	./scc0 -o scc1 $(ALLSRC)
 
 scc0:	$(ALLSRC)
-	$(CC) -o scc0 $(ALLSRC)
+	$(CC) $(INCLUDES) -o scc0 $(ALLSRC)
 
-lib:	lib/libscc.a
+lib:	$(LIBDIR)/libscc.a
 
-crt0:	lib/crt0.o
+crt0:	$(LIBDIR)/crt0.o
 
-ncrt0:	lib/ncrt0.o
+ncrt0:	$(LIBDIR)/ncrt0.o
 
 exe:	scc.exe sccmain.exe
 
-lib/crt0.o:	lib/crt0.s
-	$(AS) -o lib/crt0.o lib/crt0.s
+$(LIBDIR)/crt0.o:	$(LIBDIR)/crt0.s
+	$(AS) -o $(LIBDIR)/crt0.o $(LIBDIR)/crt0.s
 
-lib/ncrt0.o:	lib/ncrt0.s
-	$(AS) -o lib/ncrt0.o lib/ncrt0.s
+$(LIBDIR)/ncrt0.o:	$(LIBDIR)/ncrt0.s
+	$(AS) -o $(LIBDIR)/ncrt0.o $(LIBDIR)/ncrt0.s
 
-lib/ncrt0.s:	lib/crt0.s
+$(LIBDIR)/ncrt0.s:	$(LIBDIR)/crt0.s
 	sed -e '/C_init.*[;@#]INIT/d' \
 	    -e 's/\(.*\)Cexit\(.*\)EXIT/\1C_exit\2EXIT/' \
-	    <lib/crt0.s >lib/ncrt0.s
+	    <$(LIBDIR)/crt0.s >$(LIBDIR)/ncrt0.s
 
-lib/libscc.a:	$(LIBOBJS)
-	$(AR) lib/libscc.a $(LIBOBJS)
-	$(RANLIB) lib/libscc.a
+$(LIBDIR)/libscc.a:	$(LIBOBJS)
+	$(AR) $(LIBDIR)/libscc.a $(LIBOBJS)
+	$(RANLIB) $(LIBDIR)/libscc.a
 
 $(SRC):		$(HDRS)
 libscc.a:	$(OBJS)
@@ -123,7 +175,7 @@ sccmain.exe:	$(SRC) targets/lib/ulibc.c targets/dos-8086/dosmain.c
 	./scc0 -c $(SRC) && rm -f main.o
 	./scc0 -o ulibc.o -c targets/lib/ulibc.c
 	./scc0 -o dosmain.o -c targets/dos-8086/dosmain.c
-	sld -o sccmain.exe lib/crt0.o *.o lib/libscc.a
+	sld -o sccmain.exe $(LIBDIR)/crt0.o *.o $(LIBDIR)/libscc.a
 
 tests:	test ptest systest libtest sigtest
 	@echo "Looks good!"
@@ -131,23 +183,23 @@ tests:	test ptest systest libtest sigtest
 test:	scc $(ALLSRC)
 	sh ../tests/triple-test.sh
 
-ptest:	scc0 lib/crt0.o lib/libscc.a ../tests/ptest.src ../tests/ptest.awk
+ptest:	scc0 $(LIBDIR)/crt0.o $(LIBDIR)/libscc.a ../tests/ptest.src ../tests/ptest.awk
 	awk -f ../tests/ptest.awk <../tests/ptest.src >../tests/ptest.c
 	./scc0 -o ../tests/ptest ../tests/ptest.c
 	../tests/ptest
 	rm ../tests/ptest
 
-systest:	scc0 lib/crt0.o lib/libscc.a ../tests/systest.c
+systest:	scc0 $(LIBDIR)/crt0.o $(LIBDIR)/libscc.a ../tests/systest.c
 	./scc0 -o ../tests/systest ../tests/systest.c
 	 (cd ../tests && ./systest)
 	rm ../tests/systest
 
-libtest:	scc0 lib/crt0.o lib/libscc.a ../tests/libtest.c
+libtest:	scc0 $(LIBDIR)/crt0.o $(LIBDIR)/libscc.a ../tests/libtest.c
 	./scc0 -o ../tests/libtest$(EXESFX) ../tests/libtest.c
 	(cd ../tests && ./libtest$(EXESFX))
 	rm ../tests/libtest$(EXESFX)
 
-sigtest:	scc0 lib/crt0.o lib/libscc.a ../tests/sigtest.c
+sigtest:	scc0 $(LIBDIR)/crt0.o $(LIBDIR)/libscc.a ../tests/sigtest.c
 	./scc0 -o ../tests/sigtest ../tests/sigtest.c
 	(cd ../tests && ./sigtest)
 	rm ../tests/sigtest
@@ -170,23 +222,23 @@ install:	all
 	./scc0 -o scc -D 'SCCDIR="$(SCCDIR)"' $(ALLSRC)
 	cp scc $(BINDIR)/scc$(EXESFX)
 	strip $(BINDIR)/scc$(EXESFX)
-	cp include/* $(SCCDIR)/include
-	cp lib/libscc.a lib/crt0.o lib/ncrt0.o $(SCCDIR)/lib
+	cp $(INCDIR)/* $(SCCDIR)/include
+	cp $(LIBDIR)/libscc.a $(LIBDIR)/crt0.o $(LIBDIR)/ncrt0.o $(SCCDIR)/lib
 
 install-scc86:	all
 	scc -o scc86 -D 'SCCDIR="$(SC86DIR)"' $(ALLSRC)
 	cp scc86 $(BINDIR)/scc86$(EXESFX)
 	strip $(BINDIR)/scc86$(EXESFX)
-	cp include/* $(SC86DIR)/include
-	cp lib/libscc.a lib/crt0.o lib/ncrt0.o $(SC86DIR)/lib
+	cp $(INCDIR)/* $(SC86DIR)/include
+	cp $(LIBDIR)/libscc.a $(LIBDIR)/crt0.o $(LIBDIR)/ncrt0.o $(SC86DIR)/lib
 
 subc-dos.zip:
 	mkdir subc-dos
 	mkdir subc-dos/include
 	mkdir subc-dos/lib
 	mkdir subc-dos/src
-	cp include/* subc-dos/include
-	cp lib/crt0.o lib/ncrt0.o lib/libscc.a subc-dos/lib
+	cp $(INCDIR)/* subc-dos/include
+	cp $(LIBDIR)/crt0.o $(LIBDIR)/ncrt0.o $(LIBDIR)/libscc.a subc-dos/lib
 	cp *.[ch] targets/lib/ulibc.c targets/dos-8086/dosmain.c subc-dos/src
 	cp targets/dos-8086/dosbuild.bat targets/dos-8086/link.lst subc-dos
 	cp scc.exe sccmain.exe subc-dos
@@ -205,18 +257,18 @@ subc-dos.zip:
 	rm -r subc-dos
 
 lint:
-	$(LINT) decl.c
-	$(LINT) error.c
-	$(LINT) expr.c
-	$(LINT) gen.c
 	$(LINT) main.c
-	$(LINT) misc.c
-	$(LINT) opt.c
-	$(LINT) prep.c
-	$(LINT) scan.c
-	$(LINT) stmt.c
-	$(LINT) sym.c
-	$(LINT) tree.c
+	$(LINT) frontend/lexer/scan.c
+	$(LINT) frontend/preprocessor/prep.c
+	$(LINT) frontend/parser/decl.c
+	$(LINT) frontend/parser/expr.c
+	$(LINT) frontend/parser/stmt.c
+	$(LINT) ast/tree.c
+	$(LINT) optimizer/opt.c
+	$(LINT) codegen/gen.c
+	$(LINT) symbols/sym.c
+	$(LINT) common/error.c
+	$(LINT) common/misc.c
 	$(LINT) targets/arch/cgtarget.c
 	$(LINT) targets/arch/cg_os_configs.c
 	$(LINT) targets/arch/x86/i386/cg_386.c
@@ -229,4 +281,4 @@ lint:
 
 clean:
 	rm -f scc0 scc1 scc2 scc scc86 test.s *.o *.core core a.out \
-		*.tmp lib/*.o lib/ncrt0.s lib/libscc.a *.exe subc-dos.zip
+		*.tmp $(LIBDIR)/*.o $(LIBDIR)/ncrt0.s $(LIBDIR)/libscc.a *.exe subc-dos.zip

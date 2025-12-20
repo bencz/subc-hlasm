@@ -26,10 +26,10 @@
  * Copyright (c) 2011-2025 - Public Domain (CC0)
  */
 
-#include "../../../../defs.h"
-#include "../../../../data.h"
-#include "../../../../decl.h"
-#include "../../cgtarget.h"
+#include "defs.h"
+#include "data.h"
+#include "decl.h"
+#include "cgtarget.h"
 
 /*
  * ============================================================================

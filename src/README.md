@@ -1,0 +1,147 @@
+# SubC Compiler - Source Code Organization
+
+## Directory Structure
+
+```
+src/
+├── main.c                      # Entry point, CLI, driver
+├── defs.h                      # Global definitions (constants, includes)
+├── data.h                      # Global variables (legacy)
+├── decl.h                      # Function declarations (legacy)
+│
+├── frontend/                   # Lexical and syntactic analysis
+│   ├── lexer/
+│   │   ├── scan.c              # Scanner (lexical analyzer)
+│   │   ├── scan.h              # Scanner declarations
+│   │   └── tokens.h            # Token definitions
+│   │
+│   ├── preprocessor/
+│   │   ├── prep.c              # Preprocessor (#define, #include, etc.)
+│   │   └── prep.h              # Preprocessor declarations
+│   │
+│   └── parser/
+│       ├── decl.c              # Declaration parser
+│       ├── decl.h              # Declaration parser declarations
+│       ├── stmt.c              # Statement parser
+│       ├── stmt.h              # Statement parser declarations
+│       ├── expr.c              # Expression parser
+│       ├── expr.h              # Expression parser declarations
+│       └── prec.h              # Operator precedence table
+│
+├── ast/                        # Abstract Syntax Tree
+│   ├── tree.c                  # AST node construction and emission
+│   ├── tree.h                  # AST declarations
+│   └── ops.h                   # AST operator definitions
+│
+├── optimizer/                  # Code optimization
+│   ├── opt.c                   # Constant folding, reordering
+│   └── opt.h                   # Optimizer declarations
+│
+├── codegen/                    # Code generation interface
+│   ├── gen.c                   # High-level code generation
+│   └── gen.h                   # Code generator declarations
+│
+├── symbols/                    # Symbol table management
+│   ├── sym.c                   # Symbol table operations
+│   ├── sym.h                   # Symbol table declarations
+│   └── types.h                 # Type and storage class definitions
+│
+├── common/                     # Shared utilities
+│   ├── error.c                 # Error handling
+│   ├── error.h                 # Error declarations
+│   ├── misc.c                  # Miscellaneous utilities
+│   ├── misc.h                  # Misc declarations
+│   └── data.h                  # Global variables
+│
+├── targets/                    # Cross-compiler target architecture
+│   ├── arch/                   # Architecture-specific code generators
+│   │   ├── cgtarget.h/c        # Target framework
+│   │   ├── cgen_compat.h       # Backward compatibility macros
+│   │   ├── cg_os_configs.h/c   # OS configurations
+│   │   ├── x86/
+│   │   │   ├── i386/           # Intel 386 targets
+│   │   │   ├── x86_64/         # AMD64/x86-64 targets
+│   │   │   └── i8086/          # 8086 (DOS) targets
+│   │   └── arm/
+│   │       └── armv6/          # ARMv6 targets
+│   ├── os/                     # OS-specific files (crt0, sys headers)
+│   ├── include/                # Target-specific headers
+│   └── lib/                    # Target-specific library files
+│
+├── include/                    # Standard C headers
+└── lib/                        # Runtime library sources
+```
+
+## Compilation Flow
+
+```
+Source Code (.c)
+      │
+      ▼
+┌─────────────────┐
+│  Preprocessor   │  frontend/preprocessor/prep.c
+│  (#include,     │
+│   #define, etc) │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│     Lexer       │  frontend/lexer/scan.c
+│  (Tokenization) │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│     Parser      │  frontend/parser/{decl,stmt,expr}.c
+│  (Syntax        │
+│   Analysis)     │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│      AST        │  ast/tree.c
+│  (Abstract      │
+│   Syntax Tree)  │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│   Optimizer     │  optimizer/opt.c
+│  (Constant      │
+│   Folding)      │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Code Generator │  codegen/gen.c
+│  (Interface)    │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Target Backend  │  targets/arch/{arch}/{target}.c
+│ (x86, ARM, etc) │
+└────────┬────────┘
+         │
+         ▼
+   Assembly (.s)
+```
+
+## Building
+
+The Makefile supports both the legacy flat structure and the new modular structure:
+
+```bash
+# Build using legacy flat structure (default)
+make scc0
+
+# The modular sources are defined in SRC_MODULAR for future use
+```
+
+## Adding New Targets
+
+See `targets/arch/README` for detailed instructions on adding new CPU architectures or OS targets.
+
+## C89 Compliance
+
+All code is C89 compliant. No C99/C11 features are used.
