@@ -278,6 +278,8 @@
 #define BPW             (CG->arch->bpw)
 #define INTSIZE         (CG->arch->int_size)
 #define PTRSIZE         (CG->arch->ptr_size)
+#define STACK_DIR       (CG->arch->stack_dir)
+#define ENDIAN          (CG->arch->endian)
 
 /*
  * ============================================================================

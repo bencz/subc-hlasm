@@ -117,7 +117,9 @@ enum cg_os {
     OS_OPENBSD,
     OS_DARWIN,
     OS_WINDOWS,
-    OS_DOS
+    OS_DOS,
+    OS_MVS,
+    OS_ZOS
 };
 
 /*

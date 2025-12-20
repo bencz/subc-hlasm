@@ -42,6 +42,10 @@ extern struct cg_target target_8086_dos;
 extern struct cg_target target_armv6_alias;
 extern struct cg_target target_armv6_linux;
 
+/* S/370 targets */
+extern struct cg_target cg_s370_mvs_target;
+extern struct cg_target cg_s370xa_mvs_target;
+
 /*
  * ============================================================================
  * Target Registry
@@ -96,6 +100,10 @@ void cg_init_targets(void) {
     /* ARM targets */
     register_target(&target_armv6_alias);
     register_target(&target_armv6_linux);
+    
+    /* S/370 targets */
+    register_target(&cg_s370_mvs_target);
+    register_target(&cg_s370xa_mvs_target);
 }
 
 /*

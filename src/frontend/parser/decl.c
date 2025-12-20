@@ -158,7 +158,9 @@ static int pmtrdecls(void) {
 	if (RPAREN == Token)
 		return 0;
 	na = 0;
-	addr = 2*BPW;
+	/* Parameters are above frame pointer for STACK_DOWN,
+	 * below frame pointer for STACK_UP */
+	addr = (STACK_DIR == STACK_DOWN) ? 2*BPW : -2*BPW;
 	for (;;) {
 		utype = 0;
 		if (na > 0 && ELLIPSIS == Token) {
@@ -198,7 +200,8 @@ static int pmtrdecls(void) {
 			type = TVARIABLE;
 		}
 		addloc(name, prim, type, CAUTO, size, addr, 0);
-		addr += BPW;
+		/* Move to next parameter slot based on stack direction */
+		addr += (STACK_DIR == STACK_DOWN) ? BPW : -BPW;
 		na++;
 		if (COMMA == Token)
 			Token = scan();
@@ -457,7 +460,13 @@ static int localdecls(void) {
 					0, val);
 			}
 			else {
-				addr -= rsize;
+				/* Local variables grow opposite to stack direction:
+				 * STACK_DOWN: locals at negative offsets (addr -= rsize)
+				 * STACK_UP: locals at positive offsets (addr += rsize) */
+				if (STACK_DIR == STACK_DOWN)
+					addr -= rsize;
+				else
+					addr += rsize;
 				addloc(name, prim, type, CAUTO, size, addr, 0);
 			}
 			if (ini && !stat) {

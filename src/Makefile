@@ -9,7 +9,8 @@ LINT=	gcc -std=c89 -O3 -c -o /dev/null -ansi -pedantic -Wall
 # Include paths for headers
 INCLUDES=	-Iinclude -Itargets/arch \
 		-Itargets/arch/x86/i386 -Itargets/arch/x86/x86_64 \
-		-Itargets/arch/x86/i8086 -Itargets/arch/arm/armv6
+		-Itargets/arch/x86/i8086 -Itargets/arch/arm/armv6 \
+		-Itargets/arch/s370
 
 # Modular structure sources
 # Frontend - Lexer
@@ -88,8 +89,15 @@ TGTARM=	targets/arch/arm/armv6/cg_armv6.c \
 	targets/arch/arm/armv6/cg_armv6_arch.c \
 	targets/arch/arm/armv6/cg_armv6_linux.c
 
+# S/370 targets
+TGTS370= targets/arch/s370/cg_s370.c \
+	targets/arch/s370/cg_s370_arch.c \
+	targets/arch/s370/cg_s370_mvs.c \
+	targets/arch/s370/cg_s370xa_arch.c \
+	targets/arch/s370/cg_s370xa_mvs.c
+
 # All target sources
-TGTSRC=	$(TGTCORE) $(TGT386) $(TGTX64) $(TGT86) $(TGTARM)
+TGTSRC=	$(TGTCORE) $(TGT386) $(TGTX64) $(TGT86) $(TGTARM) $(TGTS370)
 
 # All sources (compiler + targets)
 ALLSRC=	$(SRC) $(TGTSRC)

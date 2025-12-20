@@ -1,0 +1,647 @@
+/*
+ * SubC Compiler - IBM System/370 Code Generator
+ *
+ * This file implements the code generator for the IBM System/370 architecture.
+ * It generates HLASM (High Level Assembler) syntax assembly code.
+ *
+ * Architecture characteristics:
+ *   - 24-bit addressing (16MB address space)
+ *   - 32-bit general purpose registers (R0-R15)
+ *   - Big-endian byte order
+ *   - Stack grows upward (toward higher addresses)
+ *   - IBM Hexadecimal floating point format
+ *
+ * Register usage:
+ *   R0  - Work register (not preserved across calls)
+ *   R1  - Parameter list pointer
+ *   R2  - Primary accumulator (return value)
+ *   R3  - Secondary accumulator
+ *   R4-R11 - General purpose (callee-saved)
+ *   R12 - Base register (program addressability)
+ *   R13 - Save area pointer (frame pointer equivalent)
+ *   R14 - Return address
+ *   R15 - Entry point address / return code
+ *
+ * S/370 Save Area Layout (18 fullwords, 72 bytes):
+ *   +0   Reserved
+ *   +4   Pointer to previous save area (backward chain)
+ *   +8   Pointer to next save area (forward chain)
+ *   +12  R14 (return address)
+ *   +16  R15 (entry point)
+ *   +20  R0
+ *   +24  R1
+ *   ...
+ *   +68  R12
+ *
+ * Copyright (c) 2025 - Public Domain (CC0)
+ */
+
+#include "defs.h"
+#include "data.h"
+#include "decl.h"
+#include "cgtarget.h"
+#include "cg_s370_funcs.h"
+
+/*
+ * ============================================================================
+ * SECTION: Section Control
+ * ============================================================================
+ */
+
+void cgs370_data(void) {
+    gen("*");
+    gen("* Data Section");
+    gen("*");
+}
+
+void cgs370_text(void) {
+    gen("*");
+    gen("* Code Section");
+    gen("*");
+}
+
+void cgs370_prelude(void) {
+    gen("*");
+    gen("* SubC Generated Code for IBM System/370");
+    gen("*");
+    gen("         PRINT NOGEN");
+}
+
+void cgs370_postlude(void) {
+    gen("         END");
+}
+
+void cgs370_public(char *s) {
+    sgen("%s ENTRY %s", "", s);
+}
+
+void cgs370_align(void) {
+    gen("         DS    0F");
+}
+
+/*
+ * ============================================================================
+ * SECTION: Literal and Clear
+ * ============================================================================
+ */
+
+void cgs370_lit(int n) {
+    ngen("%s L     R2,=F'%d'", "        ", n);
+}
+
+void cgs370_clear(void) {
+    gen("         SR    R2,R2");
+}
+
+void cgs370_clear2(void) {
+    gen("         SR    R3,R3");
+}
+
+/*
+ * ============================================================================
+ * SECTION: Load Operations
+ * ============================================================================
+ */
+
+void cgs370_ldgb(char *s) {
+    gen("         SR    R2,R2");
+    sgen("%s IC    R2,%s", "        ", s);
+}
+
+void cgs370_ldgw(char *s) {
+    sgen("%s L     R2,%s", "        ", s);
+}
+
+void cgs370_ldlb(int n) {
+    gen("         SR    R2,R2");
+    ngen("%s IC    R2,%d(,R13)", "        ", n);
+}
+
+void cgs370_ldlw(int n) {
+    ngen("%s L     R2,%d(,R13)", "        ", n);
+}
+
+void cgs370_ldsb(int n) {
+    gen("         SR    R2,R2");
+    lgen("%s IC    R2,%c%d", "        ", n);
+}
+
+void cgs370_ldsw(int n) {
+    lgen("%s L     R2,%c%d", "        ", n);
+}
+
+void cgs370_ldla(int n) {
+    ngen("%s LA    R2,%d(,R13)", "        ", n);
+}
+
+void cgs370_ldsa(int n) {
+    lgen("%s LA    R2,%c%d", "        ", n);
+}
+
+void cgs370_ldga(char *s) {
+    sgen("%s LA    R2,%s", "        ", s);
+}
+
+void cgs370_indb(void) {
+    gen("         SR    R0,R0");
+    gen("         IC    R0,0(,R2)");
+    gen("         LR    R2,R0");
+}
+
+void cgs370_indw(void) {
+    gen("         L     R2,0(,R2)");
+}
+
+void cgs370_ldlab(int id) {
+    lgen("%s LA    R2,%c%d", "        ", id);
+}
+
+/*
+ * ============================================================================
+ * SECTION: Stack Operations
+ * ============================================================================
+ *
+ * Note: S/370 stack grows upward. We use a software stack pointed by R11.
+ */
+
+static int Stk = 0;  /* Stack pointer offset */
+
+void cgs370_push(void) {
+    ngen("%s ST    R2,%d(,R11)", "        ", Stk);
+    Stk += 4;
+}
+
+void cgs370_pushlit(int n) {
+    ngen("%s L     R0,=F'%d'", "        ", n);
+    ngen("%s ST    R0,%d(,R11)", "        ", Stk);
+    Stk += 4;
+}
+
+void cgs370_pop2(void) {
+    Stk -= 4;
+    ngen("%s L     R3,%d(,R11)", "        ", Stk);
+}
+
+void cgs370_swap(void) {
+    gen("         LR    R0,R2");
+    gen("         LR    R2,R3");
+    gen("         LR    R3,R0");
+}
+
+void cgs370_popptr(void) {
+    Stk -= 4;
+    ngen("%s L     R0,%d(,R11)", "        ", Stk);
+}
+
+/*
+ * ============================================================================
+ * SECTION: Arithmetic Operations
+ * ============================================================================
+ */
+
+void cgs370_add(void) {
+    gen("         AR    R2,R3");
+}
+
+void cgs370_sub(void) {
+    gen("         SR    R3,R2");
+    gen("         LR    R2,R3");
+}
+
+void cgs370_mul(void) {
+    gen("         MR    R2,R3");
+    gen("         LR    R2,R3");
+}
+
+void cgs370_div(void) {
+    gen("         LR    R0,R3");
+    gen("         SRDA  R0,32");
+    gen("         DR    R0,R2");
+    gen("         LR    R2,R1");
+}
+
+void cgs370_mod(void) {
+    gen("         LR    R0,R3");
+    gen("         SRDA  R0,32");
+    gen("         DR    R0,R2");
+    gen("         LR    R2,R0");
+}
+
+void cgs370_neg(void) {
+    gen("         LCR   R2,R2");
+}
+
+/*
+ * ============================================================================
+ * SECTION: Bitwise Operations
+ * ============================================================================
+ */
+
+void cgs370_and(void) {
+    gen("         NR    R2,R3");
+}
+
+void cgs370_ior(void) {
+    gen("         OR    R2,R3");
+}
+
+void cgs370_xor(void) {
+    gen("         XR    R2,R3");
+}
+
+void cgs370_not(void) {
+    gen("         X     R2,=F'-1'");
+}
+
+void cgs370_shl(void) {
+    gen("         SLL   R3,0(R2)");
+    gen("         LR    R2,R3");
+}
+
+void cgs370_shr(void) {
+    gen("         SRL   R3,0(R2)");
+    gen("         LR    R2,R3");
+}
+
+/*
+ * ============================================================================
+ * SECTION: Comparison Operations
+ * ============================================================================
+ */
+
+static void cgs370_cmp(char *branch_inst) {
+    int l1, l2;
+    
+    gen("         CR    R3,R2");
+    l1 = label();
+    l2 = label();
+    lgen("%s    %c%d", branch_inst, l1);
+    gen("         SR    R2,R2");
+    lgen("%s B     %c%d", "        ", l2);
+    genlab(l1);
+    gen("         LA    R2,1");
+    genlab(l2);
+}
+
+void cgs370_eq(void)  { cgs370_cmp("BE"); }
+void cgs370_ne(void)  { cgs370_cmp("BNE"); }
+void cgs370_lt(void)  { cgs370_cmp("BL"); }
+void cgs370_gt(void)  { cgs370_cmp("BH"); }
+void cgs370_le(void)  { cgs370_cmp("BNH"); }
+void cgs370_ge(void)  { cgs370_cmp("BNL"); }
+void cgs370_ult(void) { cgs370_cmp("BL"); }
+void cgs370_ugt(void) { cgs370_cmp("BH"); }
+void cgs370_ule(void) { cgs370_cmp("BNH"); }
+void cgs370_uge(void) { cgs370_cmp("BNL"); }
+
+/*
+ * ============================================================================
+ * SECTION: Conditional Branch Operations
+ * ============================================================================
+ */
+
+void cgs370_breq(int n)  { lgen("%s BE    %c%d", "        ", n); }
+void cgs370_brne(int n)  { lgen("%s BNE   %c%d", "        ", n); }
+void cgs370_brlt(int n)  { lgen("%s BL    %c%d", "        ", n); }
+void cgs370_brgt(int n)  { lgen("%s BH    %c%d", "        ", n); }
+void cgs370_brle(int n)  { lgen("%s BNH   %c%d", "        ", n); }
+void cgs370_brge(int n)  { lgen("%s BNL   %c%d", "        ", n); }
+void cgs370_brult(int n) { lgen("%s BL    %c%d", "        ", n); }
+void cgs370_brugt(int n) { lgen("%s BH    %c%d", "        ", n); }
+void cgs370_brule(int n) { lgen("%s BNH   %c%d", "        ", n); }
+void cgs370_bruge(int n) { lgen("%s BNL   %c%d", "        ", n); }
+
+/*
+ * ============================================================================
+ * SECTION: Boolean and Logic Operations
+ * ============================================================================
+ */
+
+void cgs370_lognot(void) {
+    int l1, l2;
+    
+    gen("         LTR   R2,R2");
+    l1 = label();
+    l2 = label();
+    lgen("%s BZ    %c%d", "        ", l1);
+    gen("         SR    R2,R2");
+    lgen("%s B     %c%d", "        ", l2);
+    genlab(l1);
+    gen("         LA    R2,1");
+    genlab(l2);
+}
+
+void cgs370_bool(void) {
+    int l1, l2;
+    
+    gen("         LTR   R2,R2");
+    l1 = label();
+    l2 = label();
+    lgen("%s BNZ   %c%d", "        ", l1);
+    gen("         SR    R2,R2");
+    lgen("%s B     %c%d", "        ", l2);
+    genlab(l1);
+    gen("         LA    R2,1");
+    genlab(l2);
+}
+
+/*
+ * ============================================================================
+ * SECTION: Pointer Scaling Operations
+ * ============================================================================
+ */
+
+void cgs370_scale(void) {
+    gen("         SLA   R2,2");
+}
+
+void cgs370_scale2(void) {
+    gen("         SLA   R3,2");
+}
+
+void cgs370_unscale(void) {
+    gen("         SRA   R2,2");
+}
+
+void cgs370_scaleby(int v) {
+    if (v == 1) return;
+    ngen("%s MH    R2,=H'%d'", "        ", v);
+}
+
+void cgs370_scale2by(int v) {
+    if (v == 1) return;
+    ngen("%s MH    R3,=H'%d'", "        ", v);
+}
+
+void cgs370_unscaleby(int v) {
+    if (v == 1) return;
+    gen("         SRDA  R2,32");
+    ngen("%s D     R2,=F'%d'", "        ", v);
+    gen("         LR    R2,R3");
+}
+
+/*
+ * ============================================================================
+ * SECTION: Increment/Decrement Operations
+ * ============================================================================
+ */
+
+void cgs370_ldinc(void) {
+    /* Load value for increment via pointer */
+}
+
+void cgs370_inc1pi(int v) {
+    gen("         L     R0,0(,R2)");
+    ngen("%s A     R0,=F'%d'", "        ", v);
+    gen("         ST    R0,0(,R2)");
+}
+
+void cgs370_dec1pi(int v) {
+    gen("         L     R0,0(,R2)");
+    ngen("%s S     R0,=F'%d'", "        ", v);
+    gen("         ST    R0,0(,R2)");
+}
+
+void cgs370_inc2pi(int v) { cgs370_inc1pi(v); }
+void cgs370_dec2pi(int v) { cgs370_dec1pi(v); }
+
+void cgs370_incpl(int a, int v) {
+    ngen("%s L     R0,%d(,R13)", "        ", a);
+    ngen("%s A     R0,=F'%d'", "        ", v);
+    ngen("%s ST    R0,%d(,R13)", "        ", a);
+}
+
+void cgs370_decpl(int a, int v) {
+    ngen("%s L     R0,%d(,R13)", "        ", a);
+    ngen("%s S     R0,=F'%d'", "        ", v);
+    ngen("%s ST    R0,%d(,R13)", "        ", a);
+}
+
+void cgs370_inclw(int a) { cgs370_incpl(a, 1); }
+void cgs370_declw(int a) { cgs370_decpl(a, 1); }
+void cgs370_inclb(int a) { cgs370_incpl(a, 1); }
+void cgs370_declb(int a) { cgs370_decpl(a, 1); }
+
+void cgs370_incps(int a, int v) {
+    lgen("%s L     R0,%c%d", "        ", a);
+    ngen("%s A     R0,=F'%d'", "        ", v);
+    lgen("%s ST    R0,%c%d", "        ", a);
+}
+
+void cgs370_decps(int a, int v) {
+    lgen("%s L     R0,%c%d", "        ", a);
+    ngen("%s S     R0,=F'%d'", "        ", v);
+    lgen("%s ST    R0,%c%d", "        ", a);
+}
+
+void cgs370_incsw(int a) { cgs370_incps(a, 1); }
+void cgs370_decsw(int a) { cgs370_decps(a, 1); }
+void cgs370_incsb(int a) { cgs370_incps(a, 1); }
+void cgs370_decsb(int a) { cgs370_decps(a, 1); }
+
+void cgs370_incpg(char *s, int v) {
+    sgen("%s L     R0,%s", "        ", s);
+    ngen("%s A     R0,=F'%d'", "        ", v);
+    sgen("%s ST    R0,%s", "        ", s);
+}
+
+void cgs370_decpg(char *s, int v) {
+    sgen("%s L     R0,%s", "        ", s);
+    ngen("%s S     R0,=F'%d'", "        ", v);
+    sgen("%s ST    R0,%s", "        ", s);
+}
+
+void cgs370_incgw(char *s) { cgs370_incpg(s, 1); }
+void cgs370_decgw(char *s) { cgs370_decpg(s, 1); }
+void cgs370_incgb(char *s) { cgs370_incpg(s, 1); }
+void cgs370_decgb(char *s) { cgs370_decpg(s, 1); }
+
+void cgs370_inc1iw(void) {
+    gen("         L     R0,0(,R2)");
+    gen("         A     R0,=F'1'");
+    gen("         ST    R0,0(,R2)");
+}
+
+void cgs370_dec1iw(void) {
+    gen("         L     R0,0(,R2)");
+    gen("         S     R0,=F'1'");
+    gen("         ST    R0,0(,R2)");
+}
+
+void cgs370_inc2iw(void) { cgs370_inc1iw(); }
+void cgs370_dec2iw(void) { cgs370_dec1iw(); }
+void cgs370_inc1ib(void) { cgs370_inc1iw(); }
+void cgs370_dec1ib(void) { cgs370_dec1iw(); }
+void cgs370_inc2ib(void) { cgs370_inc1iw(); }
+void cgs370_dec2ib(void) { cgs370_dec1iw(); }
+
+/*
+ * ============================================================================
+ * SECTION: Unconditional Branch
+ * ============================================================================
+ */
+
+void cgs370_brtrue(int n) {
+    gen("         LTR   R2,R2");
+    lgen("%s BNZ   %c%d", "        ", n);
+}
+
+void cgs370_brfalse(int n) {
+    gen("         LTR   R2,R2");
+    lgen("%s BZ    %c%d", "        ", n);
+}
+
+void cgs370_jump(int n) {
+    lgen("%s B     %c%d", "        ", n);
+}
+
+/*
+ * ============================================================================
+ * SECTION: Switch Statement Support
+ * ============================================================================
+ */
+
+void cgs370_ldswtch(int n) {
+    lgen("%s LA    R1,%c%d", "        ", n);
+}
+
+void cgs370_calswtch(void) {
+    gen("         BALR  R14,R1");
+}
+
+void cgs370_case(int v, int l) {
+    ngen("%s DC    F'%d'", "        ", v);
+    lgen("%s DC    A(%c%d)", "        ", l);
+}
+
+/*
+ * ============================================================================
+ * SECTION: Store Operations
+ * ============================================================================
+ */
+
+void cgs370_storib(void) {
+    cgs370_pop2();
+    gen("         STC   R2,0(,R3)");
+}
+
+void cgs370_storiw(void) {
+    cgs370_pop2();
+    gen("         ST    R2,0(,R3)");
+}
+
+void cgs370_storlb(int n) {
+    ngen("%s STC   R2,%d(,R13)", "        ", n);
+}
+
+void cgs370_storlw(int n) {
+    ngen("%s ST    R2,%d(,R13)", "        ", n);
+}
+
+void cgs370_storsb(int n) {
+    lgen("%s STC   R2,%c%d", "        ", n);
+}
+
+void cgs370_storsw(int n) {
+    lgen("%s ST    R2,%c%d", "        ", n);
+}
+
+void cgs370_storgb(char *s) {
+    sgen("%s STC   R2,%s", "        ", s);
+}
+
+void cgs370_storgw(char *s) {
+    sgen("%s ST    R2,%s", "        ", s);
+}
+
+/*
+ * ============================================================================
+ * SECTION: Function Call Operations
+ * ============================================================================
+ */
+
+void cgs370_initlw(int v, int a) {
+    ngen("%s L     R0,=F'%d'", "        ", v);
+    ngen("%s ST    R0,%d(,R13)", "        ", a);
+}
+
+void cgs370_call(char *s) {
+    sgen("%s L     R15,=V(%s)", "        ", s);
+    gen("         BALR  R14,R15");
+}
+
+void cgs370_calr(void) {
+    gen("         LR    R15,R2");
+    gen("         BALR  R14,R15");
+}
+
+void cgs370_stack(int n) {
+    ngen("%s A     R11,=F'%d'", "        ", n);
+    Stk -= n;
+}
+
+void cgs370_entry(void) {
+    gen("         STM   R14,R12,12(R13)");
+    gen("         LR    R12,R15");
+    gen("         USING *,R12");
+    gen("         LA    R11,72(,R13)");
+    gen("         ST    R13,4(,R11)");
+    gen("         ST    R11,8(,R13)");
+    gen("         LR    R13,R11");
+    Stk = 72;  /* Start after save area */
+}
+
+void cgs370_exit(void) {
+    gen("         L     R13,4(,R13)");
+    gen("         LM    R14,R12,12(R13)");
+    gen("         BR    R14");
+}
+
+/*
+ * ============================================================================
+ * SECTION: Data Definition
+ * ============================================================================
+ */
+
+void cgs370_defb(int v) {
+    ngen("%s DC    X'%02X'", "        ", v & 0xFF);
+}
+
+void cgs370_defw(int v) {
+    ngen("%s DC    H'%d'", "        ", v);
+}
+
+void cgs370_defp(int v) {
+    ngen("%s DC    A(%d)", "        ", v);
+}
+
+void cgs370_defl(int v) {
+    lgen("%s DC    A(%c%d)", "        ", v);
+}
+
+void cgs370_defc(int c) {
+    ngen("%s DC    C'%c'", "        ", c);
+}
+
+void cgs370_gbss(char *s, int z) {
+    char buf[64];
+    sprintf(buf, "%dC", z);
+    sgen("%-8s DS    %s", s, buf);
+}
+
+void cgs370_lbss(char *s, int z) {
+    char buf[64];
+    sprintf(buf, "%dC", z);
+    sgen("%-8s DS    %s", s, buf);
+}
+
+/*
+ * ============================================================================
+ * SECTION: Synthesizer Support
+ * ============================================================================
+ */
+
+int cgs370_load2(void) {
+    cgs370_pop2();
+    return 1;
+}
