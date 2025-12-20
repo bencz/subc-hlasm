@@ -287,10 +287,20 @@
  * ============================================================================
  */
 #define OS              (CG->os->os_name)
+#define TARGET_OS       (CG->os->target_os)
+#define OBJ_FORMAT      (CG->os->obj_format)
 #define AOUTNAME        (CG->os->aout_name)
 #define LDCMD           (CG->os->ld_cmd)
 #define ASCMD           (CG->os->asm_cmd)
 #define ASMCMD          (CG->os->asm_cmd)
 #define SYSLIBC         (CG->os->sys_libc)
+
+/*
+ * ============================================================================
+ * Calling Convention Access
+ * ============================================================================
+ */
+#define CALL_CONV       (CG->arch->call_conv)
+#define ASM_SYNTAX      (CG->arch->asm_syntax)
 
 #endif /* CGEN_COMPAT_H */
