@@ -34,3 +34,6 @@ test.s
 
 # Archive
 subc-b2022.zip
+
+# Jet Brains IDE
+.idea

@@ -1,0 +1,285 @@
+
+    SUBC CROSS-COMPILER TARGET ARCHITECTURE FRAMEWORK (v2)
+
+
+    OVERVIEW
+
+    This directory contains the cross-compiler target architecture
+    framework for SubC. The framework uses a composable design with
+    three separate components:
+
+    1. struct cg_vtable   - Code generation function pointers
+    2. struct cg_arch     - Architecture properties (CPU-specific)
+    3. struct cg_os_config - Operating system configuration
+
+    These components are combined into struct cg_target, allowing
+    maximum code reuse between targets.
+
+
+    KEY BENEFITS
+
+    - Single binary supports multiple targets
+    - Cross-compilation without recompiling the compiler
+    - Minimal code duplication between OS variants
+    - Easy addition of new architectures or OS combinations
+    - Clean separation of concerns
+    - Pure C89 code, no macros or preprocessor tricks
+
+
+    DIRECTORY STRUCTURE
+
+    targets/arch/
+    ├── README                  This file
+    ├── cgtarget.h              Target structures (cg_target, cg_arch, etc.)
+    ├── cgtarget.c              Target registration and selection
+    ├── cgen_compat.h           Backward-compatible macros
+    ├── cg_os_configs.h         OS configuration declarations
+    ├── cg_os_configs.c         OS configuration definitions
+    │
+    ├── x86/                    Intel x86 family
+    │   ├── i386/               32-bit x86
+    │   │   ├── cg_386.c            Code generation functions
+    │   │   ├── cg_386.h            Function prototypes
+    │   │   ├── cg_386_arch.h       Arch/vtable declarations
+    │   │   ├── cg_386_arch.c       Arch/vtable definitions
+    │   │   ├── cg_386_linux.c      Linux target (10 lines!)
+    │   │   ├── cg_386_freebsd.c    FreeBSD target
+    │   │   ├── cg_386_netbsd.c     NetBSD target
+    │   │   ├── cg_386_openbsd.c    OpenBSD target
+    │   │   └── cg_386_windows.c    Windows target
+    │   │
+    │   ├── x86_64/             64-bit x86-64 / AMD64
+    │   │   ├── cg_x86_64.c         Code generation functions
+    │   │   ├── cg_x86_64_funcs.h   Function prototypes
+    │   │   ├── cg_x86_64_arch.h    Arch/vtable declarations
+    │   │   ├── cg_x86_64_arch.c    Arch/vtable definitions
+    │   │   ├── cg_x86_64_linux.c   Linux target
+    │   │   ├── cg_x86_64_freebsd.c FreeBSD target
+    │   │   ├── cg_x86_64_netbsd.c  NetBSD target
+    │   │   └── cg_x86_64_darwin.c  Darwin/macOS target
+    │   │
+    │   └── i8086/              16-bit 8086 (DOS)
+    │       ├── cg_8086.c           Code generation functions
+    │       ├── cg_8086_funcs.h     Function prototypes
+    │       ├── cg_8086_arch.h      Arch/vtable declarations
+    │       ├── cg_8086_arch.c      Arch/vtable definitions
+    │       └── cg_8086_dos.c       DOS target
+    │
+    └── arm/                    ARM family
+        └── armv6/              ARMv6 (Raspberry Pi)
+            └── ...
+
+
+    COMPOSABLE ARCHITECTURE
+
+    The key insight is separating three concerns:
+
+    ┌─────────────────────────────────────────────────────────────┐
+    │  struct cg_vtable                                           │
+    │  ~90 function pointers for code generation                  │
+    │  Shared by ALL targets of same CPU architecture             │
+    │  Example: cg_386_vtable used by Linux, FreeBSD, Windows     │
+    └─────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+    ┌─────────────────────────────────────────────────────────────┐
+    │  struct cg_arch                                             │
+    │  CPU properties: bits, endian, registers, directives        │
+    │  Shared by ALL targets of same CPU architecture             │
+    │  Example: cg_386_arch used by Linux, FreeBSD, Windows       │
+    └─────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+    ┌─────────────────────────────────────────────────────────────┐
+    │  struct cg_os_config                                        │
+    │  OS properties: asm_cmd, ld_cmd, obj_format                 │
+    │  Shared by ALL targets on same OS                           │
+    │  Example: cg_os_linux_elf32 used by 386-linux               │
+    └─────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+    ┌─────────────────────────────────────────────────────────────┐
+    │  struct cg_target                                           │
+    │  Final target: combines arch + os + vtable via pointers     │
+    │  Very small: just name, description, and 3 pointers         │
+    └─────────────────────────────────────────────────────────────┘
+
+
+    BEFORE vs AFTER
+
+    BEFORE (cg_386_linux.c): ~300 lines
+        struct cg_target target_386_linux = {
+            "386-linux",
+            "Intel 386 (Linux)",
+            32, 1, 2, 4, 4, 4, 4,           /* sizes */
+            ENDIAN_LITTLE, STACK_DOWN, ...   /* arch props */
+            OS_LINUX, OBJ_ELF, 0, ...        /* os props */
+            "%eax", "%ecx", ...              /* registers */
+            ".text", ".data", ...            /* directives */
+            cg386_data, cg386_text, ...      /* ~90 function ptrs */
+        };
+
+    AFTER (cg_386_linux.c): ~20 lines
+        struct cg_target target_386_linux = {
+            "386-linux",
+            "Intel 386 (Linux)",
+            &cg_386_arch,           /* shared arch properties */
+            &cg_os_linux_elf32,     /* shared OS config */
+            &cg_386_vtable,         /* shared vtable */
+            NULL, NULL, NULL        /* overrides */
+        };
+
+
+    ADDING A NEW TARGET
+
+    For a new OS on existing architecture (e.g., 386-myos):
+
+    1. Add OS config to cg_os_configs.c (or reuse existing):
+           struct cg_os_config cg_os_myos = { ... };
+
+    2. Create target file (cg_386_myos.c):
+           #include "cg_386_arch.h"
+           #include "cg_os_configs.h"
+           struct cg_target target_386_myos = {
+               "386-myos", "Intel 386 (MyOS)",
+               &cg_386_arch, &cg_os_myos, &cg_386_vtable,
+               NULL, NULL, NULL
+           };
+
+    3. Register in cgtarget.c:
+           extern struct cg_target target_386_myos;
+           register_target(&target_386_myos);
+
+    For a new architecture (e.g., RISC-V):
+
+    1. Create code generator: cg_riscv.c
+       - Implement all ~90 code generation functions
+
+    2. Create function header: cg_riscv_funcs.h
+       - Declare all function prototypes
+
+    3. Create arch definition: cg_riscv_arch.c
+       - Define cg_riscv_arch with CPU properties
+       - Define cg_riscv_vtable pointing to functions
+
+    4. Create arch header: cg_riscv_arch.h
+       - Declare extern cg_riscv_arch and cg_riscv_vtable
+
+    5. Create OS targets: cg_riscv_linux.c, etc.
+       - Each is just ~20 lines combining arch + os + vtable
+
+    6. Register all targets in cgtarget.c
+
+
+    TARGET STRUCTURE DETAILS
+
+    struct cg_vtable:
+        ~90 function pointers for all code generation operations.
+        Grouped by category: section control, loads, stores,
+        arithmetic, comparisons, branches, etc.
+
+    struct cg_arch:
+        bits            Architecture bit width (16, 32, 64)
+        char_size       sizeof(char)
+        int_size        sizeof(int)
+        ptr_size        sizeof(void*)
+        bpw             Bytes Per Word
+        endian          ENDIAN_LITTLE or ENDIAN_BIG
+        stack_dir       STACK_DOWN or STACK_UP
+        asm_syntax      ASM_GAS, ASM_TASM, ASM_HLASM
+        call_conv       CC_CDECL, CC_SYSV_AMD64, etc.
+        reg_accum       Primary accumulator name
+        reg_aux         Auxiliary register name
+        dir_text        Text section directive
+        dir_data        Data section directive
+        ...
+
+    struct cg_os_config:
+        target_os       OS_LINUX, OS_FREEBSD, OS_DOS, etc.
+        obj_format      OBJ_ELF, OBJ_MACHO, OBJ_PE, OBJ_OMF
+        underscore_sym  1 if symbols need underscore prefix
+        os_name         Display name
+        asm_cmd         Assembler command template
+        ld_cmd          Linker command template
+        sys_libc        System C library flags
+        aout_name       Default output filename
+
+    struct cg_target:
+        name            Short name for --target flag
+        description     Human-readable description
+        arch            Pointer to cg_arch (shared)
+        os              Pointer to cg_os_config (shared)
+        vtable          Pointer to cg_vtable (shared)
+        asm_cmd_override Override OS asm_cmd if needed
+        ld_cmd_override  Override OS ld_cmd if needed
+        ext_data        Extension data for special needs
+
+
+    USAGE
+
+    Command line:
+        scc --target=386-linux program.c
+        scc --target=x86-64-freebsd program.c
+        scc --list-targets
+
+    In code:
+        #include "cgtarget.h"
+
+        cg_init_targets();
+        if (!cg_set_target("386-linux")) {
+            fprintf(stderr, "Unknown target\n");
+            exit(1);
+        }
+        /* Now CG points to target_386_linux */
+        /* Access properties via CG->arch->bits, CG->os->os_name */
+        /* Call functions via CG->vtable->cgadd() */
+
+
+    COMPATIBILITY
+
+    The cgen_compat.h provides macros for existing code:
+
+        /* Old code works unchanged: */
+        cgadd();
+        cgpush();
+
+        /* Expands to: */
+        CG->vtable->cgadd();
+        CG->vtable->cgpush();
+
+        /* Architecture properties: */
+        #define BPW (CG->arch->bpw)
+
+
+    C89 COMPLIANCE
+
+    This framework is pure C89:
+    - No designated initializers
+    - No inline functions
+    - No C99/C11 features
+    - Standard structs with function pointers
+    - Composition via pointers (not inheritance)
+
+
+    FILES SUMMARY
+
+    cgtarget.h          Main header with all struct definitions
+    cgtarget.c          Target registry and selection
+    cgen_compat.h       Backward-compatible macros
+    cg_os_configs.h     OS config declarations
+    cg_os_configs.c     OS config definitions
+
+    Per architecture:
+    cg_<arch>.c         Code generation functions
+    cg_<arch>_funcs.h   Function prototypes
+    cg_<arch>_arch.h    Arch/vtable declarations
+    cg_<arch>_arch.c    Arch/vtable definitions
+    cg_<arch>_<os>.c    Target descriptors (very small)
+
+
+    AUTHOR
+
+    Original SubC compiler by Nils M Holm, 2011-2021.
+    Cross-compiler framework extension, 2025.
+    Public Domain (CC0).
+
