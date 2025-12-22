@@ -210,11 +210,16 @@
         asm_syntax      ASM_GAS, ASM_TASM, ASM_HLASM, ASM_ARM
         call_conv       CC_CDECL, CC_SYSV_AMD64, CC_HLASM, etc.
         float_format    FLOAT_IEEE754, FLOAT_IBM_HEX, etc.
-        reg_accum       Primary accumulator name
-        reg_aux         Auxiliary register name
-        dir_text        Text section directive
-        dir_data        Data section directive
-        ...
+        
+        /* Stack Frame Layout (new in v2.1) */
+        param_offset_base   Initial offset for first parameter
+        param_offset_dir    0 = follows stack_dir, 1 = always positive
+        local_offset_base   Initial offset for local variables
+        stack_slot_size     Size of each stack slot (0 = use BPW)
+                            ARM64 uses 16 for 16-byte stack alignment
+        
+        /* Symbol Transformation (new in v2.1) */
+        symbol_transform    Callback to transform symbol names (or NULL)
 
     struct cg_os_config:
         target_os       OS_LINUX, OS_FREEBSD, OS_DOS, OS_MVS, etc.
@@ -237,6 +242,38 @@
         ext_data        Extension data for special needs
 
 
+    ARM64/AARCH64 TARGETS
+
+    The ARM64 target generates GNU Assembler code for 64-bit ARM
+    processors. Key characteristics:
+
+    - 64-bit registers and pointers
+    - Little-endian byte order
+    - Stack grows downward (STACK_DOWN)
+    - 16-byte stack alignment required
+    - IEEE 754 floating point
+    - GAS assembly syntax
+
+    Two OS targets are supported:
+
+    arm64-linux   - ARM64 Linux (ELF)
+    arm64-darwin  - ARM64 Darwin/macOS (Mach-O)
+
+    The architecture definition includes ARM64-specific settings:
+    - stack_slot_size = 16 (16-byte stack alignment)
+    - All stack operations aligned to 16 bytes
+    - Uses x0 as accumulator, x1 as auxiliary register
+    - Frame pointer in x29, link register in x30
+
+    Register usage:
+    - x0       Primary accumulator, return value
+    - x1       Auxiliary register for binary operations
+    - x2, x3   Scratch registers
+    - x29      Frame pointer
+    - x30      Link register (return address)
+    - sp       Stack pointer (must be 16-byte aligned)
+
+
     IBM SYSTEM/370 TARGETS
 
     The S/370 target generates HLASM (High Level Assembler) code for
@@ -254,8 +291,13 @@
     s370     - Original System/370 with 24-bit addressing
     s370-xa  - System/370-XA with 31-bit addressing
 
-    The code generator detects TARGET_OS == OS_MVS and generates
-    MVS-compatible code with:
+    The architecture definition includes MVS-specific settings:
+    - param_offset_base = 0 (params via R11)
+    - param_offset_dir = 1 (always positive offsets)
+    - local_offset_base = 88 (after save area)
+    - symbol_transform = s370_symbol_transform (uppercase, 8-char limit)
+
+    The code generator produces MVS-compatible output with:
     - COPY PDPTOP header
     - CSECT directive
     - LTORG for literal pools

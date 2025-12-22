@@ -45,7 +45,16 @@ struct cg_arch cg_8086_arch = {
     1,                              /* has_byte_ops */
     0,                              /* needs_alignment */
     0,                              /* needs_pic */
-    1                               /* has_frame_ptr */
+    1,                              /* has_frame_ptr */
+    
+    /* Stack frame layout */
+    0,                              /* param_offset_base - calculated as 2*BPW */
+    0,                              /* param_offset_dir - follows stack_dir */
+    0,                              /* local_offset_base */
+    0,                              /* stack_slot_size - use BPW */
+    
+    /* Symbol transformation */
+    NULL                            /* symbol_transform - use default */
 };
 
 /*

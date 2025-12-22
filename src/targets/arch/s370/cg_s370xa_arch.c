@@ -14,6 +14,9 @@
 
 #include "cgtarget.h"
 
+/* Import symbol transform from cg_s370_arch.c */
+extern char *s370_symbol_transform(char *s);
+
 /*
  * ============================================================================
  * Architecture Properties for S/370-XA (31-bit)
@@ -52,5 +55,14 @@ struct cg_arch cg_s370xa_arch = {
     1,                              /* has_byte_ops - IC/STC */
     1,                              /* needs_alignment - yes, for fullwords */
     0,                              /* needs_pic - no */
-    1                               /* has_frame_ptr - R13 save area */
+    1,                              /* has_frame_ptr - R13 save area */
+    
+    /* Stack frame layout for MVS */
+    0,                              /* param_offset_base - params via R11 at offset 0 */
+    1,                              /* param_offset_dir - always positive offsets */
+    88,                             /* local_offset_base - after 72-byte save area + 16 reserved */
+    0,                              /* stack_slot_size - use BPW */
+    
+    /* Symbol transformation */
+    s370_symbol_transform           /* Convert to uppercase, 8-char limit */
 };

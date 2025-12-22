@@ -99,55 +99,21 @@ char *labname(int id) {
 	return name;
 }
 
-/* Simple hash function for generating unique short names */
-static unsigned int gsym_hash(char *s) {
-	unsigned int h = 0;
-	while (*s) {
-		h = h * 31 + (unsigned char)*s++;
-	}
-	return h;
-}
-
+/*
+ * gsym - Generate global symbol name
+ *
+ * If the target architecture provides a symbol_transform callback,
+ * use it. Otherwise, use the default PREFIX + name transformation.
+ */
 char *gsym(char *s) {
 	static char	name[NAMELEN+2];
-	char	*p;
-	int	i, len;
-	unsigned int hash;
 
-	if (TARGET_OS == OS_MVS) {
-		/* MVS: convert to uppercase, remove C prefix */
-		p = s;
-		if (*p == 'C' && p[1] >= 'a' && p[1] <= 'z') {
-			p++;  /* Skip C prefix */
-		}
-		
-		/* Calculate length */
-		for (len = 0; p[len]; len++);
-		
-		if (len <= 8) {
-			/* Short enough, just convert to uppercase */
-			for (i = 0; p[i] && i < 8; i++) {
-				if (p[i] >= 'a' && p[i] <= 'z') {
-					name[i] = p[i] - 'a' + 'A';
-				} else {
-					name[i] = p[i];
-				}
-			}
-			name[i] = '\0';
-		} else {
-			/* Too long: use first 4 chars + 4-digit hash */
-			hash = gsym_hash(p) % 10000;
-			for (i = 0; i < 4 && p[i]; i++) {
-				if (p[i] >= 'a' && p[i] <= 'z') {
-					name[i] = p[i] - 'a' + 'A';
-				} else {
-					name[i] = p[i];
-				}
-			}
-			sprintf(&name[4], "%04u", hash);
-		}
-		return name;
+	/* Check if architecture provides custom symbol transformation */
+	if (CG_SYMBOL_TRANSFORM != NULL) {
+		return CG_SYMBOL_TRANSFORM(s);
 	}
+	
+	/* Default transformation: PREFIX + name */
 	name[0] = PREFIX;
 	copyname(&name[1], s);
 	return name;

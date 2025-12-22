@@ -117,7 +117,8 @@ enum cg_os {
     OS_OPENBSD,
     OS_DARWIN,
     OS_WINDOWS,
-    OS_DOS
+    OS_DOS,
+    OS_MVS
 };
 
 /*
@@ -350,6 +351,38 @@ struct cg_arch {
     int  needs_alignment;
     int  needs_pic;
     int  has_frame_ptr;
+    
+    /*
+     * Stack Frame Layout Configuration
+     * These fields allow different architectures to specify how parameters
+     * and local variables are laid out relative to the frame pointer.
+     *
+     * For most architectures (x86, ARM, x86-64):
+     *   - param_offset_base = 2*BPW (return addr + saved FP)
+     *   - param_offset_dir = same as stack_dir
+     *   - local_offset_base = 0
+     *   - stack_slot_size = 0 (use BPW)
+     *
+     * For ARM64 (16-byte stack alignment required):
+     *   - stack_slot_size = 16 (each push uses 16 bytes)
+     *
+     * For MVS/HLASM (S/370):
+     *   - param_offset_base = 0 (params via R11 at offsets 0, 4, 8...)
+     *   - param_offset_dir = 1 (always positive)
+     *   - local_offset_base = 88 (after 72-byte save area + 16 reserved)
+     */
+    int  param_offset_base;   /* Initial offset for first parameter */
+    int  param_offset_dir;    /* 0 = follows stack_dir, 1 = always positive */
+    int  local_offset_base;   /* Initial offset for local variables */
+    int  stack_slot_size;     /* Size of each stack slot (0 = use BPW) */
+    
+    /*
+     * Symbol Transformation Callback
+     * If non-NULL, this function is called to transform symbol names.
+     * Used by MVS/HLASM to convert to uppercase and handle 8-char limit.
+     * If NULL, the default PREFIX + name transformation is used.
+     */
+    char *(*symbol_transform)(char *name);
 };
 
 /*
@@ -412,6 +445,12 @@ extern struct cg_target *CG;
 #define CG_ENDIAN       (CG->arch->endian)
 #define CG_STACK_DIR    (CG->arch->stack_dir)
 #define CG_ASM_SYNTAX   (CG->arch->asm_syntax)
+
+/* Frame layout properties */
+#define CG_PARAM_OFFSET_BASE  (CG->arch->param_offset_base)
+#define CG_PARAM_OFFSET_DIR   (CG->arch->param_offset_dir)
+#define CG_LOCAL_OFFSET_BASE  (CG->arch->local_offset_base)
+#define CG_SYMBOL_TRANSFORM   (CG->arch->symbol_transform)
 
 /* OS properties */
 #define CG_OS           (CG->os->target_os)

@@ -55,7 +55,16 @@ struct cg_arch cg_arm64_arch = {
     1,                              /* has_byte_ops - LDRB/STRB */
     1,                              /* needs_alignment - yes */
     1,                              /* needs_pic - position independent code */
-    1                               /* has_frame_ptr - x29 */
+    1,                              /* has_frame_ptr - x29 */
+    
+    /* Stack frame layout */
+    0,                              /* param_offset_base - calculated as 2*BPW */
+    0,                              /* param_offset_dir - follows stack_dir */
+    0,                              /* local_offset_base */
+    16,                             /* stack_slot_size - 16-byte alignment required */
+    
+    /* Symbol transformation */
+    NULL                            /* symbol_transform - use default */
 };
 
 /*

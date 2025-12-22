@@ -280,6 +280,14 @@
 #define BPW             (CG->arch->bpw)
 #define INTSIZE         (CG->arch->int_size)
 #define PTRSIZE         (CG->arch->ptr_size)
+#define STACK_DIR       (CG->arch->stack_dir)
+
+/* Frame layout properties */
+#define CG_PARAM_OFFSET_BASE  (CG->arch->param_offset_base)
+#define CG_PARAM_OFFSET_DIR   (CG->arch->param_offset_dir)
+#define CG_LOCAL_OFFSET_BASE  (CG->arch->local_offset_base)
+#define CG_STACK_SLOT_SIZE    (CG->arch->stack_slot_size ? CG->arch->stack_slot_size : BPW)
+#define CG_SYMBOL_TRANSFORM   (CG->arch->symbol_transform)
 
 /*
  * ============================================================================
@@ -287,6 +295,7 @@
  * ============================================================================
  */
 #define OS              (CG->os->os_name)
+#define TARGET_OS       (CG->os->target_os)
 #define AOUTNAME        (CG->os->aout_name)
 #define LDCMD           (CG->os->ld_cmd)
 #define ASCMD           (CG->os->asm_cmd)

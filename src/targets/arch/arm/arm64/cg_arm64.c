@@ -340,6 +340,7 @@ void cga64_ldlab(int id) {
  */
 
 void cga64_push(void) {
+    /* ARM64 requires 16-byte stack alignment */
     gen("str\tx0, [sp, #-16]!");
 }
 
@@ -373,7 +374,9 @@ void cga64_add(void) {
 }
 
 void cga64_sub(void) {
-    gen("sub\tx0, x1, x0");
+    /* After swap: x0=first, x1=second, want first-second */
+    /* sub x0, x0, x1 = x0 - x1 = first - second */
+    gen("sub\tx0, x0, x1");
 }
 
 void cga64_mul(void) {
@@ -381,12 +384,16 @@ void cga64_mul(void) {
 }
 
 void cga64_div(void) {
-    gen("sdiv\tx0, x1, x0");
+    /* After swap: x0=first (dividend), x1=second (divisor) */
+    /* sdiv x0, x0, x1 = x0 / x1 = first / second */
+    gen("sdiv\tx0, x0, x1");
 }
 
 void cga64_mod(void) {
-    gen("sdiv\tx3, x1, x0");
-    gen("msub\tx0, x3, x0, x1");
+    /* After swap: x0=first (dividend), x1=second (divisor) */
+    /* ARM64 doesn't have mod instruction, use: a % b = a - (a/b)*b */
+    gen("sdiv\tx2, x0, x1");    /* x2 = x0 / x1 = first / second */
+    gen("msub\tx0, x2, x1, x0"); /* x0 = x0 - x2*x1 = first - (first/second)*second */
 }
 
 void cga64_neg(void) {
@@ -878,8 +885,9 @@ void cga64_calr(void) {
 }
 
 void cga64_stack(int n) {
-    /* Adjust stack pointer */
+    /* Adjust stack pointer - must maintain 16-byte alignment */
     if (n > 0) {
+        n = (n + 15) & ~15;  /* Align to 16 bytes */
         if (n <= 4095) {
             ngen("%s\tsp, sp, #%d", "add", n);
         } else {
@@ -887,7 +895,7 @@ void cga64_stack(int n) {
             gen("add\tsp, sp, x1");
         }
     } else if (n < 0) {
-        n = -n;
+        n = ((-n) + 15) & ~15;  /* Align to 16 bytes */
         if (n <= 4095) {
             ngen("%s\tsp, sp, #%d", "sub", n);
         } else {
@@ -898,13 +906,15 @@ void cga64_stack(int n) {
 }
 
 void cga64_entry(int lsize) {
-    (void)lsize;
+    (void)lsize;  /* Stack allocation handled by genstack() */
     /* Save frame pointer and link register */
     gen("stp\tx29, x30, [sp, #-16]!");
     gen("mov\tx29, sp");
 }
 
 void cga64_exit(void) {
+    /* Restore stack pointer to frame pointer (deallocates locals) */
+    gen("mov\tsp, x29");
     /* Restore frame pointer and link register, return */
     gen("ldp\tx29, x30, [sp], #16");
     gen("ret");

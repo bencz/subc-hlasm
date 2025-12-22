@@ -17,6 +17,65 @@
 
 #include "cgtarget.h"
 #include "cg_s370_funcs.h"
+#include <stdio.h>
+
+/*
+ * MVS Symbol Transformation
+ * 
+ * HLASM has strict symbol naming rules:
+ * - Maximum 8 characters
+ * - Must be uppercase
+ * - First character must be A-Z, @, #, or $
+ * 
+ * This function transforms C symbol names to valid HLASM names.
+ */
+static unsigned int s370_sym_hash(char *s) {
+    unsigned int h = 0;
+    while (*s) {
+        h = h * 31 + (unsigned char)*s++;
+    }
+    return h;
+}
+
+char *s370_symbol_transform(char *s) {
+    static char name[12];  /* 8 chars + null + margin */
+    char *p;
+    int i, len;
+    unsigned int hash;
+    
+    /* Skip 'C' prefix if present (e.g., Cmain -> main) */
+    p = s;
+    if (*p == 'C' && p[1] >= 'a' && p[1] <= 'z') {
+        p++;
+    }
+    
+    /* Calculate length */
+    for (len = 0; p[len]; len++);
+    
+    if (len <= 8) {
+        /* Short enough, just convert to uppercase */
+        for (i = 0; p[i] && i < 8; i++) {
+            if (p[i] >= 'a' && p[i] <= 'z') {
+                name[i] = p[i] - 'a' + 'A';
+            } else {
+                name[i] = p[i];
+            }
+        }
+        name[i] = '\0';
+    } else {
+        /* Too long: use first 4 chars + 4-digit hash */
+        hash = s370_sym_hash(p) % 10000;
+        for (i = 0; i < 4 && p[i]; i++) {
+            if (p[i] >= 'a' && p[i] <= 'z') {
+                name[i] = p[i] - 'a' + 'A';
+            } else {
+                name[i] = p[i];
+            }
+        }
+        sprintf(&name[4], "%04u", hash);
+    }
+    return name;
+}
 
 /*
  * ============================================================================
@@ -58,7 +117,16 @@ struct cg_arch cg_s370_arch = {
     1,                              /* has_byte_ops - IC/STC */
     1,                              /* needs_alignment - yes, for fullwords */
     0,                              /* needs_pic - no */
-    1                               /* has_frame_ptr - R13 save area */
+    1,                              /* has_frame_ptr - R13 save area */
+    
+    /* Stack frame layout for MVS */
+    0,                              /* param_offset_base - params via R11 at offset 0 */
+    1,                              /* param_offset_dir - always positive offsets */
+    88,                             /* local_offset_base - after 72-byte save area + 16 reserved */
+    0,                              /* stack_slot_size - use BPW */
+    
+    /* Symbol transformation */
+    s370_symbol_transform           /* Convert to uppercase, 8-char limit */
 };
 
 /*

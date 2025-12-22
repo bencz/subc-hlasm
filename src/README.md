@@ -55,8 +55,8 @@ src/
 │
 ├── targets/                    # Cross-compiler target architecture
 │   ├── arch/                   # Architecture-specific code generators
-│   │   ├── cgtarget.h/c        # Target framework
-│   │   ├── cgen_compat.h       # Backward compatibility macros
+│   │   ├── cgtarget.h/c        # Target framework (canonical location)
+│   │   ├── cgen_compat.h       # Backward compatibility macros (canonical)
 │   │   ├── cg_os_configs.h/c   # OS configurations
 │   │   ├── x86/
 │   │   │   ├── i386/           # Intel 386 targets

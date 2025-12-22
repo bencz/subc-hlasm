@@ -329,7 +329,7 @@ static void emittree1(node *a) {
 			commit();
 			spill();
 			gencall(a->args[0]);
-			genstack((a->args[1]) * BPW);
+			genstack((a->args[1]) * CG_STACK_SLOT_SIZE);
 			break;
 	case OP_CALR:	emitargs(a->left);
 			commit();
@@ -339,7 +339,7 @@ static void emittree1(node *a) {
 			lv[LVSYM] = a->args[0];
 			genrval(lv);
 			gencalr();
-			genstack((a->args[1]) * BPW);
+			genstack((a->args[1]) * CG_STACK_SLOT_SIZE);
 			break;
 	case OP_ASSIGN: if (OP_IDENT == a->left->op) {
 				emittree1(a->right);

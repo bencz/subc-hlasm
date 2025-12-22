@@ -14,7 +14,7 @@
 #include <string.h>
 #include <ctype.h>
 
-/* Target architecture framework */
+/* Target architecture framework (canonical files in targets/arch/) */
 #include "cgtarget.h"
 #include "cgen_compat.h"
 
@@ -23,7 +23,7 @@
 #include "tokens.h"
 #include "ops.h"
 
-#define VERSION		"2025-12-20"
+#define VERSION		"2025-12-22"
 
 #ifndef SCCDIR
  #define SCCDIR		"."

@@ -1,3 +1,10 @@
+2025-12-22 Fixed ARM64 stack alignment (16-byte requirement) in cga64_stack().
+2025-12-22 Fixed ARM64 arithmetic operand order (sub, div, mod) after swap.
+2025-12-22 Added stack_slot_size field to cg_arch for stack alignment requirements.
+2025-12-22 Refactored OS-specific code out of gen.c and decl.c into cg_arch.
+2025-12-22 Added frame layout fields (param_offset_base, local_offset_base) to cg_arch.
+2025-12-22 Added symbol_transform callback to cg_arch for custom symbol naming.
+2025-12-22 Removed duplicate cgtarget.h/cgen_compat.h files from include/.
 2025-12-22 Added ARM64/AArch64 target support for Linux and Darwin/macOS.
 2025-12-22 Added cross-compiler target architecture framework (v2).
 2025-12-22 Added IBM System/370 and S/370-XA targets for MVS (HLASM output).

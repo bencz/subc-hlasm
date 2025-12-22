@@ -160,11 +160,12 @@ static int pmtrdecls(void) {
 	na = 0;
 	/* Parameters are above frame pointer for STACK_DOWN,
 	 * below frame pointer for STACK_UP.
-	 * For MVS, parameters are accessed via R11 (parameter list pointer)
-	 * with positive offsets starting at 0. */
-	if (TARGET_OS == OS_MVS) {
-		addr = 0;  /* MVS: params via R11 at offsets 0, 4, 8, ... */
+	 * The architecture can override this with param_offset_base. */
+	if (CG_PARAM_OFFSET_BASE != 0 || CG_PARAM_OFFSET_DIR != 0) {
+		/* Architecture specifies custom parameter layout */
+		addr = CG_PARAM_OFFSET_BASE;
 	} else {
+		/* Default: 2*BPW offset based on stack direction */
 		addr = (STACK_DIR == STACK_DOWN) ? 2*BPW : -2*BPW;
 	}
 	for (;;) {
@@ -207,11 +208,12 @@ static int pmtrdecls(void) {
 		}
 		addloc(name, prim, type, CAUTO, size, addr, 0);
 		/* Move to next parameter slot based on stack direction.
-		 * For MVS, parameters are always at positive offsets. */
-		if (TARGET_OS == OS_MVS) {
-			addr += BPW;  /* MVS: always positive offsets */
+		 * Architecture can specify always-positive offsets.
+		 * Use CG_STACK_SLOT_SIZE for architectures with alignment requirements. */
+		if (CG_PARAM_OFFSET_DIR != 0) {
+			addr += CG_STACK_SLOT_SIZE;  /* Always positive offsets */
 		} else {
-			addr += (STACK_DIR == STACK_DOWN) ? BPW : -BPW;
+			addr += (STACK_DIR == STACK_DOWN) ? CG_STACK_SLOT_SIZE : -CG_STACK_SLOT_SIZE;
 		}
 		na++;
 		if (COMMA == Token)
@@ -413,11 +415,10 @@ static int localdecls(void) {
 	Nli = 0;
 	utype = 0;
 	
-	/* For MVS, local variables start after save area (72 bytes) + 
-	 * reserved area (16 bytes) = offset 88 */
-	if (TARGET_OS == OS_MVS) {
-		addr = 88;
-	}
+	/* Local variables start at architecture-specified offset.
+	 * For most architectures this is 0, but MVS needs 88 bytes
+	 * for save area + reserved area. */
+	addr = CG_LOCAL_OFFSET_BASE;
 	while ( AUTO == Token || EXTERN == Token || REGISTER == Token ||
 		STATIC == Token || VOLATILE == Token ||
 		INT == Token || CHAR == Token || VOID == Token ||

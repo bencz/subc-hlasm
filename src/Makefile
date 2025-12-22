@@ -110,7 +110,7 @@ ALLSRC=	$(SRC) $(TGTSRC)
 
 HDRS=	include/data.h include/decl.h include/defs.h \
 	include/prec.h include/types.h include/tokens.h include/ops.h \
-	include/cgtarget.h include/cgen_compat.h
+	targets/arch/cgtarget.h targets/arch/cgen_compat.h
 
 # Runtime library directory (outside src/)
 RUNTIME=	../runtime
