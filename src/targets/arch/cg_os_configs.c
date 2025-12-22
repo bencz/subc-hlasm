@@ -22,6 +22,7 @@ struct cg_os_config cg_os_linux_elf32 = {
     "Linux",
     "as --32 -o %s %s",
     "ld -m elf_i386 -o %s %s/lib/%scrt0.o",
+    "gcc -m32 -o %s",               /* ld_cmd_sysrt: use gcc as driver */
     "",
     "a.out"
 };
@@ -33,6 +34,7 @@ struct cg_os_config cg_os_linux_elf64 = {
     "Linux",
     "as -o %s %s",
     "ld -o %s %s/lib/%scrt0.o",
+    "gcc -o %s",                    /* ld_cmd_sysrt */
     "",
     "a.out"
 };
@@ -50,6 +52,7 @@ struct cg_os_config cg_os_freebsd_elf32 = {
     "FreeBSD",
     "as --32 -o %s %s",
     "ld -m elf_i386_fbsd -o %s %s/lib/%scrt0.o",
+    "cc -m32 -o %s",                /* ld_cmd_sysrt */
     "",
     "a.out"
 };
@@ -61,6 +64,7 @@ struct cg_os_config cg_os_freebsd_elf64 = {
     "FreeBSD",
     "as -o %s %s",
     "ld -o %s %s/lib/%scrt0.o",
+    "cc -o %s",                     /* ld_cmd_sysrt */
     "",
     "a.out"
 };
@@ -72,6 +76,7 @@ struct cg_os_config cg_os_netbsd_elf32 = {
     "NetBSD",
     "as --32 -o %s %s",
     "ld -m elf_i386 -o %s %s/lib/%scrt0.o",
+    "cc -m32 -o %s",                /* ld_cmd_sysrt */
     "",
     "a.out"
 };
@@ -83,6 +88,7 @@ struct cg_os_config cg_os_netbsd_elf64 = {
     "NetBSD",
     "as -o %s %s",
     "ld -o %s %s/lib/%scrt0.o",
+    "cc -o %s",                     /* ld_cmd_sysrt */
     "",
     "a.out"
 };
@@ -94,6 +100,7 @@ struct cg_os_config cg_os_openbsd_elf32 = {
     "OpenBSD",
     "as --32 -o %s %s",
     "ld -m elf_i386 -o %s %s/lib/%scrt0.o",
+    "cc -m32 -o %s",                /* ld_cmd_sysrt */
     "-lc",
     "a.out"
 };
@@ -111,6 +118,7 @@ struct cg_os_config cg_os_darwin_macho64 = {
     "Darwin",
     "as -o %s %s",
     "ld -o %s %s/lib/%scrt0.o -lSystem",
+    "clang -o %s",                  /* ld_cmd_sysrt */
     "-lSystem",
     "a.out"
 };
@@ -128,6 +136,7 @@ struct cg_os_config cg_os_windows_pe32 = {
     "Windows",
     "as -o %s %s",
     "ld -o %s %s/lib/%scrt0.o",
+    "gcc -o %s",                    /* ld_cmd_sysrt */
     "-lkernel32 -lmsvcrt",
     "a.exe"
 };
@@ -145,6 +154,7 @@ struct cg_os_config cg_os_dos_omf16 = {
     "DOS",
     "s86 -o %s %s",
     "sld -o %s %s/lib/%scrt0.o",
+    NULL,                           /* ld_cmd_sysrt: not supported on DOS */
     "",
     "aout.exe"
 };

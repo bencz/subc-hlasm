@@ -323,6 +323,37 @@
 		rm scc && scc -o scc *.c
 
 
+	SYSTEM RUNTIME MODE (-R FLAG)
+
+	The -R flag allows linking against the system's C library (libc)
+	instead of the SubC runtime library. This is useful for:
+
+	- Testing on platforms without a SubC crt0/libscc
+	- Calling system library functions directly
+	- Interoperability with system tools
+
+	Usage:
+		scc -R -T arm64-darwin -o program program.c
+
+	When -R is active:
+	- No 'C' prefix is added to symbol names
+	- clang/gcc is used as the linker driver
+	- System crt0 and libc are used automatically
+
+	Limitations:
+	- Variadic functions (printf, scanf, etc.) may not work correctly
+	  on ARM64 due to AAPCS64 calling convention differences
+	- Non-variadic functions (write, read, open, etc.) work correctly
+	- Currently only ARM64 has full register calling convention support
+
+	Example (ARM64 Darwin):
+		int write(int fd, char *buf, int len);
+		int main(void) {
+		    write(1, "Hello!\n", 7);
+		    return 0;
+		}
+
+
 	DOS SUPPORT
 
 	Please see the NOTES-DOS file!

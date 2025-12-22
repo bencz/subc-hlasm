@@ -228,8 +228,13 @@
         os_name         Display name
         asm_cmd         Assembler command template
         ld_cmd          Linker command template
+        ld_cmd_sysrt    Linker command for system runtime (-R flag)
         sys_libc        System C library flags
         aout_name       Default output filename
+
+    struct cg_vtable (partial - system runtime support):
+        cgmovearg(n)    Move accumulator to argument register n (0-7)
+        maxregargs      Maximum number of register arguments (0 = stack only)
 
     struct cg_target:
         name            Short name for --target flag
@@ -272,6 +277,14 @@
     - x29      Frame pointer
     - x30      Link register (return address)
     - sp       Stack pointer (must be 16-byte aligned)
+
+    System Runtime Mode (-R flag):
+    ARM64 supports the -R flag for linking with system libc. When active:
+    - cgmovearg() moves x0 to x0-x7 for AAPCS64 calling convention
+    - maxregargs = 8 (arguments passed in x0-x7)
+    - Non-variadic functions (write, read, etc.) work correctly
+    - Variadic functions (printf, etc.) have limitations due to
+      AAPCS64 requiring variadic args on stack
 
 
     IBM SYSTEM/370 TARGETS

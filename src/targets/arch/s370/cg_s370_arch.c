@@ -294,6 +294,10 @@ struct cg_vtable cg_s370_vtable = {
     cgs370_entry,
     cgs370_exit,
     
+    /* System Runtime Calling Convention Support */
+    NULL,                           /* cgmovearg - not applicable for S/370 */
+    0,                              /* maxregargs - S/370 uses parameter list */
+    
     /* Data Definition */
     cgs370_defb,
     cgs370_defw,

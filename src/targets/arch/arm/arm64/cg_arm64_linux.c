@@ -26,6 +26,7 @@ static struct cg_os_config cg_os_linux_arm64 = {
     "Linux",
     "as -o %s %s",                  /* assembler command */
     "ld -o %s %s/lib/%scrt0.o",     /* linker command */
+    "gcc -o %s",                    /* ld_cmd_sysrt: use gcc as driver */
     "",                             /* sys_libc */
     "a.out"                         /* default output name */
 };

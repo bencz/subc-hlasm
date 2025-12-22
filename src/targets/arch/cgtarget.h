@@ -300,6 +300,12 @@ struct cg_vtable {
     void (*cgentry)(int lsize);
     void (*cgexit)(void);
     
+    /* System Runtime Calling Convention Support (-R flag) */
+    /* Move accumulator to argument register n (0-7) */
+    void (*cgmovearg)(int n);
+    /* Maximum number of register arguments supported */
+    int  maxregargs;
+    
     /* Data Definition */
     void (*cgdefb)(int v);
     void (*cgdefw)(int v);
@@ -400,6 +406,7 @@ struct cg_os_config {
     char *os_name;
     char *asm_cmd;
     char *ld_cmd;
+    char *ld_cmd_sysrt;   /* linker command when using system runtime (-R) */
     char *sys_libc;
     char *aout_name;
 };

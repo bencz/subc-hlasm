@@ -104,6 +104,9 @@ char *labname(int id) {
  *
  * If the target architecture provides a symbol_transform callback,
  * use it. Otherwise, use the default PREFIX + name transformation.
+ *
+ * When using system runtime (-R flag), no prefix is added to allow
+ * direct linking with system libc functions.
  */
 char *gsym(char *s) {
 	static char	name[NAMELEN+2];
@@ -111,6 +114,12 @@ char *gsym(char *s) {
 	/* Check if architecture provides custom symbol transformation */
 	if (CG_SYMBOL_TRANSFORM != NULL) {
 		return CG_SYMBOL_TRANSFORM(s);
+	}
+	
+	/* When using system runtime, don't add prefix */
+	if (O_sysrt) {
+		copyname(name, s);
+		return name;
 	}
 	
 	/* Default transformation: PREFIX + name */

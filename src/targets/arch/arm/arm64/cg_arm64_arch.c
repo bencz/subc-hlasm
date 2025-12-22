@@ -232,6 +232,10 @@ struct cg_vtable cg_arm64_vtable = {
     cga64_entry,
     cga64_exit,
     
+    /* System Runtime Calling Convention Support */
+    cga64_movearg,
+    8,                              /* maxregargs - AAPCS64 uses x0-x7 */
+    
     /* Data Definition */
     cga64_defb,
     cga64_defw,

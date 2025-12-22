@@ -25,6 +25,7 @@ static struct cg_os_config cg_s370xa_mvs_os = {
     "MVS/XA",                       /* os_name */
     "",                             /* asm_cmd - HLASM is run separately */
     "",                             /* ld_cmd - linkage editor is run separately */
+    NULL,                           /* ld_cmd_sysrt - not applicable on MVS */
     "",                             /* sys_libc */
     "a.obj"                         /* aout_name */
 };

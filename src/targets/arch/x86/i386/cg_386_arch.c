@@ -224,6 +224,10 @@ struct cg_vtable cg_386_vtable = {
     cg386_entry,
     cg386_exit,
     
+    /* System Runtime Calling Convention Support */
+    NULL,                           /* cgmovearg - not implemented for i386 */
+    0,                              /* maxregargs - i386 uses stack for args */
+    
     /* Data Definition */
     cg386_defb,
     cg386_defw,

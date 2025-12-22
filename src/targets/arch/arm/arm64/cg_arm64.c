@@ -921,6 +921,28 @@ void cga64_exit(void) {
 }
 
 /*
+ * cga64_movearg - Move accumulator (x0) to argument register n
+ *
+ * For AAPCS64 calling convention, arguments go in x0-x7.
+ * This function moves x0 to the appropriate register for argument n.
+ * Used when -R (system runtime) flag is active.
+ *
+ * @n: Argument number (0-7)
+ */
+void cga64_movearg(int n) {
+    if (n < 0 || n > 7) {
+        /* Too many arguments for register passing */
+        return;
+    }
+    if (n == 0) {
+        /* Already in x0, nothing to do */
+        return;
+    }
+    sprintf(buf, "mov\tx%d, x0", n);
+    gen(buf);
+}
+
+/*
  * ============================================================================
  * SECTION: Data Definition
  * ============================================================================

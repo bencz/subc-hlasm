@@ -207,6 +207,71 @@ void emitargs(node *a) {
 	emitargs(a->left);
 }
 
+/*
+ * Count the number of arguments in an argument list
+ */
+static int countargs(node *a) {
+	int count = 0;
+	while (a != NULL) {
+		count++;
+		a = a->left;
+	}
+	return count;
+}
+
+/*
+ * Emit arguments for system runtime calling convention.
+ * Arguments are placed in registers (x0-x7 for ARM64, etc.)
+ * instead of being pushed on the stack.
+ *
+ * The argument tree is structured as a linked list via 'left' pointers,
+ * with each argument value in 'right'. The list is in reverse order:
+ * the last argument is at the root, first argument is deepest.
+ *
+ * For write(1, msg, len):
+ *   a->right = len (arg 2)
+ *   a->left->right = msg (arg 1)  
+ *   a->left->left->right = 1 (arg 0)
+ *
+ * We process from last to first, moving each to its target register.
+ * Last arg (index nargs-1) goes to highest register, first arg to x0.
+ *
+ * @a: Argument list node
+ * @nargs: Total number of arguments
+ * @maxargs: Maximum number of register arguments
+ * @current: Current argument index (nargs-1 down to 0)
+ */
+static void emitargs_sysrt_helper(node *a, int nargs, int maxargs, int current) {
+	if (NULL == a) return;
+	
+	/* Process this argument (rightmost/last in remaining list) */
+	/* emittree1 generates code that leaves result in accumulator (x0) */
+	emittree1(a->right);
+	
+	/* Flush any pending operations without spilling to stack */
+	/* We need the value in x0, then move it to target register */
+	commit();
+	
+	/* Move to appropriate register */
+	/* current counts down: nargs-1, nargs-2, ..., 0 */
+	/* So current=nargs-1 is last arg, current=0 is first arg */
+	/* First arg (current=0) should go to x0, etc. */
+	if (current < maxargs && CG->vtable->cgmovearg != NULL) {
+		CG->vtable->cgmovearg(current);
+	}
+	
+	/* Clear accumulator state so next arg doesn't trigger spill */
+	clear(1);
+	
+	/* Process remaining arguments (earlier ones) */
+	emitargs_sysrt_helper(a->left, nargs, maxargs, current - 1);
+}
+
+static void emitargs_sysrt(node *a, int nargs, int maxargs) {
+	if (NULL == a) return;
+	emitargs_sysrt_helper(a, nargs, maxargs, nargs - 1);
+}
+
 static void emittree1(node *a) {
 	int	lv[LV];
 	int	ptr;
@@ -325,21 +390,43 @@ static void emittree1(node *a) {
 			case OP_SUB:	gensub(a->args[0], a->args[1], 1);						break;
 			}
 			break;
-	case OP_CALL:	emitargs(a->left);
-			commit();
-			spill();
-			gencall(a->args[0]);
-			genstack((a->args[1]) * CG_STACK_SLOT_SIZE);
+	case OP_CALL:	if (O_sysrt && CG->vtable->maxregargs > 0) {
+				/* System runtime: use register calling convention */
+				emitargs_sysrt(a->left, a->args[1], CG->vtable->maxregargs);
+				commit();
+				gencall(a->args[0]);
+				/* No stack adjustment needed for register args */
+			} else {
+				/* SubC runtime: use stack calling convention */
+				emitargs(a->left);
+				commit();
+				spill();
+				gencall(a->args[0]);
+				genstack((a->args[1]) * CG_STACK_SLOT_SIZE);
+			}
 			break;
-	case OP_CALR:	emitargs(a->left);
-			commit();
-			spill();
-			clear(0);
-			lv[LVPRIM] = FUNPTR;
-			lv[LVSYM] = a->args[0];
-			genrval(lv);
-			gencalr();
-			genstack((a->args[1]) * CG_STACK_SLOT_SIZE);
+	case OP_CALR:	if (O_sysrt && CG->vtable->maxregargs > 0) {
+				/* System runtime: use register calling convention */
+				emitargs_sysrt(a->left, a->args[1], CG->vtable->maxregargs);
+				commit();
+				clear(0);
+				lv[LVPRIM] = FUNPTR;
+				lv[LVSYM] = a->args[0];
+				genrval(lv);
+				gencalr();
+				/* No stack adjustment needed for register args */
+			} else {
+				/* SubC runtime: use stack calling convention */
+				emitargs(a->left);
+				commit();
+				spill();
+				clear(0);
+				lv[LVPRIM] = FUNPTR;
+				lv[LVSYM] = a->args[0];
+				genrval(lv);
+				gencalr();
+				genstack((a->args[1]) * CG_STACK_SLOT_SIZE);
+			}
 			break;
 	case OP_ASSIGN: if (OP_IDENT == a->left->op) {
 				emittree1(a->right);

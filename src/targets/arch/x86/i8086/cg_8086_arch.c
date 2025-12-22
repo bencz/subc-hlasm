@@ -220,6 +220,10 @@ struct cg_vtable cg_8086_vtable = {
     cg86_entry,
     cg86_exit,
     
+    /* System Runtime Calling Convention Support */
+    NULL,                           /* cgmovearg - not implemented for 8086 */
+    0,                              /* maxregargs - 8086 uses stack for args */
+    
     /* Data Definition */
     cg86_defb,
     cg86_defw,

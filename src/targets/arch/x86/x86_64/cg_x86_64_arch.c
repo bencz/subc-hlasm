@@ -220,6 +220,10 @@ struct cg_vtable cg_x86_64_vtable = {
     cgx64_entry,
     cgx64_exit,
     
+    /* System Runtime Calling Convention Support */
+    NULL,                           /* cgmovearg - not implemented for x86-64 */
+    0,                              /* maxregargs - would be 6 for SysV AMD64 */
+    
     /* Data Definition */
     cgx64_defb,
     cgx64_defw,

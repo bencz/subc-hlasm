@@ -159,16 +159,36 @@ static void link(void) {
 	char	cmd[TEXTLEN+2];
 	char	cmd2[TEXTLEN+2];
 	char	*ofile;
+	char	*ldcmd;
 
 	ofile = O_outfile? O_outfile: AOUTNAME;
-	if (strlen(ofile) + strlen(LDCMD) + strlen(SCCDIR)*2 >= TEXTLEN)
-		cmderror("linker command too long", NULL);
-	sprintf(cmd, LDCMD, ofile, SCCDIR, O_stdio? "": "n");
-	k = strlen(cmd);
-	for (i=0; i<Nf; i++)
-		k = concat(k, cmd, Files[i]);
-	k = concat(k, cmd, SCCLIBC);
-	concat(k, cmd, SYSLIBC);
+	
+	/* Select linker command based on runtime mode */
+	if (O_sysrt) {
+		/* Use system runtime (clang/gcc as driver) */
+		ldcmd = CG->os->ld_cmd_sysrt;
+		if (!ldcmd) {
+			cmderror("system runtime not supported for target %s",
+				CG->name);
+		}
+		if (strlen(ofile) + strlen(ldcmd) >= TEXTLEN)
+			cmderror("linker command too long", NULL);
+		sprintf(cmd, ldcmd, ofile);
+		k = strlen(cmd);
+		for (i=0; i<Nf; i++)
+			k = concat(k, cmd, Files[i]);
+	} else {
+		/* Use SubC runtime */
+		if (strlen(ofile) + strlen(LDCMD) + strlen(SCCDIR)*2 >= TEXTLEN)
+			cmderror("linker command too long", NULL);
+		sprintf(cmd, LDCMD, ofile, SCCDIR, O_stdio? "": "n");
+		k = strlen(cmd);
+		for (i=0; i<Nf; i++)
+			k = concat(k, cmd, Files[i]);
+		k = concat(k, cmd, SCCLIBC);
+		concat(k, cmd, SYSLIBC);
+	}
+	
 	sprintf(cmd2, cmd, SCCDIR);
 	if (O_verbose > 1) printf("%s\n", cmd2);
 	if (system(cmd2))
@@ -184,7 +204,7 @@ static void link(void) {
 }
 
 static void usage(void) {
-	printf("Usage: scc [-h] [-ctvNSV] [-d opt] [-o file] [-T target]\n");
+	printf("Usage: scc [-h] [-ctvNRSV] [-d opt] [-o file] [-T target]\n");
 	printf("           [-D macro[=text]] file [...]\n");
 }
 
@@ -199,6 +219,7 @@ static void longusage(void) {
 		"-v       verbose, more v's = more verbose\n"
 		"-D m=v   define macro M with optional value V\n"
 		"-N       do not use stdio (can't use printf, etc)\n"
+		"-R       use system runtime (libc) instead of SubC runtime\n"
 		"-S       compile to assembly language\n"
 		"-T tgt   select target architecture (default: 386)\n"
 		"-L       list available targets and exit\n"
@@ -251,6 +272,7 @@ int main(int argc, char *argv[]) {
 	O_asmonly = 0;
 	O_testonly = 0;
 	O_stdio = 1;
+	O_sysrt = 0;
 	O_outfile = NULL;
 	
 	/* Initialize target subsystem */
@@ -289,6 +311,9 @@ int main(int argc, char *argv[]) {
 				break;
 			case 'N':
 				O_stdio = 0;
+				break;
+			case 'R':
+				O_sysrt = 1;
 				break;
 			case 'S':
 				O_componly = O_asmonly = 1;

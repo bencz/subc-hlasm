@@ -28,6 +28,7 @@ static struct cg_os_config cg_os_darwin_arm64 = {
     "Darwin",
     "as -o %s %s",                  /* assembler command */
     "ld -o %s %s/lib/%scrt0.o -lSystem -syslibroot `xcrun --show-sdk-path` -e _start -arch arm64",
+    "clang -arch arm64 -o %s",      /* ld_cmd_sysrt: use clang as driver */
     "-lSystem",                     /* sys_libc */
     "a.out"                         /* default output name */
 };
