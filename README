@@ -340,16 +340,15 @@
 	- clang/gcc is used as the linker driver
 	- System crt0 and libc are used automatically
 
-	Limitations:
-	- Variadic functions (printf, scanf, etc.) may not work correctly
-	  on ARM64 due to AAPCS64 calling convention differences
-	- Non-variadic functions (write, read, open, etc.) work correctly
-	- Currently only ARM64 has full register calling convention support
+	Supported on ARM64:
+	- Non-variadic functions (write, read, open, etc.) - args in x0-x7
+	- Variadic functions (printf, scanf, etc.) - fixed args in regs,
+	  variadic args on stack per AAPCS64
 
 	Example (ARM64 Darwin):
-		int write(int fd, char *buf, int len);
+		int printf(char *fmt, ...);
 		int main(void) {
-		    write(1, "Hello!\n", 7);
+		    printf("Hello %d!\n", 42);
 		    return 0;
 		}
 
