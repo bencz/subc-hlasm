@@ -21,7 +21,7 @@
 int	verbose = 0;
 
 void error(char *s) {
-	printf("error: %s\n", s);
+	kprintf(1, "error: %s\n", s);
 }
 
 int main(int argc, char **argv) {
@@ -54,192 +54,192 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	if (verbose) printf("sbrk\n");
-	n = sbrk(1024);
-	m = sbrk(-1024);
-	k = sbrk(0);
+	if (verbose) kprintf(1, "sbrk\n");
+	n = _sbrk(1024);
+	m = _sbrk(-1024);
+	k = _sbrk(0);
 	if (n + 1024 != m || k != n)
-		error("sbrk()");
+		error("_sbrk()");
 
-	if (verbose) printf("creat\n");
-	fd  = creat(TESTFILE, 0644);
+	if (verbose) kprintf(1, "creat\n");
+	fd  = _creat(TESTFILE, 0644);
 	if (fd < 0)
-		error("creat() of new file");
-	close(fd);
-	fd = creat(TESTFILE, 0644);
+		error("_creat() of new file");
+	_close(fd);
+	fd = _creat(TESTFILE, 0644);
 	if (fd < 0)
-		error("creat() of existing file");
+		error("_creat() of existing file");
 
-	if (verbose) printf("write\n");
+	if (verbose) kprintf(1, "write\n");
 	for (i=0; i<256; i++)
 		buf[i] = i;
 	for (i=0; i<256; i += 16)
-		if (write(fd, buf, i) != i)
-			error("write()");
+		if (_write(fd, buf, i) != i)
+			error("_write()");
 
-	if (verbose) printf("close\n");
-	if (close(fd) < 0) error("close()");
+	if (verbose) kprintf(1, "close\n");
+	if (_close(fd) < 0) error("_close()");
 
-	if (verbose) printf("open\n");
-	fd = open(TESTFILE, O_RDONLY);
+	if (verbose) kprintf(1, "open\n");
+	fd = _open(TESTFILE, O_RDONLY);
 	if (fd < 0)
 		error("_open in read-only mode");
-	if (verbose) printf("read\n");
+	if (verbose) kprintf(1, "read\n");
 	for (i=0; i<256; i += 16) {
-		if (read(fd, buf, i) != i)
-			error("read()");
+		if (_read(fd, buf, i) != i)
+			error("_read()");
 		for (j=0; j<i; j++)
 			if (buf[j] != j)
-				error("read() read wrong data");
+				error("_read() read wrong data");
 	}
-	if (write(fd, "1234567890", 10) >= 0)
-		error("write() could write read-only file");
-	close(fd);
+	if (_write(fd, "1234567890", 10) >= 0)
+		error("_write() could write read-only file");
+	_close(fd);
 
-	fd = open(TESTFILE, O_WRONLY);
+	fd = _open(TESTFILE, O_WRONLY);
 	if (fd < 0)
 		error("_open in write-only mode");
-	if (write(fd, "0123456789", 10) != 10)
-		error("write() could not write write-only file");
-	close(fd);
-	fd = open(TESTFILE, O_RDONLY);
-	read(fd, buf, 10);
+	if (_write(fd, "0123456789", 10) != 10)
+		error("_write() could not write write-only file");
+	_close(fd);
+	fd = _open(TESTFILE, O_RDONLY);
+	_read(fd, buf, 10);
 	if (memcmp(buf, "0123456789", 10))
-		error("read() from write-only file returned wrong data");
-	close(fd);
+		error("_read() from write-only file returned wrong data");
+	_close(fd);
 
-	fd = open(TESTFILE, O_RDWR);
+	fd = _open(TESTFILE, O_RDWR);
 	if (fd < 0)
 		error("_open in read-write mode");
-	if (write(fd, "9876543210", 10) != 10)
-		error("write() could not write read/write file");
-	close(fd);
-	fd = open(TESTFILE, O_RDONLY);
-	read(fd, buf, 10);
+	if (_write(fd, "9876543210", 10) != 10)
+		error("_write() could not write read/write file");
+	_close(fd);
+	fd = _open(TESTFILE, O_RDONLY);
+	_read(fd, buf, 10);
 	if (memcmp(buf, "9876543210", 10))
-		error("read() from read/write file returned wrong data");
-	close(fd);
+		error("_read() from read/write file returned wrong data");
+	_close(fd);
 
-	fd = open(TESTFILE, O_RDWR);
+	fd = _open(TESTFILE, O_RDWR);
 	if (fd < 0)
-		error("open in read-write mode (2)");
-	if (verbose) printf("lseek\n");
-	if (lseek(fd, 250, SEEK_SET) != 250)
+		error("_open in read-write mode (2)");
+	if (verbose) kprintf(1, "lseek\n");
+	if (_lseek(fd, 250, SEEK_SET) != 250)
 		error("lseek() from beginning of file");
-	if (write(fd, "1111111111", 10) != 10)
-		error("write() could not write read/write file (2)");
-	if (lseek(fd, -10, SEEK_END) != 1910)
+	if (_write(fd, "1111111111", 10) != 10)
+		error("_write() could not write read/write file (2)");
+	if (_lseek(fd, -10, SEEK_END) != 1910)
 		error("lseek() from end of file");
-	if (write(fd, "2222222222", 10) != 10)
-		error("write() could not write read/write file (3)");
-	if (lseek(fd, -1000, SEEK_CUR) != 920)
+	if (_write(fd, "2222222222", 10) != 10)
+		error("_write() could not write read/write file (3)");
+	if (_lseek(fd, -1000, SEEK_CUR) != 920)
 		error("lseek() relative backward");
-	if (write(fd, "3333333333", 10) != 10)
-		error("write() could not write read/write file (4)");
-	if (lseek(fd, 500, SEEK_CUR) != 1430)
+	if (_write(fd, "3333333333", 10) != 10)
+		error("_write() could not write read/write file (4)");
+	if (_lseek(fd, 500, SEEK_CUR) != 1430)
 		error("lseek() relative forward");
-	if (write(fd, "4444444444", 10) != 10)
-		error("write() could not write read/write file (5)");
-	close(fd);
+	if (_write(fd, "4444444444", 10) != 10)
+		error("_write() could not write read/write file (5)");
+	_close(fd);
 
 	p[0] = 250;
 	p[1] = 1910;
 	p[2] = 920;
 	p[3] = 1430;
 	for (i=0; i<4; i++) {
-		fd = open(TESTFILE, O_RDONLY);
+		fd = _open(TESTFILE, O_RDONLY);
 		if (fd < 0)
-			error("open in read-only mode (3)");
+			error("_open in read-only mode (3)");
 		for (j=0; j<p[i]; j += 10)
-			read(fd, buf, 10);
-		if (read(fd, buf, 10) != 10)
-			error("read() (2)");
+			_read(fd, buf, 10);
+		if (_read(fd, buf, 10) != 10)
+			error("_read() (2)");
 		for (j=0; j<10; j++)
 			if (buf[j] != i+1+'0')
-				error("read() with lseek()"
+				error("_read() with lseek()"
 					" returned wrong data");
-		close(fd);
+		_close(fd);
 	}
 
-	if (verbose) printf("rename\n");
-	if (rename(TESTFILE, TESTFILE2) < 0)
-		error("rename() existing file");
-	if (rename(TESTFILE, TESTFILE2) == 0)
-		error("rename() non-existing file returned success");
-	if ((fd = open(TESTFILE, O_RDONLY)) >= 0) {
-		error("rename() left original link");
-		close(fd);
+	if (verbose) kprintf(1, "rename\n");
+	if (_rename(TESTFILE, TESTFILE2) < 0)
+		error("_rename() existing file");
+	if (_rename(TESTFILE, TESTFILE2) == 0)
+		error("_rename() non-existing file returned success");
+	if ((fd = _open(TESTFILE, O_RDONLY)) >= 0) {
+		error("_rename() left original link");
+		_close(fd);
 	}
-	if ((fd = open(TESTFILE2, O_RDONLY)) < 0)
-		error("rename() failed to create new link");
+	if ((fd = _open(TESTFILE2, O_RDONLY)) < 0)
+		error("_rename() failed to create new link");
 	else
-		close(fd);
+		_close(fd);
 
-	if (verbose) printf("unlink\n");
-	if (unlink(TESTFILE2) < 0)
-		error("unlink() existing file");
-	if (unlink(TESTFILE2) == 0)
-		error("unlink() non-existing file returned success");
-	if ((fd = open(TESTFILE2, O_RDONLY)) >= 0) {
-		error("unlink() failed to remove link");
-		close(fd);
+	if (verbose) kprintf(1, "unlink\n");
+	if (_unlink(TESTFILE2) < 0)
+		error("_unlink() existing file");
+	if (_unlink(TESTFILE2) == 0)
+		error("_unlink() non-existing file returned success");
+	if ((fd = _open(TESTFILE2, O_RDONLY)) >= 0) {
+		error("_unlink() failed to remove link");
+		_close(fd);
 	}
 
 #ifndef __dos
-	if (verbose) printf("fork/exit/wait\n");
+	if (verbose) kprintf(1, "fork/exit/wait\n");
 	for (i=0; i<3; i++) {
-		switch (fork()) {
+		switch (_fork()) {
 		case -1:
-			error("fork()");
+			error("_fork()");
 			break;
 		case 0:	
-			exit(i);
+			_exit(i);
 		default:
-			wait(&j);
+			_wait(&j);
 			if (j != i<<8)
-				error("wait() returned wrong exit code");
+				error("_wait() returned wrong exit code");
 		}
 	}
 
-	if (verbose) printf("execve\n");
-	switch(fork()) {
+	if (verbose) kprintf(1, "execve\n");
+	switch(_fork()) {
 	case -1:
-		error("fork() (2)");
+		error("_fork() (2)");
 		break;
 	case 0:
 		a[0] = "./systest";
 		a[1] = "q";
 		a[2] = NULL;
-		execve("./systest", a, NULL);
+		_execve("./systest", a, NULL);
 		error("execve()");
-		exit(1);
+		_exit(1);
 	case 1:
-		wait(&j);
+		_wait(&j);
 		if (j != 5<<8)
-			error("wait() with execve(): wrong exit code");
+			error("_wait() with execve(): wrong exit code");
 	}
 
-	if (verbose) printf("argc/argv\n");
-	switch(fork()) {
+	if (verbose) kprintf(1, "argc/argv\n");
+	switch(_fork()) {
 	case -1:
-		error("fork() (3)");
+		error("_fork() (3)");
 		break;
 	case 0:
 		a[0] = "./systest";
 		a[1] = "a";
 		a[2] = "0123456789";
 		a[3] = NULL;
-		execve("./systest", a, NULL);
+		_execve("./systest", a, NULL);
 		error("execve() (2)");
-		exit(1);
+		_exit(1);
 	case 1:
-		wait(&j);
+		_wait(&j);
 	}
 
-	if (verbose) printf("environ\n");
-	switch(fork()) {
+	if (verbose) kprintf(1, "environ\n");
+	switch(_fork()) {
 	case -1:
-		error("fork() (4)");
+		error("_fork() (4)");
 		break;
 	case 0:
 		a[0] = "./systest";
@@ -247,18 +247,18 @@ int main(int argc, char **argv) {
 		a[2];
 		e[0] = "FOO=BAR";
 		e[1] = NULL;
-		execve("./systest", a, e);
+		_execve("./systest", a, e);
 		error("execve() (3)");
-		exit(1);
+		_exit(1);
 	case 1:
-		wait(&j);
+		_wait(&j);
 	}
 #endif
 
-	if (verbose) printf("time\n");
-	printf("_time() returned %d\n", _time());
+	if (verbose) kprintf(1, "time\n");
+	kprintf(0, "_time() returned %d\n", _time());
 
-	if (verbose) printf("exit\n");
+	if (verbose) kprintf(1, "exit\n");
 	_exit(0);
 	error("_exit()");
 }

@@ -34,16 +34,12 @@ int	Verbose = 0;
 int	Errors = 0;
 
 void fail(char *name) {
-	write(1, name, strlen(name));
-	write(1, " failed\n", 8);
+	kprintf(1, "%s failed\n", name);
 	Errors++;
 }
 
 void pr(char *s) {
-	if (Verbose) {
-		write(1, s, strlen(s));
-		write(1, "\n", 1);
-	}
+	if (Verbose) kprintf(1, "%s\n", s);
 }
 
 void test_memfn(void) {
@@ -468,7 +464,7 @@ void test_math(void) {
 	}
 }
 
-int	here[_JMPBUF_SIZ];
+jmp_buf	here;
 int	count;
 
 void jump(int v) {
@@ -522,7 +518,7 @@ void test_sio1(void) {
 		fd = fileno(f);
 		pr("fclose");
 		if (fclose(f)) fail("fclose-1");
-		if (close(fd) == 0) fail("fclose-2");
+		if (_close(fd) == 0) fail("fclose-2");
 
 		if ((f = fopen(TMPFILE, "r")) == NULL) {
 			fail("fopen-3");
@@ -543,10 +539,10 @@ void test_sio1(void) {
 			}
 			fd = fileno(f);
 			if (fclose(f)) fail("fclose-1");
-			if (close(fd) == 0) fail("fclose-2");
+			if (_close(fd) == 0) fail("fclose-2");
 		}
 	}
-	unlink(TMPFILE);
+	_unlink(TMPFILE);
 }
 
 void test_sio2(void) {
@@ -570,11 +566,11 @@ void test_sio2(void) {
 
 	pr("fflush");
 	if (fflush(f) < 0) fail("fflush-1");
-	if (lseek(fileno(f), 0, SEEK_END) != 26) fail("fflush-2");
+	if (_lseek(fileno(f), 0, SEEK_END) != 26) fail("fflush-2");
 
 	pr("rewind");
 	rewind(f);
-	if (lseek(fileno(f), 0, SEEK_CUR) != 0)
+	if (_lseek(fileno(f), 0, SEEK_CUR) != 0)
 		fail("rewind-1");
 
 	pr("fgets");
@@ -596,7 +592,7 @@ void test_sio2(void) {
 
 	if (fclose(f)) fail("fclose-5");
 
-	unlink(TMPFILE);
+	_unlink(TMPFILE);
 }
 
 void test_sio3(void) {
@@ -664,7 +660,7 @@ void test_sio3(void) {
 	if (ftell(f) != 10000) fail("fseek-5");
 
 	fclose(f);
-	unlink(TMPFILE);
+	_unlink(TMPFILE);
 }
 
 void test_stdout(void) {
@@ -734,7 +730,7 @@ void test_sio4(void) {
 		}
 		fclose(f);
 	}
-	if (!err) unlink(TMPFILE);
+	if (!err) _unlink(TMPFILE);
 	if (err) fail("misc-stdout");
 }
 

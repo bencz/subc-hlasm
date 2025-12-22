@@ -43,15 +43,19 @@ void push(void) {
 }
 
 void pop(void) {
-        if (S) {
-                gen("pop  R%d");
-                S--;
-                R--;
-                if (0 == R) R = N;
-        }
-        else {
-                R--;
-        }
+	if (R <= 1) {
+		gen("pop  R%d");
+		R = N;
+		S--;
+	}
+	else if (S) {
+		gen("pop  R%d");
+		S--;
+		R--;
+	}
+	else {
+		R--;
+	}
 }
 
 void synth(int i) {
