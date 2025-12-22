@@ -184,7 +184,7 @@ static void link(void) {
 
 static void usage(void) {
 	printf("Usage: scc [-h] [-ctvNSV] [-d opt] [-o file] [-D macro[=text]]"
-		" file [...]\n");
+		" [-I dir] file [...]\n");
 }
 
 static void longusage(void) {
@@ -197,6 +197,7 @@ static void longusage(void) {
 		"-t       test only, generate no code\n"
 		"-v       verbose, more v's = more verbose\n"
 		"-D m=v   define macro M with optional value V\n"
+		"-I dir   add DIR to include search path\n"
 		"-N       do not use stdio (can't use printf, etc)\n"
 		"-S       compile to assembly language\n"
 		"-T tgt   select target architecture (default: host)\n"
@@ -245,6 +246,7 @@ int main(int argc, char *argv[]) {
 	def = NULL;
 	O_debug = 0;
 	O_verbose = 0;
+	Nincdirs = 0;
 	O_componly = 0;
 	O_asmonly = 0;
 	O_testonly = 0;
@@ -280,6 +282,11 @@ int main(int argc, char *argv[]) {
 			case 'D':
 				if (def) cmderror("too many -D's", NULL);
 				def = nextarg(argc, argv, &i, &j);
+				break;
+			case 'I':
+				if (Nincdirs >= MAXINCDIRS)
+					cmderror("too many -I options", NULL);
+				Incdirs[Nincdirs++] = nextarg(argc, argv, &i, &j);
 				break;
 			case 'N':
 				O_stdio = 0;

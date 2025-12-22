@@ -72,6 +72,10 @@ extern_ char	*Files[MAXFILES];
 extern_ char	Temp[MAXFILES];
 extern_ int	Nf;
 
+/* include directories */
+extern_ char	*Incdirs[MAXINCDIRS];
+extern_ int	Nincdirs;
+
 /* options */
 extern_ int	O_verbose;
 extern_ int	O_componly;

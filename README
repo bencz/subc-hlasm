@@ -233,6 +233,11 @@
 
 		./scc0 -L
 
+	To add custom include directories, use the -I flag (can be
+	specified multiple times):
+
+		./scc0 -I /path/to/includes -I /another/path -S myprogram.c
+
 	The default target is linux-386. The compiler automatically
 	includes all supported architectures (i386, x86-64, 8086, ARMv6)
 	and can generate code for any of them.

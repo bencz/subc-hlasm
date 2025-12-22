@@ -40,6 +40,7 @@
 #define NAMELEN		16
 
 #define MAXFILES	32
+#define MAXINCDIRS	16
 
 #define MAXIFDEF	16
 #define MAXNMAC		32
