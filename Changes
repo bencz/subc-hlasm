@@ -1,3 +1,19 @@
+2025-12-22 Major refactoring by Alexandre Bencz: implemented cross-compilation support
+           via vtable-based code generator dispatch. The compiler can now target
+           multiple architectures from a single binary using the -T flag.
+2025-12-22 Added -T <target> flag to select target architecture at runtime.
+2025-12-22 Added -L flag to list all available targets.
+2025-12-22 Created modular header structure: types.h, tokens.h, ops.h, cgen_compat.h.
+2025-12-22 Implemented cgtarget.h/cgtarget.c with vtable-based architecture framework.
+2025-12-22 Created cg_os_configs.c with OS-specific configurations.
+2025-12-22 Reorganized code generators into src/targets/arch/<arch>/ directories:
+           - i386/cg_i386.c
+           - x86_64/cg_x86_64.c
+           - 8086/cg_8086.c
+           - arm/cg_arm.c
+2025-12-22 Removed dependency on symlinks for target selection (cg.c, cg.h, sys.h).
+2025-12-22 Removed platform-specific crt0 files (kept only DOS/8086 crt0).
+2025-12-22 Updated version to 2025-12-22.
 2022-01-23 Fixed a bug in struct declaration. Thanks, Paul Edwards!
 2021-08-17 Changed type of jmp_buf, so that setjmp(jmp_buf) works (without &).
 2021-08-17 Fixed array declarations in typedef struct.

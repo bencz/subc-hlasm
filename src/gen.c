@@ -6,7 +6,6 @@
 #include "defs.h"
 #include "data.h"
 #include "decl.h"
-#include "cgen.h"
 
 int	Acc = 0;
 

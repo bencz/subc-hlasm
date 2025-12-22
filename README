@@ -1,6 +1,7 @@
 
 	SubC Compiler
-	By Nils M Holm, 2011--2021
+	Originally by Nils M Holm, 2011--2022
+	Cross-compilation support by Alexandre Bencz, 2025
 	Placed in the public domain
 	In places where the concept of the public domain does not exist,
 	the Creative Commons Zero license applies. See the file CC0.
@@ -30,35 +31,35 @@
 
 	SUPPORTED SYSTEMS
 
+	SubC now supports cross-compilation from a single binary. Use
+	the -L flag to list available targets and -T <target> to select
+	a target architecture.
+
 	SubC generates code for GAS, the GNU assembler (except for the
 	DOS version, which emits TASM-style syntax). It targets the
 	following processors and operating systems:
 
-		FreeBSD		386*	armv6*	x86-64
-		Linux		386*	-	x86-64*
-		NetBSD		386*	-	x86-64*
-		OpenBSD		386%	-	-
-		Windows/MinGW	386*	-	-
-		Darwin		-	-	x86-64%(/)
-		DOS		8086(/)
+		FreeBSD		386	armv6	x86-64
+		Linux		386	-	x86-64
+		NetBSD		386	-	x86-64
+		OpenBSD		386	-	-
+		Windows/MinGW	386	-	-
+		Darwin		-	-	x86-64
+		DOS		8086
 
-		  %  uses the syscall layer of the host libc
-		  *  untested
-		  !  experimental
-		 (/) broken
+	Available targets (use -L to list, -T to select):
 
-	Platforms tagged "untested" are not regularly tested by myself
-	and are therefore subject to potential bit rot. You can help
-	me improve SubC by running "make tests" on an "untested"
-	platform and let me know about the results.
-
-	Platforms using the system's libc as a thin system call layer
-	often cause build/stability problems due to the omnipresence of
-	the GNU libc, which is not "thin" at all. Expect trouble on
-	those systems!
-
-	Platforms tagged "broken" currently will not compile or run
-	properly for some reason. See the Todo file for details.
+		linux-386        Linux i386 (ELF, GAS syntax)
+		linux-x86-64     Linux x86-64 (ELF, GAS syntax)
+		freebsd-386      FreeBSD i386 (ELF, GAS syntax)
+		freebsd-x86-64   FreeBSD x86-64 (ELF, GAS syntax)
+		freebsd-armv6    FreeBSD ARMv6 (ELF, GAS syntax)
+		netbsd-386       NetBSD i386 (ELF, GAS syntax)
+		netbsd-x86-64    NetBSD x86-64 (ELF, GAS syntax)
+		openbsd-386      OpenBSD i386 (ELF, GAS syntax)
+		darwin-x86-64    Darwin/macOS x86-64 (Mach-O, GAS syntax)
+		windows-386      Windows i386 (PE, GAS syntax)
+		dos-8086         DOS 8086 (OMF, TASM syntax)
 
 	The DOS version brings its own toolchain, which can be found in
 	the s86/ directory, so no pre-existing DOS assembler or linker
@@ -219,43 +220,27 @@
 
 	SELECTING A TARGET PLATFORM
 
-	The easiest way to prepare a build is to run the configure
-	script in this directory. Don't worry, it is just a simple
-	script that will figure out the host platform via uname and
-	link a few machine-dependent files into place.
+	As of version 2025-12-22, SubC supports cross-compilation from
+	a single binary. You no longer need to run configure or create
+	symlinks to select a target platform.
 
-	If you want to configure the compiler manually: select one of
-	the target descriptions (cg*.c) files in src/targets/cg and
-	symlink it to src/cg.c. Also link the corresponding header
-	file into place:
+	Simply compile the compiler and use the -T flag to select your
+	target at runtime:
 
-		(cd src && ln -fs targets/cg/cg386.c cg.c)
-		(cd src && ln -fs targets/cg/cg386.h cg.h)
+		./scc0 -T linux-x86-64 -S myprogram.c
 
-	Next select the C startup (crt0) file for your OS and CPU type
-	from src/targets/OS-CPU/ and link it to src/lib/crt0.s, e.g.:
+	To see all available targets:
 
-		(cd src/lib && \
-		 ln -fs ../targets/freebsd-386/crt0-freebsd-386.s \
-		 	crt0.s)
+		./scc0 -L
 
-	If your OS/CPU combination is not supported, you might try
-	to port the compiler. See the file "Porting" for details.
+	The default target is linux-386. The compiler automatically
+	includes all supported architectures (i386, x86-64, 8086, ARMv6)
+	and can generate code for any of them.
 
-	You will also need some operating system-dependent
-	definitions, which are kept in files named "sys-OS-CPU.h"
-	in src/targets/OS-CPU/. Just symlink the appropriate file
-	to src/sys.h:
-
-		(cd src && \
-		 ln -fs targets/freebsd-386/sys-freebsd-386.h sys.h)
-
-	Finally, select a limits-*.h file from targets/include/ that
-	reflects the machine word size of your target and link it to
-	src/include/limits.h:
-
-		(cd src/include && \
-		 ln -fs ../targets/include/limits-32.h limits.h)
+	Note: Platform-specific crt0 files have been removed from this
+	version. Only the DOS/8086 crt0 is included. For other platforms,
+	you will need to provide your own crt0 startup module or use the
+	system's libc.
 
 
 	COMPILING THE COMPILER
@@ -264,21 +249,27 @@
 	so all the subsequent steps assume that this is your current
 	working directory. (I.e. do a "cd src" now.)
 
-	On a supported system, just type "make".
+	On a supported system, just type "make scc0".
 
 	Without "make" the compiler can be bootstrapped by running:
 
-		cc -o scc0 *.c
+		cc -I. -o scc0 decl.c error.c expr.c gen.c main.c \
+		   misc.c opt.c prep.c scan.c stmt.c sym.c tree.c \
+		   cgtarget.c targets/os/cg_os_configs.c \
+		   targets/arch/i386/cg_i386.c \
+		   targets/arch/x86_64/cg_x86_64.c \
+		   targets/arch/8086/cg_8086.c \
+		   targets/arch/arm/cg_arm.c
 
 	To compile and package the runtime library:
 
-		./scc0 -c lib/*.c
-		ar -rc lib/libscc.a lib/*.o
-		ranlib lib/libscc.a
+		./scc0 -c ../runtime/lib/*.c
+		ar -rc ../runtime/lib/libscc.a ../runtime/lib/*.o
+		ranlib ../runtime/lib/libscc.a
 
 	To compile the startup module:
 
-		as -o lib/crt0.o lib/crt0.s
+		as -o ../runtime/lib/crt0.o ../runtime/lib/crt0.s
 
 	To test the compiler, either run "make test" or perform the
 	following steps:

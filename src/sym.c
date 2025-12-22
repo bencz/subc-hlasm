@@ -6,7 +6,6 @@
 #include "defs.h"
 #include "data.h"
 #include "decl.h"
-#include "cgen.h"
 
 int findglob(char *s) {
 	int	i;

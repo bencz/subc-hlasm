@@ -1,12 +1,19 @@
 
+	TODO:
+
 	- Fix the bugs in BUGS.
 
-	- Rewrite crt0 module to remove GLIBC system call layer:
-		OpenBSD-386
-		Darwin-x86-64
-	  (Can't do this, don't know enough about these systems.)
-
 	- fgetpos()/fsetpos() should support longer seek.
+
+	- Add more target architectures:
+		? RISC-V (rv32/rv64)
+		? MIPS
+		? PowerPC
+
+	- Create crt0 modules for non-DOS platforms (removed in 2025-12-22)
+
+	- Implement runtime library cross-compilation support
+	  (currently only code generation is cross-platform)
 
 	? clean up sym.c
 

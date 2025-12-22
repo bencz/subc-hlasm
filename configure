@@ -83,8 +83,8 @@ if [ -f "src/targets/$os-$mac/NOTE" ]; then
 fi
 
 if [ $os = dos ]; then
-	(cd src; ln -fs ../targets/lib/init-unix.c lib/init.c)
-	(cd src; ln -fs ../targets/lib/system-dos.c lib/system.c)
+	(cd runtime/lib; ln -fs ../targets/lib/init-unix.c init.c)
+	(cd runtime/lib; ln -fs ../targets/lib/system-dos.c system.c)
 	if [ "$as" != "" ]; then
 		if [ ! -f src/Makefile.ORIG ]; then
 			cp src/Makefile src/Makefile.ORIG
@@ -95,17 +95,17 @@ if [ $os = dos ]; then
 			<src/Makefile.ORIG >src/Makefile
 	fi
 elif [ $os = windows ]; then
-	(cd src; ln -fs ../targets/lib/init-windows.c lib/init.c)
-	(cd src; ln -fs ../targets/lib/system-windows.c lib/system.c)
+	(cd runtime/lib; ln -fs ../targets/lib/init-windows.c init.c)
+	(cd runtime/lib; ln -fs ../targets/lib/system-windows.c system.c)
 else
-	(cd src; ln -fs ../targets/lib/init-unix.c lib/init.c)
-	(cd src; ln -fs ../targets/lib/system-unix.c lib/system.c)
+	(cd runtime/lib; ln -fs ../targets/lib/init-unix.c init.c)
+	(cd runtime/lib; ln -fs ../targets/lib/system-unix.c system.c)
 fi
 
 (cd src && ln -fs targets/cg/cg$mac$opt.c cg.c)
 (cd src && ln -fs targets/cg/cg$mac.h cg.h)
 (cd src && ln -fs targets/$os-$mac/sys-$os-$mac.h sys.h)
-(cd src/lib && ln -fs ../targets/$os-$mac/crt0-$os-$mac.s crt0.s)
-(cd src/include && ln -fs ../targets/include/limits-$int.h limits.h)
+(cd runtime/lib && ln -fs ../targets/$os-$mac/crt0-$os-$mac.s crt0.s)
+(cd runtime/include && ln -fs ../targets/include/limits-$int.h limits.h)
 
 echo "Building for $os/$mac. Now cd to src and run make."
