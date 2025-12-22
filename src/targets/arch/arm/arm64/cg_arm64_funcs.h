@@ -187,6 +187,7 @@ void cga64_stack(int n);
 void cga64_entry(int lsize);
 void cga64_exit(void);
 void cga64_movearg(int n);
+int cga64_emitargs(void (*emitter)(void*), void *args, int nargs, int nfixed);
 
 /* Data definition */
 void cga64_defb(int v);

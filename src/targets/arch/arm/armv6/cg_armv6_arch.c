@@ -220,6 +220,7 @@ struct cg_vtable cg_armv6_vtable = {
     /* System Runtime Calling Convention Support */
     NULL,                           /* cgmovearg - not implemented for ARMv6 */
     0,                              /* maxregargs - would be 4 for AAPCS */
+    NULL,                           /* cgemitargs - not implemented for ARMv6 */
     
     /* Data Definition */
     cgarm_defb,

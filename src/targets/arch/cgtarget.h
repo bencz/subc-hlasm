@@ -303,8 +303,18 @@ struct cg_vtable {
     /* System Runtime Calling Convention Support (-R flag) */
     /* Move accumulator to argument register n (0-7) */
     void (*cgmovearg)(int n);
-    /* Maximum number of register arguments supported */
+    /* Maximum number of register arguments supported (0 = use stack) */
     int  maxregargs;
+    /* Emit function call arguments using platform ABI.
+     * If non-NULL, this function handles all argument emission for system runtime.
+     * Parameters:
+     *   emitter: callback to emit a single argument (calls emittree1+commit)
+     *   args: argument list node (linked via left, values in right)
+     *   nargs: total number of arguments
+     *   nfixed: number of fixed (non-variadic) args (-1 = all fixed)
+     * Returns: number of stack slots used (for cleanup after call)
+     */
+    int  (*cgemitargs)(void (*emitter)(void*), void *args, int nargs, int nfixed);
     
     /* Data Definition */
     void (*cgdefb)(int v);

@@ -943,6 +943,125 @@ void cga64_movearg(int n) {
 }
 
 /*
+ * cga64_emitargs - Emit function arguments using AAPCS64 calling convention
+ *
+ * This function handles argument emission for system runtime mode (-R flag).
+ * On ARM64 AAPCS64, arguments go in registers x0-x7. If there are more than
+ * 8 arguments, the rest go on the stack (not implemented yet).
+ *
+ * The argument tree is structured as a linked list via 'left' pointers,
+ * with each argument value in 'right'. The list is in reverse order:
+ * the last argument is at the root, first argument is deepest.
+ *
+ * We process from last to first, so that x0 ends up with the first argument.
+ *
+ * @emitter: callback to emit a single argument node (leaves result in x0)
+ * @args: argument list node (opaque, uses accessor functions)
+ * @nargs: total number of arguments
+ * @return: number of stack slots used (for cleanup after call)
+ */
+
+/* Accessor functions defined in tree.c */
+extern void *node_get_left(void *n);
+extern void *node_get_right(void *n);
+
+/* Frontend function to clear accumulator state (prevents spill on next commit) */
+extern void clear(int q);
+
+/*
+ * Emit variadic arguments to stack in correct order.
+ * On ARM64 Darwin, variadic args go on stack at [sp], [sp+8], [sp+16], etc.
+ * We need to emit them in forward order (first variadic at [sp]).
+ */
+static int emit_variadic_args(void (*emitter)(void*), void *a, int nfixed, int idx) {
+    void *left, *right;
+    int count = 0;
+    
+    if (a == NULL) return 0;
+    if (idx < nfixed) return 0;  /* Not a variadic arg */
+    
+    left = node_get_left(a);
+    right = node_get_right(a);
+    
+    /* First emit earlier variadic args (recursive) */
+    count = emit_variadic_args(emitter, left, nfixed, idx - 1);
+    
+    /* Then emit this variadic arg */
+    if (right != NULL) {
+        emitter(right);
+    }
+    
+    /* Store to stack at correct offset */
+    /* sp points to variadic area, store at [sp + count*8] */
+    sprintf(buf, "str\tx0, [sp, #%d]", count * 8);
+    gen(buf);
+    
+    clear(1);
+    return count + 1;
+}
+
+/*
+ * Emit fixed arguments to registers (last to first so x0 gets first arg).
+ */
+static void emit_fixed_args(void (*emitter)(void*), void *a, int nfixed, int idx) {
+    void *left, *right;
+    
+    if (a == NULL) return;
+    if (nfixed >= 0 && idx >= nfixed) {
+        /* Skip variadic args */
+        emit_fixed_args(emitter, node_get_left(a), nfixed, idx - 1);
+        return;
+    }
+    
+    left = node_get_left(a);
+    right = node_get_right(a);
+    
+    /* Process this fixed argument */
+    if (right != NULL) {
+        emitter(right);
+    }
+    
+    /* Move to appropriate register */
+    if (idx < 8) {
+        cga64_movearg(idx);
+    }
+    
+    clear(1);
+    
+    /* Process earlier fixed arguments */
+    emit_fixed_args(emitter, left, nfixed, idx - 1);
+}
+
+int cga64_emitargs(void (*emitter)(void*), void *args, int nargs, int nfixed) {
+    int nvarargs = 0;
+    int stack_slots = 0;
+    
+    if (nfixed >= 0 && nfixed < nargs) {
+        /* Has variadic arguments */
+        nvarargs = nargs - nfixed;
+        
+        /* Ensure we're in text section before emitting code */
+        cga64_text();
+        
+        /* Allocate stack space for variadic args (16-byte aligned) */
+        stack_slots = (nvarargs + 1) & ~1;  /* Round up to even for 16-byte alignment */
+        sprintf(buf, "sub\tsp, sp, #%d", stack_slots * 8);
+        gen(buf);
+        
+        /* Emit variadic args to stack */
+        emit_variadic_args(emitter, args, nfixed, nargs - 1);
+        
+        /* Emit fixed args to registers */
+        emit_fixed_args(emitter, args, nfixed, nargs - 1);
+    } else {
+        /* No variadic arguments - all go to registers */
+        emit_fixed_args(emitter, args, -1, nargs - 1);
+    }
+    
+    return stack_slots;
+}
+
+/*
  * ============================================================================
  * SECTION: Data Definition
  * ============================================================================

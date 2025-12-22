@@ -223,6 +223,7 @@ struct cg_vtable cg_8086_vtable = {
     /* System Runtime Calling Convention Support */
     NULL,                           /* cgmovearg - not implemented for 8086 */
     0,                              /* maxregargs - 8086 uses stack for args */
+    NULL,                           /* cgemitargs - not implemented for 8086 */
     
     /* Data Definition */
     cg86_defb,

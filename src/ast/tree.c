@@ -14,6 +14,19 @@ char	Bars[MAXBARS];
 
 static void emittree1(node *a);
 
+/*
+ * Accessor functions for node structure.
+ * These are used by backend cgemitargs implementations to traverse
+ * the argument tree without needing to know the node structure details.
+ */
+void *node_get_left(void *n) {
+	return n ? ((node *)n)->left : NULL;
+}
+
+void *node_get_right(void *n) {
+	return n ? ((node *)n)->right : NULL;
+}
+
 static node *mknode(int op, int na, int *args, node *left, node *right) {
 	node	*n;
 	int	hdrlen;
@@ -220,56 +233,13 @@ static int countargs(node *a) {
 }
 
 /*
- * Emit arguments for system runtime calling convention.
- * Arguments are placed in registers (x0-x7 for ARM64, etc.)
- * instead of being pushed on the stack.
- *
- * The argument tree is structured as a linked list via 'left' pointers,
- * with each argument value in 'right'. The list is in reverse order:
- * the last argument is at the root, first argument is deepest.
- *
- * For write(1, msg, len):
- *   a->right = len (arg 2)
- *   a->left->right = msg (arg 1)  
- *   a->left->left->right = 1 (arg 0)
- *
- * We process from last to first, moving each to its target register.
- * Last arg (index nargs-1) goes to highest register, first arg to x0.
- *
- * @a: Argument list node
- * @nargs: Total number of arguments
- * @maxargs: Maximum number of register arguments
- * @current: Current argument index (nargs-1 down to 0)
+ * Callback for cgemitargs - emits a single argument node.
+ * Called by backend to emit each argument value into accumulator (x0).
+ * Backend is responsible for moving value to target register and clearing.
  */
-static void emitargs_sysrt_helper(node *a, int nargs, int maxargs, int current) {
-	if (NULL == a) return;
-	
-	/* Process this argument (rightmost/last in remaining list) */
-	/* emittree1 generates code that leaves result in accumulator (x0) */
-	emittree1(a->right);
-	
-	/* Flush any pending operations without spilling to stack */
-	/* We need the value in x0, then move it to target register */
+static void emit_single_arg(void *arg_node) {
+	emittree1((node *)arg_node);
 	commit();
-	
-	/* Move to appropriate register */
-	/* current counts down: nargs-1, nargs-2, ..., 0 */
-	/* So current=nargs-1 is last arg, current=0 is first arg */
-	/* First arg (current=0) should go to x0, etc. */
-	if (current < maxargs && CG->vtable->cgmovearg != NULL) {
-		CG->vtable->cgmovearg(current);
-	}
-	
-	/* Clear accumulator state so next arg doesn't trigger spill */
-	clear(1);
-	
-	/* Process remaining arguments (earlier ones) */
-	emitargs_sysrt_helper(a->left, nargs, maxargs, current - 1);
-}
-
-static void emitargs_sysrt(node *a, int nargs, int maxargs) {
-	if (NULL == a) return;
-	emitargs_sysrt_helper(a, nargs, maxargs, nargs - 1);
 }
 
 static void emittree1(node *a) {
@@ -390,12 +360,24 @@ static void emittree1(node *a) {
 			case OP_SUB:	gensub(a->args[0], a->args[1], 1);						break;
 			}
 			break;
-	case OP_CALL:	if (O_sysrt && CG->vtable->maxregargs > 0) {
-				/* System runtime: use register calling convention */
-				emitargs_sysrt(a->left, a->args[1], CG->vtable->maxregargs);
+	case OP_CALL:	if (O_sysrt && CG->vtable->cgemitargs != NULL) {
+				/* System runtime: backend handles argument emission */
+				/* Check if function is variadic: Sizes[sym] < 0 means variadic */
+				/* Sizes[sym] = -(nfixed + 1), so nfixed = -Sizes[sym] - 1 */
+				int stack_slots, nfixed;
+				if (a->args[0] > 0 && Sizes[a->args[0]] < 0) {
+					nfixed = -Sizes[a->args[0]] - 1;
+				} else {
+					nfixed = -1;  /* -1 means all args are fixed */
+				}
+				stack_slots = CG->vtable->cgemitargs(emit_single_arg, 
+					a->left, a->args[1], nfixed);
 				commit();
 				gencall(a->args[0]);
-				/* No stack adjustment needed for register args */
+				/* Adjust stack if backend pushed any args */
+				if (stack_slots > 0) {
+					genstack(stack_slots * CG_STACK_SLOT_SIZE);
+				}
 			} else {
 				/* SubC runtime: use stack calling convention */
 				emitargs(a->left);
@@ -405,16 +387,22 @@ static void emittree1(node *a) {
 				genstack((a->args[1]) * CG_STACK_SLOT_SIZE);
 			}
 			break;
-	case OP_CALR:	if (O_sysrt && CG->vtable->maxregargs > 0) {
-				/* System runtime: use register calling convention */
-				emitargs_sysrt(a->left, a->args[1], CG->vtable->maxregargs);
+	case OP_CALR:	if (O_sysrt && CG->vtable->cgemitargs != NULL) {
+				/* System runtime: backend handles argument emission */
+				/* For indirect calls, we don't know if variadic, assume not */
+				int stack_slots;
+				stack_slots = CG->vtable->cgemitargs(emit_single_arg,
+					a->left, a->args[1], -1);
 				commit();
 				clear(0);
 				lv[LVPRIM] = FUNPTR;
 				lv[LVSYM] = a->args[0];
 				genrval(lv);
 				gencalr();
-				/* No stack adjustment needed for register args */
+				/* Adjust stack if backend pushed any args */
+				if (stack_slots > 0) {
+					genstack(stack_slots * CG_STACK_SLOT_SIZE);
+				}
 			} else {
 				/* SubC runtime: use stack calling convention */
 				emitargs(a->left);
