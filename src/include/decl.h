@@ -42,7 +42,7 @@ int scan(void);
 int scanraw(void);
 void reject(void);
 
-/* frontend/preprocessor/prep.c */
+/* frontend/preprocessor/prep.c - Modular preprocessor */
 void playmac(char *s);
 int getln(char *buf, int max);
 int frozen(int depth);

@@ -16,8 +16,7 @@ src/
 │   │   └── tokens.h            # Token definitions
 │   │
 │   ├── preprocessor/
-│   │   ├── prep.c              # Preprocessor (#define, #include, etc.)
-│   │   └── prep.h              # Preprocessor declarations
+│   │   └── prep.c              # Preprocessor (#define, #include, etc.)
 │   │
 │   └── parser/
 │       ├── decl.c              # Declaration parser
@@ -199,3 +198,36 @@ For ARM64, full AAPCS64 support is implemented:
 ## C89 Compliance
 
 All code is C89 compliant. No C99/C11 features are used.
+
+## Preprocessor Architecture
+
+The preprocessor (`frontend/preprocessor/prep.c`) handles:
+
+| Directive | Description |
+|-----------|-------------|
+| `#define` | Define object-like macros |
+| `#undef` | Undefine a macro |
+| `#include` | Include a file |
+| `#ifdef` | Conditional if macro defined |
+| `#ifndef` | Conditional if macro not defined |
+| `#else` | Else branch of conditional |
+| `#endif` | End conditional |
+| `#error` | Generate compilation error |
+| `#line` | Set line number and filename |
+| `#pragma` | Compiler pragma (ignored) |
+
+**Limitations vs. standard C89:**
+- No `#if` / `#elif` (expression evaluation)
+- No function-like macros (parameterized macros)
+- No `#` or `##` operators
+- No multi-line preprocessor commands
+
+**Internal Structure:**
+
+The preprocessor uses global variables shared with the scanner for tight integration:
+- `Macp`, `Macc`, `Mp` - Macro expansion stack (used by `scan.c:next()`)
+- `Ifdefstk`, `Isp` - Conditional compilation stack
+- `Inclev` - Include nesting depth
+- `Incdirs`, `Nincdirs` - Include search directories
+
+This coupling is intentional for performance and simplicity in a single-pass compiler.

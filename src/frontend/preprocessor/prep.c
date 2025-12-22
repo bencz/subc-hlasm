@@ -1,17 +1,33 @@
 /*
- *	NMH's Simple C Compiler, 2011,2012,2014
- *	Preprocessor
+ * SubC Compiler - Preprocessor
+ * 
+ * Refactored preprocessor with modular structure.
+ * Uses compiler globals for scanner integration (Macp, Macc, Mp).
+ *
+ * Copyright (c) 2011-2025 - Public Domain (CC0)
  */
 
 #include "defs.h"
 #include "data.h"
 #include "decl.h"
 
+/*
+ * ============================================================================
+ * SECTION: Macro Expansion (uses global Macp, Macc, Mp for scanner)
+ * ============================================================================
+ */
+
 void playmac(char *s) {
 	if (Mp >= MAXNMAC) fatal("too many nested macros");
 	Macc[Mp] = next();
 	Macp[Mp++] = s;
 }
+
+/*
+ * ============================================================================
+ * SECTION: Utility Functions
+ * ============================================================================
+ */
 
 int getln(char *buf, int max) {
 	int	k;
@@ -22,6 +38,30 @@ int getln(char *buf, int max) {
 	if (k && '\r' == buf[k-1]) buf[--k] = 0;
 	return k;
 }
+
+static void junkln(void) {
+	while (!feof(Infile) && fgetc(Infile) != '\n')
+		;
+	Line++;
+}
+
+/*
+ * ============================================================================
+ * SECTION: Conditional Compilation (uses global Ifdefstk, Isp)
+ * ============================================================================
+ */
+
+int frozen(int depth) {
+	return Isp >= depth &&
+		(P_IFNDEF == Ifdefstk[Isp-depth] ||
+		P_ELSENOT == Ifdefstk[Isp-depth]);
+}
+
+/*
+ * ============================================================================
+ * SECTION: Directive Handlers
+ * ============================================================================
+ */
 
 static void defmac(void) {
 	char	name[NAMELEN+1];
@@ -39,7 +79,7 @@ static void defmac(void) {
 	for (p = buf; isspace(*p); p++)
 		;
 	if ((y = findmac(name)) != 0) {
-		if (strcmp(Mtext[y], buf))
+		if (strcmp(Mtext[y], p))
 			error("macro redefinition: %s", name);
 	}
 	else {
@@ -66,7 +106,7 @@ static FILE *try_open_include(char *file, char *path, int pathlen) {
 	
 	/* Try each include directory in order */
 	for (i = 0; i < Nincdirs; i++) {
-		if (strlen(Incdirs[i]) + strlen(file) + 2 < pathlen) {
+		if (strlen(Incdirs[i]) + strlen(file) + 2 < (size_t)pathlen) {
 			strcpy(path, Incdirs[i]);
 			strcat(path, "/");
 			strcat(path, file);
@@ -76,7 +116,7 @@ static FILE *try_open_include(char *file, char *path, int pathlen) {
 	}
 	
 	/* Try SCCDIR/include as fallback */
-	if (strlen(SCCDIR) + strlen(file) + 10 < pathlen) {
+	if (strlen(SCCDIR) + strlen(file) + 10 < (size_t)pathlen) {
 		strcpy(path, SCCDIR);
 		strcat(path, "/include/");
 		strcat(path, file);
@@ -205,17 +245,11 @@ static void setline(void) {
 	}
 }
 
-static void junkln(void) {
-	while (!feof(Infile) && fgetc(Infile) != '\n')
-		;
-	Line++;
-}
-
-int frozen(int depth) {
-	return Isp >= depth &&
-		(P_IFNDEF == Ifdefstk[Isp-depth] ||
-		P_ELSENOT == Ifdefstk[Isp-depth]);
-}
+/*
+ * ============================================================================
+ * SECTION: Main Preprocessor Entry Point
+ * ============================================================================
+ */
 
 void preproc(void) {
 	putback('#');
@@ -239,6 +273,5 @@ void preproc(void) {
 	case P_LINE:	setline(); break;
 	case P_PRAGMA:	junkln(); break;
 	default:	junkln(); break;
-			break;
 	}
 }
