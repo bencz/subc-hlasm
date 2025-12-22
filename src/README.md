@@ -153,6 +153,49 @@ make scc0
 
 See `targets/arch/README` for detailed instructions on adding new CPU architectures or OS targets.
 
+## Command Line Options
+
+Key options handled in `main.c`:
+
+| Option | Description |
+|--------|-------------|
+| `-c` | Compile only, do not link |
+| `-o file` | Write output to FILE |
+| `-S` | Compile to assembly language |
+| `-T target` | Select target architecture (default: 386) |
+| `-L` | List available targets |
+| `-R` | Use system runtime (libc) instead of SubC runtime |
+| `-I dir` | Add DIR to include search path |
+| `-D m=v` | Define macro M with optional value V |
+| `-N` | Do not use stdio |
+| `-v` | Verbose mode |
+
+## Include Search Path
+
+The preprocessor (`frontend/preprocessor/prep.c`) searches for include files in this order:
+
+**For `#include "file"`:**
+1. Current directory
+2. Directories specified with `-I` (in order)
+3. `SCCDIR/include`
+
+**For `#include <file>`:**
+1. Directories specified with `-I` (in order)
+2. `SCCDIR/include`
+
+## System Runtime Mode (-R)
+
+When `-R` is active, the compiler generates code compatible with the system's C library:
+
+- Symbol names are not prefixed with 'C'
+- Uses platform ABI for function calls (e.g., AAPCS64 for ARM64)
+- Links with system libc instead of SubC runtime
+
+For ARM64, full AAPCS64 support is implemented:
+- Caller side: arguments in x0-x7, overflow on stack
+- Callee side: saves register arguments to stack for SubC access
+- No limit on number of function parameters
+
 ## C89 Compliance
 
 All code is C89 compliant. No C99/C11 features are used.
