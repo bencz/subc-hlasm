@@ -10,7 +10,7 @@ LINT=	gcc -std=c89 -O3 -c -o /dev/null -ansi -pedantic -Wall
 INCLUDES=	-Iinclude -Itargets/arch \
 		-Itargets/arch/x86/i386 -Itargets/arch/x86/x86_64 \
 		-Itargets/arch/x86/i8086 -Itargets/arch/arm/armv6 \
-		-Itargets/arch/s370
+		-Itargets/arch/arm/arm64 -Itargets/arch/s370
 
 # Modular structure sources
 # Frontend - Lexer
@@ -84,10 +84,16 @@ TGT86=	targets/arch/x86/i8086/cg_8086.c \
 	targets/arch/x86/i8086/cg_8086_arch.c \
 	targets/arch/x86/i8086/cg_8086_dos.c
 
-# ARM targets
-TGTARM=	targets/arch/arm/armv6/cg_armv6.c \
+# ARMv6 targets
+TGTARMV6= targets/arch/arm/armv6/cg_armv6.c \
 	targets/arch/arm/armv6/cg_armv6_arch.c \
 	targets/arch/arm/armv6/cg_armv6_linux.c
+
+# ARM64 targets
+TGTARM64= targets/arch/arm/arm64/cg_arm64.c \
+	targets/arch/arm/arm64/cg_arm64_arch.c \
+	targets/arch/arm/arm64/cg_arm64_linux.c \
+	targets/arch/arm/arm64/cg_arm64_darwin.c
 
 # S/370 targets
 TGTS370= targets/arch/s370/cg_s370.c \
@@ -97,7 +103,7 @@ TGTS370= targets/arch/s370/cg_s370.c \
 	targets/arch/s370/cg_s370xa_mvs.c
 
 # All target sources
-TGTSRC=	$(TGTCORE) $(TGT386) $(TGTX64) $(TGT86) $(TGTARM) $(TGTS370)
+TGTSRC=	$(TGTCORE) $(TGT386) $(TGTX64) $(TGT86) $(TGTARMV6) $(TGTARM64) $(TGTS370)
 
 # All sources (compiler + targets)
 ALLSRC=	$(SRC) $(TGTSRC)
@@ -286,6 +292,8 @@ lint:
 	$(LINT) targets/arch/x86/i8086/cg_8086.c
 	$(LINT) targets/arch/x86/i8086/cg_8086_arch.c
 	$(LINT) targets/arch/arm/armv6/cg_armv6.c
+	$(LINT) targets/arch/arm/arm64/cg_arm64.c
+	$(LINT) targets/arch/arm/arm64/cg_arm64_arch.c
 
 clean:
 	rm -f scc0 scc1 scc2 scc scc86 test.s *.o *.core core a.out \

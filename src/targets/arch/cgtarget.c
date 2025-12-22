@@ -38,9 +38,17 @@ extern struct cg_target target_x86_64_darwin;
 extern struct cg_target target_8086_alias;
 extern struct cg_target target_8086_dos;
 
-/* ARM targets */
+/* ARMv6 targets */
 extern struct cg_target target_armv6_alias;
 extern struct cg_target target_armv6_linux;
+
+/* ARM64 targets */
+extern struct cg_target target_arm64_alias;
+extern struct cg_target target_arm64_linux;
+extern struct cg_target target_aarch64_linux;
+extern struct cg_target target_arm64_darwin;
+extern struct cg_target target_aarch64_darwin;
+extern struct cg_target target_arm64_macos;
 
 /* S/370 targets */
 extern struct cg_target cg_s370_mvs_target;
@@ -52,7 +60,7 @@ extern struct cg_target cg_s370xa_mvs_target;
  * ============================================================================
  */
 
-#define MAX_TARGETS 32
+#define MAX_TARGETS 48
 
 static struct cg_target *targets[MAX_TARGETS];
 static int num_targets = 0;
@@ -97,9 +105,17 @@ void cg_init_targets(void) {
     register_target(&target_8086_alias);
     register_target(&target_8086_dos);
     
-    /* ARM targets */
+    /* ARMv6 targets */
     register_target(&target_armv6_alias);
     register_target(&target_armv6_linux);
+    
+    /* ARM64 targets */
+    register_target(&target_arm64_alias);
+    register_target(&target_arm64_linux);
+    register_target(&target_aarch64_linux);
+    register_target(&target_arm64_darwin);
+    register_target(&target_aarch64_darwin);
+    register_target(&target_arm64_macos);
     
     /* S/370 targets */
     register_target(&cg_s370_mvs_target);

@@ -63,7 +63,12 @@ src/
 │   │   │   ├── x86_64/         # AMD64/x86-64 targets
 │   │   │   └── i8086/          # 8086 (DOS) targets
 │   │   ├── arm/
-│   │   │   └── armv6/          # ARMv6 targets
+│   │   │   ├── armv6/          # ARMv6 targets (32-bit ARM)
+│   │   │   └── arm64/          # ARM64/AArch64 targets (64-bit ARM)
+│   │   │       ├── cg_arm64.c          # ARM64 code generation
+│   │   │       ├── cg_arm64_arch.c/h   # ARM64 architecture (64-bit)
+│   │   │       ├── cg_arm64_linux.c    # ARM64 Linux target
+│   │   │       └── cg_arm64_darwin.c   # ARM64 Darwin/macOS target
 │   │   └── s370/               # IBM System/370 targets
 │   │       ├── cg_s370.c           # S/370 code generation (HLASM)
 │   │       ├── cg_s370_arch.c/h    # S/370 architecture (24-bit)

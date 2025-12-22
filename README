@@ -31,16 +31,18 @@
 	SUPPORTED SYSTEMS
 
 	SubC generates code for GAS, the GNU assembler (except for the
-	DOS version, which emits TASM-style syntax). It targets the
-	following processors and operating systems:
+	DOS version, which emits TASM-style syntax, and the S/370 version
+	which emits HLASM syntax). It targets the following processors
+	and operating systems:
 
 		FreeBSD		386*	armv6*	x86-64
-		Linux		386*	-	x86-64*
+		Linux		386*	arm64!	x86-64*
 		NetBSD		386*	-	x86-64*
 		OpenBSD		386%	-	-
 		Windows/MinGW	386*	-	-
-		Darwin		-	-	x86-64%(/)
+		Darwin		-	arm64!	x86-64%(/)
 		DOS		8086(/)
+		MVS		s370!	s370-xa!
 
 		  %  uses the syscall layer of the host libc
 		  *  untested

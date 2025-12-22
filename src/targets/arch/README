@@ -66,8 +66,20 @@
     │       └── cg_8086_dos.c       DOS target
     │
     ├── arm/                    ARM family
-    │   └── armv6/              ARMv6 (Raspberry Pi)
-    │       └── ...
+    │   ├── armv6/              ARMv6 (Raspberry Pi, 32-bit)
+    │   │   ├── cg_armv6.c          Code generation functions
+    │   │   ├── cg_armv6_funcs.h    Function prototypes
+    │   │   ├── cg_armv6_arch.h     Arch/vtable declarations
+    │   │   ├── cg_armv6_arch.c     Arch/vtable definitions
+    │   │   └── cg_armv6_linux.c    Linux target
+    │   │
+    │   └── arm64/              ARM64/AArch64 (Apple Silicon, 64-bit)
+    │       ├── cg_arm64.c          Code generation functions
+    │       ├── cg_arm64_funcs.h    Function prototypes
+    │       ├── cg_arm64_arch.h     Arch/vtable declarations
+    │       ├── cg_arm64_arch.c     Arch/vtable definitions
+    │       ├── cg_arm64_linux.c    Linux target
+    │       └── cg_arm64_darwin.c   Darwin/macOS target
     │
     └── s370/                   IBM System/370 family
         ├── cg_s370.c               Code generation (HLASM syntax)
@@ -264,14 +276,76 @@
              ...
 
 
+    ARM64/AARCH64 TARGETS
+
+    The ARM64 target generates GNU Assembler (GAS) code for 64-bit ARM
+    processors. Key characteristics:
+
+    - 64-bit registers and pointers
+    - Little-endian byte order (default)
+    - Stack grows downward (STACK_DOWN)
+    - 16-byte stack alignment required
+    - IEEE 754 floating point
+    - AAPCS64 calling convention
+
+    Register usage:
+      x0      - Primary accumulator, return value
+      x1      - Secondary accumulator
+      x2      - Tertiary register (pointer for stores)
+      x3      - Scratch register
+      x29     - Frame pointer (FP)
+      x30     - Link register (LR)
+      sp      - Stack pointer
+
+    Two OS variants are supported:
+
+    arm64-linux   - Linux with ELF object format
+    arm64-darwin  - Darwin/macOS with Mach-O object format
+
+    Darwin differences:
+    - Symbols require underscore prefix (_main vs main)
+    - Uses @PAGE/@PAGEOFF for PC-relative addressing
+    - Mach-O specific section directives
+
+    Linux differences:
+    - Uses :pg_hi21:/:lo12: for PC-relative addressing
+    - Standard ELF format
+
+    Example output (Linux):
+        .arch armv8-a
+        .text
+        .globl  Cmain
+        .align 3
+        Cmain:
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+        mov     x0, #42
+        ldp     x29, x30, [sp], #16
+        ret
+
+    Example output (Darwin):
+        .section __TEXT,__text,regular,pure_instructions
+        .build_version macos, 11, 0
+        .globl  _Cmain
+        .p2align 3
+        _Cmain:
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+        mov     x0, #42
+        ldp     x29, x30, [sp], #16
+        ret
+
+
     USAGE
 
     Command line:
-        scc --target=386-linux program.c
-        scc --target=x86-64-freebsd program.c
-        scc --target=s370 program.c
-        scc --target=s370-xa program.c
-        scc --list-targets
+        scc -T 386-linux program.c
+        scc -T x86-64-freebsd program.c
+        scc -T arm64-linux program.c
+        scc -T arm64-darwin program.c
+        scc -T s370 program.c
+        scc -T s370-xa program.c
+        scc -L                          # list all targets
 
     In code:
         #include "cgtarget.h"

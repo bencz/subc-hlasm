@@ -72,3 +72,22 @@
 		libtest		passed
 		signal()	n/a
 
+	ARM64/Linux (cross-compiled), SubC 20251222
+		code generation	works
+		assembly output	verified
+		runtime		untested (needs ARM64 hardware)
+
+	ARM64/Darwin (cross-compiled on macOS), SubC 20251222
+		code generation	works
+		assembly output	verified
+		runtime		untested (needs runtime library port)
+
+	IBM S/370 MVS (cross-compiled), SubC 20251222
+		code generation	works (HLASM output)
+		assembly output	verified
+		runtime		untested (needs MVS environment)
+
+	IBM S/370-XA MVS (cross-compiled), SubC 20251222
+		code generation	works (HLASM output)
+		assembly output	verified
+		runtime		untested (needs MVS environment)
