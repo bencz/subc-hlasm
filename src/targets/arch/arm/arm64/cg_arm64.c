@@ -1034,7 +1034,7 @@ static void emit_fixed_args(void (*emitter)(void*), void *a, int nfixed, int idx
 
 int cga64_emitargs(void (*emitter)(void*), void *args, int nargs, int nfixed) {
     int nvarargs = 0;
-    int stack_slots = 0;
+    int stack_bytes = 0;
     
     if (nfixed >= 0 && nfixed < nargs) {
         /* Has variadic arguments */
@@ -1044,8 +1044,9 @@ int cga64_emitargs(void (*emitter)(void*), void *args, int nargs, int nfixed) {
         cga64_text();
         
         /* Allocate stack space for variadic args (16-byte aligned) */
-        stack_slots = (nvarargs + 1) & ~1;  /* Round up to even for 16-byte alignment */
-        sprintf(buf, "sub\tsp, sp, #%d", stack_slots * 8);
+        /* Each arg is 8 bytes, round up to 16-byte alignment */
+        stack_bytes = ((nvarargs * 8) + 15) & ~15;
+        sprintf(buf, "sub\tsp, sp, #%d", stack_bytes);
         gen(buf);
         
         /* Emit variadic args to stack */
@@ -1058,7 +1059,8 @@ int cga64_emitargs(void (*emitter)(void*), void *args, int nargs, int nfixed) {
         emit_fixed_args(emitter, args, -1, nargs - 1);
     }
     
-    return stack_slots;
+    /* Return number of bytes allocated on stack */
+    return stack_bytes;
 }
 
 /*

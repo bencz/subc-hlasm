@@ -364,19 +364,19 @@ static void emittree1(node *a) {
 				/* System runtime: backend handles argument emission */
 				/* Check if function is variadic: Sizes[sym] < 0 means variadic */
 				/* Sizes[sym] = -(nfixed + 1), so nfixed = -Sizes[sym] - 1 */
-				int stack_slots, nfixed;
+				int stack_bytes, nfixed;
 				if (a->args[0] > 0 && Sizes[a->args[0]] < 0) {
 					nfixed = -Sizes[a->args[0]] - 1;
 				} else {
 					nfixed = -1;  /* -1 means all args are fixed */
 				}
-				stack_slots = CG->vtable->cgemitargs(emit_single_arg, 
+				stack_bytes = CG->vtable->cgemitargs(emit_single_arg, 
 					a->left, a->args[1], nfixed);
 				commit();
 				gencall(a->args[0]);
-				/* Adjust stack if backend pushed any args */
-				if (stack_slots > 0) {
-					genstack(stack_slots * CG_STACK_SLOT_SIZE);
+				/* Adjust stack if backend allocated any bytes */
+				if (stack_bytes > 0) {
+					genstack(stack_bytes);
 				}
 			} else {
 				/* SubC runtime: use stack calling convention */
@@ -390,8 +390,8 @@ static void emittree1(node *a) {
 	case OP_CALR:	if (O_sysrt && CG->vtable->cgemitargs != NULL) {
 				/* System runtime: backend handles argument emission */
 				/* For indirect calls, we don't know if variadic, assume not */
-				int stack_slots;
-				stack_slots = CG->vtable->cgemitargs(emit_single_arg,
+				int stack_bytes;
+				stack_bytes = CG->vtable->cgemitargs(emit_single_arg,
 					a->left, a->args[1], -1);
 				commit();
 				clear(0);
@@ -399,9 +399,9 @@ static void emittree1(node *a) {
 				lv[LVSYM] = a->args[0];
 				genrval(lv);
 				gencalr();
-				/* Adjust stack if backend pushed any args */
-				if (stack_slots > 0) {
-					genstack(stack_slots * CG_STACK_SLOT_SIZE);
+				/* Adjust stack if backend allocated any bytes */
+				if (stack_bytes > 0) {
+					genstack(stack_bytes);
 				}
 			} else {
 				/* SubC runtime: use stack calling convention */

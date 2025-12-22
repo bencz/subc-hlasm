@@ -312,7 +312,7 @@ struct cg_vtable {
      *   args: argument list node (linked via left, values in right)
      *   nargs: total number of arguments
      *   nfixed: number of fixed (non-variadic) args (-1 = all fixed)
-     * Returns: number of stack slots used (for cleanup after call)
+     * Returns: number of stack BYTES used (for cleanup after call)
      */
     int  (*cgemitargs)(void (*emitter)(void*), void *args, int nargs, int nfixed);
     
