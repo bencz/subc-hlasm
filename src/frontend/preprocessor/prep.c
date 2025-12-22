@@ -60,6 +60,33 @@ static void undef(void) {
 		Names[y] = "#undef'd";
 }
 
+static FILE *try_open_include(char *file, char *path, int pathlen) {
+	int	i;
+	FILE	*f;
+	
+	/* Try each include directory in order */
+	for (i = 0; i < Nincdirs; i++) {
+		if (strlen(Incdirs[i]) + strlen(file) + 2 < pathlen) {
+			strcpy(path, Incdirs[i]);
+			strcat(path, "/");
+			strcat(path, file);
+			if ((f = fopen(path, "r")) != NULL)
+				return f;
+		}
+	}
+	
+	/* Try SCCDIR/include as fallback */
+	if (strlen(SCCDIR) + strlen(file) + 10 < pathlen) {
+		strcpy(path, SCCDIR);
+		strcat(path, "/include/");
+		strcat(path, file);
+		if ((f = fopen(path, "r")) != NULL)
+			return f;
+	}
+	
+	return NULL;
+}
+
 static void include(void) {
 	char	file[TEXTLEN+1], path[TEXTLEN+1];
 	int	c, k;
@@ -74,15 +101,20 @@ static void include(void) {
 	if (!k || file[k-1] != c)
 		error("missing delimiter in '#include'", NULL);
 	if (k) file[k-1] = 0;
-	if (c == '"')
+	if (c == '"') {
+		/* Try current directory first for "file" includes */
 		strcpy(path, file);
-	else {
-		strcpy(path, SCCDIR);
-		strcat(path, "/include/");
-		strcat(path, file);
+		inc = fopen(path, "r");
+		/* If not found, try include directories */
+		if (inc == NULL)
+			inc = try_open_include(file, path, TEXTLEN);
 	}
-	if ((inc = fopen(path, "r")) == NULL)
-		error("cannot open include file: %s", path);
+	else {
+		/* For <file> includes, search include directories */
+		inc = try_open_include(file, path, TEXTLEN);
+	}
+	if (inc == NULL)
+		error("cannot open include file: %s", file);
 	else {
 		Inclev++;
 		oc = next();

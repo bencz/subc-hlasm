@@ -179,7 +179,7 @@ void cg386_initlw(int v, int a);
 void cg386_call(char *s);
 void cg386_calr(void);
 void cg386_stack(int n);
-void cg386_entry(int lsize);
+void cg386_entry(int lsize, int nparams);
 void cg386_exit(void);
 
 /* Data definition */

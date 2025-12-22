@@ -81,3 +81,8 @@ extern_ int	O_stdio;
 extern_ int	O_sysrt;	/* use system runtime instead of SubC runtime */
 extern_ char	*O_outfile;
 extern_ int	O_debug;
+
+/* include paths (-I option) */
+#define MAXINCDIR	16
+extern_ char	*Incdirs[MAXINCDIR];
+extern_ int	Nincdirs;

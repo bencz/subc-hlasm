@@ -205,7 +205,7 @@ static void link(void) {
 
 static void usage(void) {
 	printf("Usage: scc [-h] [-ctvNRSV] [-d opt] [-o file] [-T target]\n");
-	printf("           [-D macro[=text]] file [...]\n");
+	printf("           [-D macro[=text]] [-I dir] file [...]\n");
 }
 
 static void longusage(void) {
@@ -218,6 +218,7 @@ static void longusage(void) {
 		"-t       test only, generate no code\n"
 		"-v       verbose, more v's = more verbose\n"
 		"-D m=v   define macro M with optional value V\n"
+		"-I dir   add DIR to include search path\n"
 		"-N       do not use stdio (can't use printf, etc)\n"
 		"-R       use system runtime (libc) instead of SubC runtime\n"
 		"-S       compile to assembly language\n"
@@ -274,6 +275,7 @@ int main(int argc, char *argv[]) {
 	O_stdio = 1;
 	O_sysrt = 0;
 	O_outfile = NULL;
+	Nincdirs = 0;
 	
 	/* Initialize target subsystem */
 	cg_init_targets();
@@ -308,6 +310,11 @@ int main(int argc, char *argv[]) {
 			case 'D':
 				if (def) cmderror("too many -D's", NULL);
 				def = nextarg(argc, argv, &i, &j);
+				break;
+			case 'I':
+				if (Nincdirs >= MAXINCDIR)
+					cmderror("too many -I options", NULL);
+				Incdirs[Nincdirs++] = nextarg(argc, argv, &i, &j);
 				break;
 			case 'N':
 				O_stdio = 0;

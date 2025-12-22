@@ -574,9 +574,9 @@ void gencalr(void) {
 	load();
 }
 
-void genentry(int lsize) {
+void genentry(int lsize, int nparams) {
 	gentext();
-	cgentry(lsize);
+	cgentry(lsize, nparams);
 }
 
 void genexit(void) {

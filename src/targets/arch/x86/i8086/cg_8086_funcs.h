@@ -161,7 +161,7 @@ void cg86_initlw(int v, int a);
 void cg86_call(char *s);
 void cg86_calr(void);
 void cg86_stack(int n);
-void cg86_entry(int lsize);
+void cg86_entry(int lsize, int nparams);
 void cg86_exit(void);
 
 /* Data definition */

@@ -297,14 +297,12 @@ struct cg_vtable {
     void (*cgcall)(char *s);
     void (*cgcalr)(void);
     void (*cgstack)(int n);
-    void (*cgentry)(int lsize);
+    void (*cgentry)(int lsize, int nparams);
     void (*cgexit)(void);
     
     /* System Runtime Calling Convention Support (-R flag) */
     /* Move accumulator to argument register n (0-7) */
     void (*cgmovearg)(int n);
-    /* Maximum number of register arguments supported (0 = use stack) */
-    int  maxregargs;
     /* Emit function call arguments using platform ABI.
      * If non-NULL, this function handles all argument emission for system runtime.
      * Parameters:
@@ -399,6 +397,17 @@ struct cg_arch {
      * If NULL, the default PREFIX + name transformation is used.
      */
     char *(*symbol_transform)(char *name);
+    
+    /*
+     * System Runtime Calling Convention
+     * Maximum number of register arguments supported by this architecture.
+     * For AAPCS64 (ARM64): 8 (x0-x7)
+     * For SysV AMD64: 6 (rdi, rsi, rdx, rcx, r8, r9)
+     * For AAPCS (ARM32): 4 (r0-r3)
+     * For cdecl (x86): 0 (all args on stack)
+     * Value of 0 means all arguments go on stack.
+     */
+    int  maxregargs;
 };
 
 /*

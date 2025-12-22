@@ -54,7 +54,10 @@ struct cg_arch cg_x86_64_arch = {
     0,                              /* stack_slot_size - use BPW */
     
     /* Symbol transformation */
-    NULL                            /* symbol_transform - use default */
+    NULL,                           /* symbol_transform - use default */
+    
+    /* System runtime calling convention */
+    6                               /* maxregargs - SysV AMD64 uses rdi,rsi,rdx,rcx,r8,r9 */
 };
 
 /*
@@ -222,7 +225,6 @@ struct cg_vtable cg_x86_64_vtable = {
     
     /* System Runtime Calling Convention Support */
     NULL,                           /* cgmovearg - not implemented for x86-64 */
-    0,                              /* maxregargs - would be 6 for SysV AMD64 */
     NULL,                           /* cgemitargs - not implemented for x86-64 */
     
     /* Data Definition */

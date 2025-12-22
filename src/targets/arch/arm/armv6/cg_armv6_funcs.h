@@ -161,7 +161,7 @@ void cgarm_initlw(int v, int a);
 void cgarm_call(char *s);
 void cgarm_calr(void);
 void cgarm_stack(int n);
-void cgarm_entry(int lsize);
+void cgarm_entry(int lsize, int nparams);
 void cgarm_exit(void);
 
 /* Data definition */

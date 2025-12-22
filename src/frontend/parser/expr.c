@@ -134,7 +134,8 @@ static node *fnargs(int fn, int *na) {
 	int	lv[LV];
 	int	*types;
 	char	msg[100];
-	int	sgn[MAXFNARGS+1];
+	int	*sgn = NULL;
+	int	sgn_capacity = 0;
 	node	*n = NULL, *n2;
 
 	types = (int *) (fn? Mtext[fn]: NULL);
@@ -156,7 +157,17 @@ static node *fnargs(int fn, int *na) {
 			}
 			types++;
 		}
-		if (*na < MAXFNARGS) sgn[*na] = lv[LVPRIM], sgn[*na+1] = 0;
+		/* Grow signature array dynamically */
+		if (*na >= sgn_capacity) {
+			int new_cap = sgn_capacity == 0 ? 16 : sgn_capacity * 2;
+			int *new_sgn = realloc(sgn, (new_cap + 1) * sizeof(int));
+			if (new_sgn == NULL)
+				fatal("out of memory in fnargs()");
+			sgn = new_sgn;
+			sgn_capacity = new_cap;
+		}
+		sgn[*na] = lv[LVPRIM];
+		sgn[*na + 1] = 0;
 		(*na)++;
 		if (COMMA == Token) {
 			Token = scan();
@@ -166,10 +177,12 @@ static node *fnargs(int fn, int *na) {
 		else
 			break;
 	}
-	if (fn && TFUNCTION == Types[fn] && !Mtext[fn]) {
+	if (fn && TFUNCTION == Types[fn] && !Mtext[fn] && sgn != NULL) {
 		Mtext[fn] = galloc((*na+1) * sizeof(int), 1);
 		memcpy(Mtext[fn], sgn, (*na+1) * sizeof(int));
 	}
+	if (sgn != NULL)
+		free(sgn);
 	rparen();
 	return n;
 }

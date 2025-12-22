@@ -514,11 +514,13 @@ static int intcmp(int *x1, int *x2) {
 }
 
 static void signature(int fn, int from, int to) {
-	int	types[MAXFNARGS+1], i;
+	int	*types, i, nparams;
 
-	if (to - from > MAXFNARGS)
-		error("too many function parameters", Names[fn]);
-	for (i=0; i<MAXFNARGS && from < to; i++)
+	nparams = to - from;
+	types = malloc((nparams + 1) * sizeof(int));
+	if (types == NULL)
+		fatal("out of memory in signature()");
+	for (i = 0; i < nparams && from < to; i++)
 		types[i] = Prims[--to];
 	types[i] = 0;
 	if (NULL == Mtext[fn]) {
@@ -528,6 +530,7 @@ static void signature(int fn, int from, int to) {
 	else if (intcmp((int *) Mtext[fn], types))
 		error("declaration does not match prior prototype: %s",
 			Names[fn]);
+	free(types);
 }
 
 /*
@@ -568,7 +571,7 @@ void decl(int clss, int prim, int utype) {
 				if (CPUBLIC == clss) genpublic(name);
 				genaligntext();
 				genfuncname(name);
-				genentry(lsize);
+				genentry(lsize, size);
 				genstack(lsize);
 				genlocinit();
 				Retlab = label();

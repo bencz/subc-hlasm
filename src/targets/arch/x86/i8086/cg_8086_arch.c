@@ -54,7 +54,10 @@ struct cg_arch cg_8086_arch = {
     0,                              /* stack_slot_size - use BPW */
     
     /* Symbol transformation */
-    NULL                            /* symbol_transform - use default */
+    NULL,                           /* symbol_transform - use default */
+    
+    /* System runtime calling convention */
+    0                               /* maxregargs - 8086 uses stack for all args */
 };
 
 /*
@@ -222,7 +225,6 @@ struct cg_vtable cg_8086_vtable = {
     
     /* System Runtime Calling Convention Support */
     NULL,                           /* cgmovearg - not implemented for 8086 */
-    0,                              /* maxregargs - 8086 uses stack for args */
     NULL,                           /* cgemitargs - not implemented for 8086 */
     
     /* Data Definition */

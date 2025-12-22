@@ -51,7 +51,10 @@ struct cg_arch cg_armv6_arch = {
     0,                              /* stack_slot_size - use BPW */
     
     /* Symbol transformation */
-    NULL                            /* symbol_transform - use default */
+    NULL,                           /* symbol_transform - use default */
+    
+    /* System runtime calling convention */
+    4                               /* maxregargs - AAPCS uses r0-r3 */
 };
 
 /*
@@ -219,7 +222,6 @@ struct cg_vtable cg_armv6_vtable = {
     
     /* System Runtime Calling Convention Support */
     NULL,                           /* cgmovearg - not implemented for ARMv6 */
-    0,                              /* maxregargs - would be 4 for AAPCS */
     NULL,                           /* cgemitargs - not implemented for ARMv6 */
     
     /* Data Definition */

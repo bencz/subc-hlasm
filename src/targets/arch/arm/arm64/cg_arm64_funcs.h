@@ -184,7 +184,7 @@ void cga64_initlw(int v, int a);
 void cga64_call(char *s);
 void cga64_calr(void);
 void cga64_stack(int n);
-void cga64_entry(int lsize);
+void cga64_entry(int lsize, int nparams);
 void cga64_exit(void);
 void cga64_movearg(int n);
 int cga64_emitargs(void (*emitter)(void*), void *args, int nargs, int nfixed);

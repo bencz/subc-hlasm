@@ -905,11 +905,74 @@ void cga64_stack(int n) {
     }
 }
 
-void cga64_entry(int lsize) {
+void cga64_entry(int lsize, int nparams) {
+    int i, nregs, noverflow, slot_size, alloc_size;
+    int overflow_src, overflow_dst;
+    
     (void)lsize;  /* Stack allocation handled by genstack() */
-    /* Save frame pointer and link register */
-    gen("stp\tx29, x30, [sp, #-16]!");
-    gen("mov\tx29, sp");
+    
+    /*
+     * When using system runtime (-R flag), arguments arrive per AAPCS64:
+     * - Args 1-8 in registers x0-x7
+     * - Args 9+ on stack (pushed by caller before the call)
+     *
+     * SubC frontend expects ALL parameters on stack at sequential offsets
+     * starting at [fp + 16] with slot_size spacing (16 bytes for ARM64).
+     *
+     * Strategy: Allocate space for all params, set up FP so that
+     * [fp + 16] points to param 1, then save regs and copy overflow.
+     */
+    if (O_sysrt && nparams > 0) {
+        nregs = nparams > 8 ? 8 : nparams;
+        noverflow = nparams > 8 ? nparams - 8 : 0;
+        slot_size = CG->arch->stack_slot_size ? CG->arch->stack_slot_size : 8;
+        
+        /* Total space needed for all parameters */
+        alloc_size = nparams * slot_size + 16;  /* +16 for saved fp/lr */
+        alloc_size = (alloc_size + 15) & ~15;   /* 16-byte align */
+        
+        /* For large frames, we can't use stp with pre-index (limit is -512 to 504).
+         * Instead, allocate stack space first, then save fp/lr. */
+        if (alloc_size > 504) {
+            /* Large frame: sub sp first, then stp at offset */
+            sprintf(buf, "sub\tsp, sp, #%d", alloc_size);
+            gen(buf);
+            gen("stp\tx29, x30, [sp]");
+            gen("mov\tx29, sp");
+        } else {
+            /* Small frame: use stp with pre-index */
+            sprintf(buf, "stp\tx29, x30, [sp, #-%d]!", alloc_size);
+            gen(buf);
+            gen("mov\tx29, sp");
+        }
+        
+        /* Now: sp = fp, and we have alloc_size bytes below old sp.
+         * Layout: [fp+0]=saved_fp, [fp+8]=saved_lr, [fp+16]=param1, ...
+         * Store register args at [fp + 16], [fp + 32], etc. */
+        for (i = 0; i < nregs; i++) {
+            sprintf(buf, "str\tx%d, [x29, #%d]", i, 16 + i * slot_size);
+            gen(buf);
+        }
+        
+        /* Copy overflow args from caller's stack to our param area.
+         * Caller's overflow args are above our frame at [fp + alloc_size],
+         * [fp + alloc_size + 8], etc. (8-byte spacing from caller). */
+        if (noverflow > 0) {
+            overflow_src = alloc_size;  /* First overflow arg */
+            overflow_dst = 16 + 8 * slot_size;  /* After 8 reg args in our frame */
+            
+            for (i = 0; i < noverflow; i++) {
+                sprintf(buf, "ldr\tx9, [x29, #%d]", overflow_src + i * 8);
+                gen(buf);
+                sprintf(buf, "str\tx9, [x29, #%d]", overflow_dst + i * slot_size);
+                gen(buf);
+            }
+        }
+    } else {
+        /* Standard prologue for non-sysrt or no params */
+        gen("stp\tx29, x30, [sp, #-16]!");
+        gen("mov\tx29, sp");
+    }
 }
 
 void cga64_exit(void) {
@@ -1001,50 +1064,87 @@ static int emit_variadic_args(void (*emitter)(void*), void *a, int nfixed, int i
 }
 
 /*
- * Emit fixed arguments to registers (last to first so x0 gets first arg).
+ * Emit fixed arguments beyond x0-x7 to stack (in forward order).
+ * Returns number of stack args emitted.
  */
-static void emit_fixed_args(void (*emitter)(void*), void *a, int nfixed, int idx) {
+static int emit_stack_fixed_args(void (*emitter)(void*), void *a, int nfixed, int idx) {
+    void *left, *right;
+    int count = 0;
+    
+    if (a == NULL) return 0;
+    if (nfixed >= 0 && idx >= nfixed) {
+        /* Skip variadic args */
+        return emit_stack_fixed_args(emitter, node_get_left(a), nfixed, idx - 1);
+    }
+    if (idx < 8) return 0;  /* Args 0-7 go in registers */
+    
+    left = node_get_left(a);
+    right = node_get_right(a);
+    
+    /* First emit earlier stack args (recursive) */
+    count = emit_stack_fixed_args(emitter, left, nfixed, idx - 1);
+    
+    /* Then emit this stack arg */
+    if (right != NULL) {
+        emitter(right);
+    }
+    
+    /* Store to stack at correct offset */
+    sprintf(buf, "str\tx0, [sp, #%d]", count * 8);
+    gen(buf);
+    
+    clear(1);
+    return count + 1;
+}
+
+/*
+ * Emit fixed arguments to registers (last to first so x0 gets first arg).
+ * Only handles args 0-7 (register args).
+ */
+static void emit_reg_fixed_args(void (*emitter)(void*), void *a, int nfixed, int idx) {
     void *left, *right;
     
     if (a == NULL) return;
     if (nfixed >= 0 && idx >= nfixed) {
         /* Skip variadic args */
-        emit_fixed_args(emitter, node_get_left(a), nfixed, idx - 1);
+        emit_reg_fixed_args(emitter, node_get_left(a), nfixed, idx - 1);
+        return;
+    }
+    if (idx >= 8) {
+        /* Skip stack args, go to earlier args */
+        emit_reg_fixed_args(emitter, node_get_left(a), nfixed, idx - 1);
         return;
     }
     
     left = node_get_left(a);
     right = node_get_right(a);
     
-    /* Process this fixed argument */
+    /* Process this register argument */
     if (right != NULL) {
         emitter(right);
     }
     
     /* Move to appropriate register */
-    if (idx < 8) {
-        cga64_movearg(idx);
-    }
+    cga64_movearg(idx);
     
     clear(1);
     
-    /* Process earlier fixed arguments */
-    emit_fixed_args(emitter, left, nfixed, idx - 1);
+    /* Process earlier register arguments */
+    emit_reg_fixed_args(emitter, left, nfixed, idx - 1);
 }
 
 int cga64_emitargs(void (*emitter)(void*), void *args, int nargs, int nfixed) {
-    int nvarargs = 0;
     int stack_bytes = 0;
+    int stack_args = 0;
+    
+    /* Ensure we're in text section before emitting code */
+    cga64_text();
     
     if (nfixed >= 0 && nfixed < nargs) {
         /* Has variadic arguments */
-        nvarargs = nargs - nfixed;
-        
-        /* Ensure we're in text section before emitting code */
-        cga64_text();
+        int nvarargs = nargs - nfixed;
         
         /* Allocate stack space for variadic args (16-byte aligned) */
-        /* Each arg is 8 bytes, round up to 16-byte alignment */
         stack_bytes = ((nvarargs * 8) + 15) & ~15;
         sprintf(buf, "sub\tsp, sp, #%d", stack_bytes);
         gen(buf);
@@ -1052,11 +1152,23 @@ int cga64_emitargs(void (*emitter)(void*), void *args, int nargs, int nfixed) {
         /* Emit variadic args to stack */
         emit_variadic_args(emitter, args, nfixed, nargs - 1);
         
-        /* Emit fixed args to registers */
-        emit_fixed_args(emitter, args, nfixed, nargs - 1);
+        /* Emit fixed args to registers (0-7 only) */
+        emit_reg_fixed_args(emitter, args, nfixed, nargs - 1);
     } else {
-        /* No variadic arguments - all go to registers */
-        emit_fixed_args(emitter, args, -1, nargs - 1);
+        /* No variadic arguments */
+        /* Check if we have more than 8 args (need stack for overflow) */
+        if (nargs > 8) {
+            stack_args = nargs - 8;
+            stack_bytes = ((stack_args * 8) + 15) & ~15;
+            sprintf(buf, "sub\tsp, sp, #%d", stack_bytes);
+            gen(buf);
+            
+            /* Emit stack args (args 8+) */
+            emit_stack_fixed_args(emitter, args, -1, nargs - 1);
+        }
+        
+        /* Emit register args (0-7) */
+        emit_reg_fixed_args(emitter, args, -1, nargs - 1);
     }
     
     /* Return number of bytes allocated on stack */

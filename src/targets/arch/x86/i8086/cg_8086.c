@@ -649,8 +649,9 @@ void cg86_stack(int n) {
     ngen("%s\tsp,%d", "add", n);
 }
 
-void cg86_entry(int lsize) {
+void cg86_entry(int lsize, int nparams) {
     (void)lsize;  /* Not used for 8086 */
+    (void)nparams;  /* Not used for 8086 */
     gen("push\tbp");
     gen("mov\tbp,sp");
 }

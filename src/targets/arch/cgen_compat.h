@@ -249,7 +249,7 @@
 #define cgcall(s)       (CG->vtable->cgcall(s))
 #define cgcalr()        (CG->vtable->cgcalr())
 #define cgstack(n)      (CG->vtable->cgstack(n))
-#define cgentry(n)      (CG->vtable->cgentry(n))
+#define cgentry(n, np)  (CG->vtable->cgentry(n, np))
 #define cgexit()        (CG->vtable->cgexit())
 
 /*

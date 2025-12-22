@@ -682,8 +682,9 @@ void cgx64_stack(int n) {
     ngen("%s\t$%d,%%rsp", "addq", n);
 }
 
-void cgx64_entry(int lsize) {
+void cgx64_entry(int lsize, int nparams) {
     (void)lsize;  /* Not used for x86-64 */
+    (void)nparams;  /* Not used for x86-64 */
     gen("pushq\t%rbp");
     gen("movq\t%rsp,%rbp");
 }

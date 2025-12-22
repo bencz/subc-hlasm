@@ -821,8 +821,9 @@ void cgarm_stack(int n) {
     gen("add\tsp,sp,r1");
 }
 
-void cgarm_entry(int lsize) {
+void cgarm_entry(int lsize, int nparams) {
     (void)lsize;  /* Not used for ARM */
+    (void)nparams;  /* Not used for ARM */
     gen("push\t{r11,lr}");
     gen("mov\tr11,sp");
 }

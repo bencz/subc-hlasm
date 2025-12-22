@@ -56,7 +56,10 @@ struct cg_arch cg_386_arch = {
     0,                              /* stack_slot_size - use BPW */
     
     /* Symbol transformation */
-    NULL                            /* symbol_transform - use default */
+    NULL,                           /* symbol_transform - use default */
+    
+    /* System runtime calling convention */
+    0                               /* maxregargs - i386 cdecl uses stack for all args */
 };
 
 /*
@@ -226,7 +229,6 @@ struct cg_vtable cg_386_vtable = {
     
     /* System Runtime Calling Convention Support */
     NULL,                           /* cgmovearg - not implemented for i386 */
-    0,                              /* maxregargs - i386 uses stack for args */
     NULL,                           /* cgemitargs - not implemented for i386 */
     
     /* Data Definition */

@@ -234,7 +234,12 @@
 
     struct cg_vtable (partial - system runtime support):
         cgmovearg(n)    Move accumulator to argument register n (0-7)
+        cgemitargs()    Emit function arguments using platform ABI
+        cgentry(lsize, nparams)  Function entry with local size and param count
+
+    struct cg_arch (partial - calling convention):
         maxregargs      Maximum number of register arguments (0 = stack only)
+                        ARM64: 8 (x0-x7), x86-64: 6, ARM32: 4, x86: 0
 
     struct cg_target:
         name            Short name for --target flag
@@ -280,10 +285,19 @@
 
     System Runtime Mode (-R flag):
     ARM64 supports the -R flag for linking with system libc. When active:
+    
+    Caller side (calling external functions):
     - cgemitargs() handles argument emission per AAPCS64 convention
-    - Fixed arguments go in x0-x7 registers
+    - Fixed arguments 0-7 go in x0-x7 registers
+    - Fixed arguments 8+ go on stack (overflow)
     - Variadic arguments go on stack (as required by AAPCS64)
     - Both variadic (printf) and non-variadic (write) functions work
+    
+    Callee side (SubC functions receiving arguments):
+    - cgentry() saves x0-x7 to stack at frontend-expected offsets
+    - Overflow arguments (9+) are copied from caller's stack area
+    - Supports functions with unlimited parameters (no MAXFNARGS limit)
+    - Large frames (>504 bytes) handled with separate stack allocation
 
 
     IBM SYSTEM/370 TARGETS

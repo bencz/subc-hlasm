@@ -126,7 +126,10 @@ struct cg_arch cg_s370_arch = {
     0,                              /* stack_slot_size - use BPW */
     
     /* Symbol transformation */
-    s370_symbol_transform           /* Convert to uppercase, 8-char limit */
+    s370_symbol_transform,          /* Convert to uppercase, 8-char limit */
+    
+    /* System runtime calling convention */
+    0                               /* maxregargs - S/370 uses parameter list */
 };
 
 /*
@@ -296,7 +299,6 @@ struct cg_vtable cg_s370_vtable = {
     
     /* System Runtime Calling Convention Support */
     NULL,                           /* cgmovearg - not applicable for S/370 */
-    0,                              /* maxregargs - S/370 uses parameter list */
     NULL,                           /* cgemitargs - not applicable for S/370 */
     
     /* Data Definition */

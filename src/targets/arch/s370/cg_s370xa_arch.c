@@ -64,5 +64,8 @@ struct cg_arch cg_s370xa_arch = {
     0,                              /* stack_slot_size - use BPW */
     
     /* Symbol transformation */
-    s370_symbol_transform           /* Convert to uppercase, 8-char limit */
+    s370_symbol_transform,          /* Convert to uppercase, 8-char limit */
+    
+    /* System runtime calling convention */
+    0                               /* maxregargs - S/370-XA uses parameter list */
 };

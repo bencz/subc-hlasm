@@ -721,9 +721,10 @@ void cgs370_stack(int n) {
     }
 }
 
-void cgs370_entry(int lsize) {
+void cgs370_entry(int lsize, int nparams) {
     char buf[128];
     int frame;
+    (void)nparams;  /* Not used for S/370 */
     
     if (TARGET_OS == OS_MVS) {
         /* MVS frame calculation:

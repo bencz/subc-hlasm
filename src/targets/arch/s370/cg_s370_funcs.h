@@ -175,7 +175,7 @@ void cgs370_initlw(int v, int a);
 void cgs370_call(char *s);
 void cgs370_calr(void);
 void cgs370_stack(int n);
-void cgs370_entry(int lsize);
+void cgs370_entry(int lsize, int nparams);
 void cgs370_exit(void);
 
 /* Data Definition */

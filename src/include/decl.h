@@ -161,7 +161,7 @@ void genbrfalse(int dest);
 void genbrtrue(int dest);
 void gencall(int y);
 void gencalr(void);
-void genentry(int lsize);
+void genentry(int lsize, int nparams);
 void genexit(void);
 void genpush(void);
 void genpushlit(int n);

@@ -1,7 +1,13 @@
+2025-12-22 Added -I option for additional include search paths.
+2025-12-22 Removed MAXFNARGS limit - function parameters now use dynamic allocation.
+2025-12-22 Moved maxregargs from cg_vtable to cg_arch (architecture property).
+2025-12-22 Implemented AAPCS64 callee side for ARM64 - functions can receive args in regs with -R.
+2025-12-22 Added nparams parameter to cgentry() for callee-side calling convention support.
 2025-12-22 Added -R flag for system runtime linking (use system libc instead of SubC RT).
 2025-12-22 Added cgemitargs to vtable for backend-controlled argument emission.
 2025-12-22 Implemented full AAPCS64 calling convention for ARM64 with -R flag.
 2025-12-22 Added variadic function support for ARM64 (fixed args in regs, variadics on stack).
+2025-12-22 Fixed ARM64 functions with >8 args (overflow args go to stack per AAPCS64).
 2025-12-22 Fixed ARM64 stack alignment (16-byte requirement) in cga64_stack().
 2025-12-22 Fixed ARM64 arithmetic operand order (sub, div, mod) after swap.
 2025-12-22 Added stack_slot_size field to cg_arch for stack alignment requirements.

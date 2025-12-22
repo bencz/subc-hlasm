@@ -64,7 +64,10 @@ struct cg_arch cg_arm64_arch = {
     16,                             /* stack_slot_size - 16-byte alignment required */
     
     /* Symbol transformation */
-    NULL                            /* symbol_transform - use default */
+    NULL,                           /* symbol_transform - use default */
+    
+    /* System runtime calling convention */
+    8                               /* maxregargs - AAPCS64 uses x0-x7 */
 };
 
 /*
@@ -234,7 +237,6 @@ struct cg_vtable cg_arm64_vtable = {
     
     /* System Runtime Calling Convention Support */
     cga64_movearg,
-    8,                              /* maxregargs - AAPCS64 uses x0-x7 */
     cga64_emitargs,                 /* cgemitargs - emit args using AAPCS64 */
     
     /* Data Definition */

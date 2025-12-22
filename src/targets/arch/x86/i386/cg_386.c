@@ -736,8 +736,9 @@ void cg386_stack(int n) {
     ngen("%s\t$%d,%%esp", "addl", n);
 }
 
-void cg386_entry(int lsize) {
+void cg386_entry(int lsize, int nparams) {
     (void)lsize;  /* Not used for x86 */
+    (void)nparams;  /* Not used for x86 */
     gen("pushl\t%ebp");
     gen("movl\t%esp,%ebp");
 }

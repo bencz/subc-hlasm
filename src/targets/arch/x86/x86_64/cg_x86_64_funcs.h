@@ -164,7 +164,7 @@ void cgx64_initlw(int v, int a);
 void cgx64_call(char *s);
 void cgx64_calr(void);
 void cgx64_stack(int n);
-void cgx64_entry(int lsize);
+void cgx64_entry(int lsize, int nparams);
 void cgx64_exit(void);
 
 /* Data definition */

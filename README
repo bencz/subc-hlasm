@@ -344,6 +344,9 @@
 	- Non-variadic functions (write, read, open, etc.) - args in x0-x7
 	- Variadic functions (printf, scanf, etc.) - fixed args in regs,
 	  variadic args on stack per AAPCS64
+	- Functions with more than 8 args - overflow args go to stack
+	- Full AAPCS64 support on both caller and callee sides
+	- No limit on number of function parameters
 
 	Example (ARM64 Darwin):
 		int printf(char *fmt, ...);
@@ -351,6 +354,27 @@
 		    printf("Hello %d!\n", 42);
 		    return 0;
 		}
+
+
+	INCLUDE SEARCH PATH (-I FLAG)
+
+	The -I flag adds directories to the include search path. Multiple
+	-I options can be specified (up to 16 directories).
+
+	Usage:
+		scc -I /path/to/includes -I /another/path -o prog prog.c
+
+	Search order for #include <file>:
+	1. Directories specified with -I (in order)
+	2. SCCDIR/include (default SubC headers)
+
+	Search order for #include "file":
+	1. Current directory (where the source file is)
+	2. Directories specified with -I (in order)
+	3. SCCDIR/include (default SubC headers)
+
+	Example:
+		scc -R -T arm64-darwin -I ../runtime/include -o prog prog.c
 
 
 	DOS SUPPORT
