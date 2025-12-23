@@ -1,6 +1,6 @@
 # SubC Compiler - Limitations Analysis
 
-## Version: 2025-12-23 (Updated)
+## Version: 2025-12-23
 
 This document lists the limitations and known issues in the SubC compiler,
 discovered through the C89 conformance test suite (`tests/c89_suite/`).
@@ -23,17 +23,6 @@ constructs. This requires killing the process. Affected patterns include:
 
 **Severity**: Critical - compiler must be killed
 **Status**: Unresolved
-
----
-
-## 1.2 Functions with Many Parameters (32+)
-
-Functions with more than 8 parameters (stack-passed parameters) may produce
-incorrect results on AArch64. The stack parameter offset calculation needs
-review.
-
-**Severity**: Medium - affects only functions with many parameters
-**Status**: Under investigation
 
 ---
 
@@ -115,33 +104,20 @@ These are intentional SubC limitations, not bugs:
 
 ---
 
-## 4. Alignment Fields (Future)
+## 4. Bootstrap Limitations
 
-| Field | Status |
-|-------|--------|
-| `align_stack` | Defined, future use for strict alignment architectures |
-| `align_data` | Defined, future use for data alignment |
-| `align_func` | Defined, future use for function alignment |
-
-**Priority**: Low - current architectures (x86, ARM) work without this.
-Required for IBM S/370 / z/Architecture.
-
----
-
-## 5. Bootstrap Limitations
-
-### 5.1 System Includes
+### 4.1 System Includes
 
 SubC cannot compile files that include system headers.
 For bootstrap, use SubC's own headers in `runtime/include/`.
 
-### 5.2 Function Pointer Return Types
+### 4.2 Function Pointer Return Types
 
 SubC treats all function pointers as returning `int` internally.
 
 ---
 
-## 6. Test Suite Results Summary
+## 5. Test Suite Results Summary
 
 From `tests/c89_suite/` with 49 tests:
 
@@ -170,26 +146,7 @@ From `tests/c89_suite/` with 49 tests:
 
 ---
 
-## 7. Recently Fixed Issues
-
-### 7.1 Variadic Functions on Darwin/AArch64 (FIXED 2025-12-23)
-
-**Problem**: `printf()` and other variadic functions produced garbage output on
-Darwin/AArch64 (Apple Silicon).
-
-**Cause**: Darwin AArch64 ABI requires variadic arguments to be passed on the
-stack, not in registers. SubC was passing all arguments in registers (x0-x7).
-
-**Solution**: Added `cgpusharg_vararg` to the vtable. On Darwin/AArch64, variadic
-arguments are now pushed to the stack. Other architectures use the default
-behavior (registers where applicable).
-
-**Files changed**: `cgtarget.h`, `cgen_compat.h`, `tree.c`, `cg_aarch64.c`,
-and NULL entries added to other architecture vtables.
-
----
-
-## 8. Priority for Fixes
+## 6. Priority for Fixes
 
 | Issue | Severity | Priority |
 |-------|----------|----------|

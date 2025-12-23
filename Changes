@@ -1,3 +1,11 @@
+2025-12-23 Fixed functions with many parameters (32+) on AArch64:
+           - Stack-passed parameter offsets were calculated with 8-byte spacing
+           - But caller pushes with 16-byte alignment (str x0,[sp,#-16]!)
+           - Fixed a64_cgparamoffset() to use CG_STACK_ALIGN (16) for stack args
+           - Refactored all architectures to use CG->arch macros:
+             BPW, CG_STACK_ALIGN, CG_NUM_ARG_REGS, CG_PARAM_OFFSET_BASE
+           - Updated cggetframeinfo() and cgparamoffset() in all 5 targets
+           - Test: fn33(1..33) now correctly returns 1+33=34
 2025-12-23 Fixed variadic function calls on Darwin/AArch64:
            - Darwin AArch64 ABI requires variadic arguments on stack, not registers
            - Added cgpusharg_vararg to vtable for architecture-specific vararg handling

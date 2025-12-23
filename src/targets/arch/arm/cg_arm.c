@@ -1047,44 +1047,51 @@ static struct cg_frame_info arm_frame_info;
  * Get frame layout information for ARM (AAPCS).
  * Register args (0-3) are saved at negative offsets from r11 (fp).
  * Stack args (4+) are at positive offsets from fp.
+ *
+ * Uses CG->arch macros for consistency across the codebase.
  */
 static struct cg_frame_info *arm_cggetframeinfo(int nparams) {
     int save_count;
+    int num_regs = CG_NUM_ARG_REGS;
     
     if (nparams < 0) {
-        save_count = 4;  /* variadic: save all */
-    } else if (nparams > 4) {
-        save_count = 4;
+        save_count = num_regs;  /* variadic: save all */
+    } else if (nparams > num_regs) {
+        save_count = num_regs;
     } else {
         save_count = nparams;
     }
     
-    /* Register args saved at fp-4, fp-8, etc. */
-    arm_frame_info.param_base = -4;
-    arm_frame_info.param_dir = -1;  /* decreasing: -4, -8, -12, -16 */
+    /* Register args saved at fp-BPW, fp-2*BPW, etc. */
+    arm_frame_info.param_base = -BPW;
+    arm_frame_info.param_dir = -1;  /* decreasing: -BPW, -2*BPW, ... */
     
     /* Locals start after saved register args */
-    arm_frame_info.local_base = -save_count * 4;
+    arm_frame_info.local_base = -save_count * BPW;
     arm_frame_info.local_dir = -1;  /* decreasing */
     
-    arm_frame_info.stack_align = 8;
-    arm_frame_info.num_reg_args = 4;
-    arm_frame_info.stack_arg_base = 8;  /* first stack arg at fp+8 */
+    arm_frame_info.stack_align = CG_STACK_ALIGN;
+    arm_frame_info.num_reg_args = num_regs;
+    arm_frame_info.stack_arg_base = CG_PARAM_OFFSET_BASE;
     
     return &arm_frame_info;
 }
 
 /*
  * Calculate offset for parameter N.
- * Params 0-3: in registers, saved at fp-4, fp-8, fp-12, fp-16
- * Params 4+: on stack at fp+8, fp+12, ...
+ * Params 0-3: in registers, saved at fp-BPW, fp-2*BPW, fp-3*BPW, fp-4*BPW
+ * Params 4+: on stack at fp+8, fp+12, ... (BPW spacing)
+ *
+ * Uses CG->arch macros for consistency.
  */
 static int arm_cgparamoffset(int paramnum, int nparams) {
     (void)nparams;
-    if (paramnum < 4) {
-        return -4 * (paramnum + 1);  /* -4, -8, -12, -16 */
+    if (paramnum < CG_NUM_ARG_REGS) {
+        /* Register args saved at negative offsets: -BPW, -2*BPW, ... */
+        return -BPW * (paramnum + 1);
     } else {
-        return 8 + (paramnum - 4) * 4;  /* +8, +12, +16, ... */
+        /* Stack args at positive offsets with BPW spacing */
+        return CG_PARAM_OFFSET_BASE + (paramnum - CG_NUM_ARG_REGS) * BPW;
     }
 }
 

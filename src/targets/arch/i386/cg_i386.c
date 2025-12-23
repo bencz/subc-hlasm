@@ -692,32 +692,37 @@ static struct cg_frame_info i386_frame_info;
  *   ebp-4:  first local variable
  *   ebp-8:  second local variable
  *   ...
+ *
+ * Uses CG->arch macros for consistency across the codebase.
  */
 static struct cg_frame_info *i386_cggetframeinfo(int nparams) {
     (void)nparams;
     
     /* Parameters at positive offsets from ebp */
-    i386_frame_info.param_base = 8;   /* first param at ebp+8 */
-    i386_frame_info.param_dir = 1;    /* increasing: +8, +12, +16... */
+    i386_frame_info.param_base = CG_PARAM_OFFSET_BASE;
+    i386_frame_info.param_dir = CG_PARAM_OFFSET_DIR;
     
     /* Locals at negative offsets from ebp */
-    i386_frame_info.local_base = 0;
-    i386_frame_info.local_dir = -1;   /* decreasing: -4, -8, -12... */
+    i386_frame_info.local_base = CG_LOCAL_OFFSET_BASE;
+    i386_frame_info.local_dir = CG_LOCAL_OFFSET_DIR;
     
-    i386_frame_info.stack_align = 4;
-    i386_frame_info.num_reg_args = 0; /* cdecl: all args on stack */
-    i386_frame_info.stack_arg_base = 8;
+    i386_frame_info.stack_align = CG_STACK_ALIGN;
+    i386_frame_info.num_reg_args = CG_NUM_ARG_REGS; /* cdecl: 0 args in regs */
+    i386_frame_info.stack_arg_base = CG_PARAM_OFFSET_BASE;
     
     return &i386_frame_info;
 }
 
 /*
  * Calculate offset for parameter N (0-based).
- * All params on stack at ebp+8, ebp+12, ebp+16, ...
+ * All params on stack at ebp+8, ebp+12, ebp+16, ... (BPW spacing)
+ *
+ * Uses CG->arch macros for consistency.
  */
 static int i386_cgparamoffset(int paramnum, int nparams) {
     (void)nparams;
-    return 8 + paramnum * 4;  /* +8, +12, +16, ... */
+    /* cdecl: all args on stack with BPW spacing */
+    return CG_PARAM_OFFSET_BASE + paramnum * BPW;
 }
 
 /*

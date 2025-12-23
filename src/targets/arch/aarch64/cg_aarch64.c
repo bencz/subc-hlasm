@@ -1267,54 +1267,68 @@ static struct cg_frame_info a64_frame_info;
  * Stack args (8+) are at positive offsets from fp.
  *
  * After cgfnentry with N params:
- *   fp-8:  x0 (arg 0)
- *   fp-16: x1 (arg 1)
+ *   fp-BPW:    x0 (arg 0)
+ *   fp-2*BPW:  x1 (arg 1)
  *   ...
- *   fp-N*8: xN-1 (arg N-1)
+ *   fp-N*BPW:  xN-1 (arg N-1)
+ *
+ * Uses CG->arch macros for consistency across the codebase.
  */
 static struct cg_frame_info *a64_cggetframeinfo(int nparams) {
     int save_count;
+    int num_regs = CG_NUM_ARG_REGS;
     
     if (nparams < 0) {
-        save_count = 8;  /* variadic: save all */
-    } else if (nparams > 8) {
-        save_count = 8;
+        save_count = num_regs;  /* variadic: save all */
+    } else if (nparams > num_regs) {
+        save_count = num_regs;
     } else {
         save_count = nparams;
     }
     
-    /* Register args saved at fp-8, fp-16, etc. */
-    a64_frame_info.param_base = -8;
-    a64_frame_info.param_dir = -1;  /* decreasing: -8, -16, -24... */
+    /* Register args saved at fp-BPW, fp-2*BPW, etc. */
+    a64_frame_info.param_base = -BPW;
+    a64_frame_info.param_dir = -1;  /* decreasing: -BPW, -2*BPW, ... */
     
     /* Account for alignment padding if odd number of registers */
-    int saved_space = save_count * 8;
+    int saved_space = save_count * BPW;
     if (save_count > 0 && (save_count & 1)) {
-        saved_space += 8;  /* alignment padding */
+        saved_space += BPW;  /* alignment padding */
     }
     
     /* Locals start after saved register args */
     a64_frame_info.local_base = -saved_space;
     a64_frame_info.local_dir = -1;  /* decreasing */
     
-    a64_frame_info.stack_align = 16;
-    a64_frame_info.num_reg_args = 8;
-    a64_frame_info.stack_arg_base = 16;  /* first stack arg at fp+16 */
+    a64_frame_info.stack_align = CG_STACK_ALIGN;
+    a64_frame_info.num_reg_args = num_regs;
+    a64_frame_info.stack_arg_base = CG_PARAM_OFFSET_BASE;
     
     return &a64_frame_info;
 }
 
 /*
  * Calculate offset for parameter N.
- * Params 0-7: in registers, saved at fp-8, fp-16, ...
- * Params 8+: on stack at fp+16, fp+24, ...
+ * Params 0-7: in registers, saved at fp-BPW, fp-2*BPW, ... (BPW spacing)
+ * Params 8+: on stack at fp+16, fp+32, fp+48, ... (CG_STACK_ALIGN spacing)
+ *
+ * Note: The caller pushes stack arguments with CG_STACK_ALIGN alignment,
+ * so we must read them with CG_STACK_ALIGN spacing, not BPW.
+ *
+ * Uses CG->arch macros:
+ *   - BPW (8): bytes per word, used for register arg spacing
+ *   - CG_STACK_ALIGN (16): stack alignment, used for stack arg spacing
+ *   - CG_NUM_ARG_REGS (8): number of register arguments
+ *   - CG_PARAM_OFFSET_BASE (16): base offset for first stack argument
  */
 static int a64_cgparamoffset(int paramnum, int nparams) {
     (void)nparams;
-    if (paramnum < 8) {
-        return -8 * (paramnum + 1);  /* -8, -16, -24, -32, -40, -48, -56, -64 */
+    if (paramnum < CG_NUM_ARG_REGS) {
+        /* Register args saved at negative offsets: -BPW, -2*BPW, ... */
+        return -BPW * (paramnum + 1);
     } else {
-        return 16 + (paramnum - 8) * 8;  /* +16, +24, +32, ... */
+        /* Stack args at positive offsets with CG_STACK_ALIGN spacing */
+        return CG_PARAM_OFFSET_BASE + (paramnum - CG_NUM_ARG_REGS) * CG_STACK_ALIGN;
     }
 }
 

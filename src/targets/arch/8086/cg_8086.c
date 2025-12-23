@@ -1024,32 +1024,37 @@ static struct cg_frame_info m86_frame_info;
  *   bp-2:  first local variable
  *   bp-4:  second local variable
  *   ...
+ *
+ * Uses CG->arch macros for consistency across the codebase.
  */
 static struct cg_frame_info *m86_cggetframeinfo(int nparams) {
     (void)nparams;
     
     /* Parameters at positive offsets from bp */
-    m86_frame_info.param_base = 4;    /* first param at bp+4 */
-    m86_frame_info.param_dir = 1;     /* increasing: +4, +6, +8... */
+    m86_frame_info.param_base = CG_PARAM_OFFSET_BASE;
+    m86_frame_info.param_dir = CG_PARAM_OFFSET_DIR;
     
     /* Locals at negative offsets from bp */
-    m86_frame_info.local_base = 0;
-    m86_frame_info.local_dir = -1;    /* decreasing: -2, -4, -6... */
+    m86_frame_info.local_base = CG_LOCAL_OFFSET_BASE;
+    m86_frame_info.local_dir = CG_LOCAL_OFFSET_DIR;
     
-    m86_frame_info.stack_align = 2;
-    m86_frame_info.num_reg_args = 0;  /* cdecl: all args on stack */
-    m86_frame_info.stack_arg_base = 4;
+    m86_frame_info.stack_align = CG_STACK_ALIGN;
+    m86_frame_info.num_reg_args = CG_NUM_ARG_REGS;  /* cdecl: 0 args in regs */
+    m86_frame_info.stack_arg_base = CG_PARAM_OFFSET_BASE;
     
     return &m86_frame_info;
 }
 
 /*
  * Calculate offset for parameter N (0-based).
- * All params on stack at bp+4, bp+6, bp+8, ...
+ * All params on stack at bp+4, bp+6, bp+8, ... (BPW spacing)
+ *
+ * Uses CG->arch macros for consistency.
  */
 static int m86_cgparamoffset(int paramnum, int nparams) {
     (void)nparams;
-    return 4 + paramnum * 2;  /* +4, +6, +8, ... */
+    /* cdecl: all args on stack with BPW spacing */
+    return CG_PARAM_OFFSET_BASE + paramnum * BPW;
 }
 
 /*

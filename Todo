@@ -12,9 +12,6 @@
 	- Implement runtime library cross-compilation support
 	  (currently only code generation is cross-platform)
 
-	- Fix functions with many parameters (32+) on AArch64
-	  Stack parameter offset calculation may be incorrect
-
 	- Fix infinite loop bug on certain valid C89 code
 	  (t_array_complex.c, t_const_expr.c, t_global.c, t_state_machine.c)
 

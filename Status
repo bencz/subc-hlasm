@@ -30,6 +30,10 @@
 		ptr-to-int	fixed (64-bit cast issue resolved)
 		fn pointers	extended (any return type, typed params)
 
+	Bug fixes (2025-12-23 session 3):
+		32+ params	fixed (AArch64 stack param offset calculation)
+		refactored	all targets now use CG->arch macros for offsets
+
 	C89 Test Suite (2025-12-23):
 		location	tests/c89_suite/
 		tests		38 test files

@@ -768,44 +768,52 @@ static struct cg_frame_info x64_frame_info;
  * Get frame layout information for x86-64.
  * Register args (0-5) are saved at negative offsets from rbp.
  * Stack args (6+) are at positive offsets from rbp.
+ *
+ * Uses CG->arch macros for consistency across the codebase.
  */
 static struct cg_frame_info *x64_cggetframeinfo(int nparams) {
     int save_count;
+    int num_regs = CG_NUM_ARG_REGS;
     
     if (nparams < 0) {
-        save_count = 6;  /* variadic: save all */
-    } else if (nparams > 6) {
-        save_count = 6;
+        save_count = num_regs;  /* variadic: save all */
+    } else if (nparams > num_regs) {
+        save_count = num_regs;
     } else {
         save_count = nparams;
     }
     
-    /* Register args saved at rbp-8, rbp-16, etc. */
-    x64_frame_info.param_base = -8;
-    x64_frame_info.param_dir = -1;  /* decreasing: -8, -16, -24... */
+    /* Register args saved at rbp-BPW, rbp-2*BPW, etc. */
+    x64_frame_info.param_base = -BPW;
+    x64_frame_info.param_dir = -1;  /* decreasing: -BPW, -2*BPW, ... */
     
     /* Locals start after saved register args */
-    x64_frame_info.local_base = -save_count * 8;
+    x64_frame_info.local_base = -save_count * BPW;
     x64_frame_info.local_dir = -1;  /* decreasing */
     
-    x64_frame_info.stack_align = 16;
-    x64_frame_info.num_reg_args = 6;
-    x64_frame_info.stack_arg_base = 16;  /* first stack arg at rbp+16 */
+    x64_frame_info.stack_align = CG_STACK_ALIGN;
+    x64_frame_info.num_reg_args = num_regs;
+    x64_frame_info.stack_arg_base = CG_PARAM_OFFSET_BASE;
     
     return &x64_frame_info;
 }
 
 /*
  * Calculate offset for parameter N.
- * Params 0-5: in registers, saved at rbp-8, rbp-16, ...
- * Params 6+: on stack at rbp+16, rbp+24, ...
+ * Params 0-5: in registers, saved at rbp-BPW, rbp-2*BPW, ...
+ * Params 6+: on stack at rbp+16, rbp+24, ... (BPW spacing for x86-64)
+ *
+ * Note: x86-64 uses 8-byte pushes (pushq), so stack args have BPW spacing.
+ * Uses CG->arch macros for consistency.
  */
 static int x64_cgparamoffset(int paramnum, int nparams) {
     (void)nparams;
-    if (paramnum < 6) {
-        return -8 * (paramnum + 1);  /* -8, -16, -24, -32, -40, -48 */
+    if (paramnum < CG_NUM_ARG_REGS) {
+        /* Register args saved at negative offsets: -BPW, -2*BPW, ... */
+        return -BPW * (paramnum + 1);
     } else {
-        return 16 + (paramnum - 6) * 8;  /* +16, +24, +32, ... */
+        /* Stack args at positive offsets with BPW spacing */
+        return CG_PARAM_OFFSET_BASE + (paramnum - CG_NUM_ARG_REGS) * BPW;
     }
 }
 
