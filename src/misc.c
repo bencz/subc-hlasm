@@ -7,6 +7,82 @@
 #include "data.h"
 #include "decl.h"
 
+/*
+ * Register predefined macros from target configuration
+ * Skips macros already defined (allows -D override)
+ */
+static void register_predef_macros(struct cg_predef_macro *macros) {
+	if (macros == NULL) return;
+	while (macros->name != NULL) {
+		if (!findmac(macros->name)) {
+			addglob(macros->name, 0, TMACRO, 0, 0, 0,
+				globname(macros->value ? macros->value : ""), 0);
+		}
+		macros++;
+	}
+}
+
+/*
+ * Helper: define a macro with an integer value
+ * Only defines if not already defined (allows -D override)
+ */
+static void define_int_macro(char *name, int value) {
+	char buf[32];
+	if (findmac(name)) return;  /* Already defined via -D, don't override */
+	sprintf(buf, "%d", value);
+	addglob(name, 0, TMACRO, 0, 0, 0, globname(buf), 0);
+}
+
+/*
+ * Helper: define a macro with string value
+ * Only defines if not already defined (allows -D override)
+ */
+static void define_str_macro(char *name, char *value) {
+	if (findmac(name)) return;  /* Already defined via -D, don't override */
+	addglob(name, 0, TMACRO, 0, 0, 0, globname(value ? value : ""), 0);
+}
+
+/*
+ * Register architecture-derived macros (__SIZEOF_*__, endianness, etc.)
+ * These are generated dynamically from cg_arch values.
+ */
+static void register_arch_derived_macros(void) {
+	if (CG == NULL || CG->arch == NULL) return;
+	
+	/* Type size macros - from cg_arch */
+	define_int_macro("__SIZEOF_CHAR__", CG->arch->char_size);
+	define_int_macro("__SIZEOF_SHORT__", CG->arch->short_size);
+	define_int_macro("__SIZEOF_INT__", CG->arch->int_size);
+	define_int_macro("__SIZEOF_LONG__", CG->arch->long_size);
+	define_int_macro("__SIZEOF_POINTER__", CG->arch->ptr_size);
+	define_int_macro("__SIZEOF_FLOAT__", CG->arch->float_size);
+	define_int_macro("__SIZEOF_DOUBLE__", CG->arch->double_size);
+	
+	/* Endianness macros */
+	if (CG->arch->endian == ENDIAN_LITTLE) {
+		define_str_macro("__LITTLE_ENDIAN__", "1");
+		define_int_macro("__BYTE_ORDER__", 1234);
+		define_int_macro("__ORDER_LITTLE_ENDIAN__", 1234);
+		define_int_macro("__ORDER_BIG_ENDIAN__", 4321);
+	} else {
+		define_str_macro("__BIG_ENDIAN__", "1");
+		define_int_macro("__BYTE_ORDER__", 4321);
+		define_int_macro("__ORDER_LITTLE_ENDIAN__", 1234);
+		define_int_macro("__ORDER_BIG_ENDIAN__", 4321);
+	}
+	
+	/* Architecture bits */
+	define_int_macro("__SIZEOF_SIZE_T__", CG->arch->ptr_size);
+	define_int_macro("__SIZEOF_PTRDIFF_T__", CG->arch->ptr_size);
+	
+	/* LP64/ILP32 model detection */
+	if (CG->arch->ptr_size == 8 && CG->arch->long_size == 8) {
+		define_str_macro("__LP64__", "1");
+	} else if (CG->arch->ptr_size == 4 && CG->arch->int_size == 4) {
+		define_str_macro("__ILP32__", "1");
+	}
+}
+
 void init(void) {
 	Line = 1;
 	Putback = '\n';
@@ -28,11 +104,21 @@ void init(void) {
 	Q_cmp = cnone;
 	Q_bool = bnone;
 	addglob("", 0, 0, 0, 0, 0, NULL, 0);
-	addglob("__SUBC__", 0, TMACRO, 0, 0, 0, globname(""), 0);
-	if (!strcmp(OS, "DOS"))
-		addglob("__dos", 0, TMACRO, 0, 0, 0, globname(""), 0);
-	else
-		addglob("__unix", 0, TMACRO, 0, 0, 0, globname(""), 0);
+	
+	/* Always define __SUBC__ */
+	addglob("__SUBC__", 0, TMACRO, 0, 0, 0, globname("1"), 0);
+	
+	/* Register OS-specific predefined macros */
+	if (CG && CG->os && CG->os->predef_macros)
+		register_predef_macros(CG->os->predef_macros);
+	
+	/* Register architecture-specific predefined macros */
+	if (CG && CG->arch && CG->arch->predef_macros)
+		register_predef_macros(CG->arch->predef_macros);
+	
+	/* Register macros derived from cg_arch values */
+	register_arch_derived_macros();
+	
 	Infile = stdin;
 	File = "(stdin)";
 	Basefile = NULL;

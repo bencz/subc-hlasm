@@ -129,6 +129,25 @@ enum cg_os_type {
     OS_MVS
 };
 
+/*
+ * Predefined Macro Entry
+ *
+ * Used to define macros that are automatically defined based on the
+ * target architecture and operating system. These are registered with
+ * the preprocessor at compilation start.
+ *
+ * Examples:
+ *   { "__linux__", "1" }       - Linux OS
+ *   { "__i386__", "1" }        - i386 architecture
+ *   { "__SIZEOF_INT__", "4" }  - Type size
+ *   { "__SUBC__", "" }         - Defined with empty value
+ *   { NULL, NULL }             - Terminator
+ */
+struct cg_predef_macro {
+    char *name;     /* Macro name (e.g., "__linux__") */
+    char *value;    /* Macro value ("" for empty, NULL = terminator) */
+};
+
 /* Object File Format */
 enum cg_obj_format {
     OBJ_NONE = 0,
@@ -656,6 +675,13 @@ struct cg_arch {
     int  poolsize;          /* Name pool size (default: 16384) */
     int  nodepoolsz;        /* AST node pool size (default: 4096) */
     char label_prefix;      /* Label prefix character (default: 'L') */
+    
+    /*
+     * Architecture-specific predefined macros
+     * Array terminated by entry with NULL name.
+     * Examples: __i386__, __x86_64__, __aarch64__, __SIZEOF_INT__
+     */
+    struct cg_predef_macro *predef_macros;
 };
 
 /*
@@ -676,6 +702,13 @@ struct cg_os_config {
     char *sys_libc;         /* System libc to link */
     char *scc_libc;         /* SubC runtime library (NULL if not needed) */
     char *aout_name;        /* Default output name */
+    
+    /*
+     * OS-specific predefined macros
+     * Array terminated by entry with NULL name.
+     * Examples: __linux__, __FreeBSD__, __APPLE__, _WIN32, __DOS__
+     */
+    struct cg_predef_macro *predef_macros;
 };
 
 /*

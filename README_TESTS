@@ -1,6 +1,17 @@
-# SubC C89 Test Suite
+# SubC Test Suites
 
-Test suite to validate SubC compiler conformance with the C89 standard.
+Test suites to validate SubC compiler conformance with the C89 standard.
+
+## Test Suites
+
+| Suite | Location | Description |
+|-------|----------|-------------|
+| C89 Suite | `tests/c89_suite/` | Core language features, operators, types |
+| Preprocessor Suite | `tests/preproc_suite/` | Preprocessor directives, predefined macros |
+
+---
+
+# C89 Test Suite
 
 ## Location
 
@@ -167,3 +178,126 @@ This allows verifying that SubC generates correct code by comparing with the sam
 2. Follow the standard format (see above)
 3. Use only headers from `runtime/include/`
 4. Run `./run_tests.sh -s t_name` to test
+
+---
+
+# Preprocessor Test Suite
+
+Tests for preprocessor functionality and predefined macros.
+
+## Location
+
+Tests are located in `tests/preproc_suite/`.
+
+## Usage
+
+```bash
+cd tests/preproc_suite
+
+# Run all tests
+./run_tests.sh
+
+# Verbose mode
+./run_tests.sh -v
+
+# Run specific test
+./run_tests.sh -s t_predef_arch
+
+# Test with specific target
+./run_tests.sh -T linux-x86-64
+./run_tests.sh -T darwin-aarch64
+./run_tests.sh -T dos-8086
+```
+
+## Available Tests
+
+### Predefined Macros
+| Test | Description |
+|------|-------------|
+| `t_predef_subc.c` | `__SUBC__` always defined |
+| `t_predef_arch.c` | Architecture macros (`__i386__`, `__x86_64__`, `__aarch64__`, etc.) |
+| `t_predef_os.c` | OS macros (`__linux__`, `__APPLE__`, `_WIN32`, `__DOS__`, etc.) |
+
+### Basic Preprocessor
+| Test | Description |
+|------|-------------|
+| `t_define_basic.c` | `#define` with numeric values |
+| `t_define_string.c` | `#define` with string values |
+| `t_undef.c` | `#undef` functionality |
+| `t_macro_redef.c` | Macro redefinition (same value) |
+
+### Conditional Compilation
+| Test | Description |
+|------|-------------|
+| `t_ifdef_ifndef.c` | `#ifdef` and `#ifndef` |
+| `t_ifdef_else.c` | `#ifdef` with `#else` |
+| `t_ifdef_nested.c` | Nested `#ifdef` directives |
+
+### Include
+| Test | Description |
+|------|-------------|
+| `t_include_basic.c` | Basic `#include` with system headers |
+
+### Other
+| Test | Description |
+|------|-------------|
+| `t_line_comment.c` | `//` comments stripped from macro definitions |
+
+## Predefined Macros Reference
+
+SubC automatically defines the following macros based on the target:
+
+### Always Defined
+- `__SUBC__` - Always `1`
+
+### OS Macros (from `cg_os_config`)
+| OS | Macros |
+|----|--------|
+| Linux | `__linux__`, `__linux`, `__unix__`, `__unix`, `__ELF__` |
+| FreeBSD | `__FreeBSD__`, `__unix__`, `__unix`, `__ELF__` |
+| NetBSD | `__NetBSD__`, `__unix__`, `__unix`, `__ELF__` |
+| OpenBSD | `__OpenBSD__`, `__unix__`, `__unix`, `__ELF__` |
+| Darwin | `__APPLE__`, `__MACH__`, `__unix__`, `__unix` |
+| Windows | `_WIN32`, `__WIN32__`, `__WINDOWS__` |
+| DOS | `__DOS__`, `__dos`, `MSDOS` |
+| MVS | `__MVS__`, `__IBM__`, `__EBCDIC__` |
+
+### Architecture Macros (from `cg_arch`)
+| Arch | Macros |
+|------|--------|
+| i386 | `__i386__`, `__i386` |
+| x86-64 | `__x86_64__`, `__x86_64`, `__amd64__`, `__amd64` |
+| AArch64 | `__aarch64__`, `__arm64__` |
+| ARM | `__arm__`, `__ARM_ARCH` |
+| 8086 | `__8086__`, `__i8086__` |
+
+### Type Size Macros (generated from `cg_arch` values)
+- `__SIZEOF_CHAR__` - Always 1
+- `__SIZEOF_SHORT__` - 2 on all targets
+- `__SIZEOF_INT__` - 2 (8086), 4 (i386/ARM), 8 (x86-64/AArch64)
+- `__SIZEOF_LONG__` - 4 (8086/i386/ARM), 8 (x86-64/AArch64)
+- `__SIZEOF_POINTER__` - 2 (8086), 4 (i386/ARM), 8 (x86-64/AArch64)
+- `__SIZEOF_FLOAT__` - 4 on all targets
+- `__SIZEOF_DOUBLE__` - 8 on all targets
+- `__SIZEOF_SIZE_T__` - Same as `__SIZEOF_POINTER__`
+- `__SIZEOF_PTRDIFF_T__` - Same as `__SIZEOF_POINTER__`
+
+### Endianness Macros
+- `__LITTLE_ENDIAN__` - Defined if little-endian (all current targets)
+- `__BIG_ENDIAN__` - Defined if big-endian
+- `__BYTE_ORDER__` - 1234 (little) or 4321 (big)
+- `__ORDER_LITTLE_ENDIAN__` - Always 1234
+- `__ORDER_BIG_ENDIAN__` - Always 4321
+
+### Data Model Macros
+- `__LP64__` - Defined if `long` and `pointer` are 64-bit
+- `__ILP32__` - Defined if `int`, `long`, and `pointer` are 32-bit
+
+### Override via -D
+
+All predefined macros can be overridden using the `-D` flag:
+
+```bash
+# Override __SIZEOF_INT__ for testing
+scc -D __SIZEOF_INT__=4 -T darwin-aarch64 test.c
+```

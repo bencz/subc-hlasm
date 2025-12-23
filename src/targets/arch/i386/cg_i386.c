@@ -17,6 +17,16 @@
 #include "decl.h"
 
 /*
+ * Predefined macros for i386 architecture
+ * Note: __SIZEOF_*__ and endianness macros are generated dynamically from cg_arch
+ */
+static struct cg_predef_macro predef_i386[] = {
+    { "__i386__", "1" },
+    { "__i386", "1" },
+    { NULL, NULL }
+};
+
+/*
  * Forward declarations for internal helper functions
  */
 static void i386_cgsynth(char *op);
@@ -802,7 +812,8 @@ struct cg_arch cg_arch_i386 = {
     0,                  /* nsymbols (default: 1024) */
     0,                  /* poolsize (default: 16384) */
     0,                  /* nodepoolsz (default: 4096) */
-    0                   /* label_prefix (default: 'L') */
+    0,                  /* label_prefix (default: 'L') */
+    predef_i386         /* predef_macros */
 };
 
 /* Windows i386: same as i386 but with underscore prefix */
@@ -846,7 +857,8 @@ struct cg_arch cg_arch_i386_windows = {
     0,                  /* nsymbols (default: 1024) */
     0,                  /* poolsize (default: 16384) */
     0,                  /* nodepoolsz (default: 4096) */
-    0                   /* label_prefix (default: 'L') */
+    0,                  /* label_prefix (default: 'L') */
+    predef_i386         /* predef_macros */
 };
 
 /*

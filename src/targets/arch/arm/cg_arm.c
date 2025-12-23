@@ -17,6 +17,16 @@
 #include "decl.h"
 
 /*
+ * Predefined macros for ARM architecture
+ * Note: __SIZEOF_*__ and endianness macros are generated dynamically from cg_arch
+ */
+static struct cg_predef_macro predef_arm[] = {
+    { "__arm__", "1" },
+    { "__ARM_ARCH", "6" },
+    { NULL, NULL }
+};
+
+/*
  * Forward declarations for internal helper functions
  */
 static void arm_cglit2(long v, int aux);
@@ -1156,7 +1166,8 @@ struct cg_arch cg_arch_armv6 = {
     0,                  /* nsymbols (default: 1024) */
     0,                  /* poolsize (default: 16384) */
     0,                  /* nodepoolsz (default: 4096) */
-    0                   /* label_prefix (default: 'L') */
+    0,                  /* label_prefix (default: 'L') */
+    predef_arm          /* predef_macros */
 };
 
 /*

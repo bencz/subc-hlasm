@@ -43,6 +43,16 @@
 #include "decl.h"
 
 /*
+ * Predefined macros for AArch64 architecture
+ * Note: __SIZEOF_*__ and endianness macros are generated dynamically from cg_arch
+ */
+static struct cg_predef_macro predef_aarch64[] = {
+    { "__aarch64__", "1" },
+    { "__arm64__", "1" },
+    { NULL, NULL }
+};
+
+/*
  * Forward declarations for internal helper functions
  */
 static void a64_cglit2(long v, int aux);
@@ -1410,7 +1420,8 @@ struct cg_arch cg_arch_aarch64 = {
     0,                  /* nsymbols (default: 1024) */
     0,                  /* poolsize (default: 16384) */
     0,                  /* nodepoolsz (default: 4096) */
-    0                   /* label_prefix (default: 'L') */
+    0,                  /* label_prefix (default: 'L') */
+    predef_aarch64      /* predef_macros */
 };
 
 /* Darwin/macOS AArch64 (Apple Silicon): same as aarch64 but with underscore prefix */
@@ -1454,7 +1465,8 @@ struct cg_arch cg_arch_aarch64_darwin = {
     0,                  /* nsymbols */
     0,                  /* poolsize */
     0,                  /* nodepoolsz */
-    0                   /* label_prefix */
+    0,                  /* label_prefix */
+    predef_aarch64      /* predef_macros */
 };
 
 /*

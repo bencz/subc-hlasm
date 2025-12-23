@@ -17,6 +17,18 @@
 #include "decl.h"
 
 /*
+ * Predefined macros for x86-64 architecture
+ * Note: __SIZEOF_*__ and endianness macros are generated dynamically from cg_arch
+ */
+static struct cg_predef_macro predef_x86_64[] = {
+    { "__x86_64__", "1" },
+    { "__x86_64", "1" },
+    { "__amd64__", "1" },
+    { "__amd64", "1" },
+    { NULL, NULL }
+};
+
+/*
  * Forward declarations for internal helper functions
  */
 static void x64_cgsynth(char *op);
@@ -894,7 +906,8 @@ struct cg_arch cg_arch_x86_64 = {
     0,                  /* nsymbols (default: 1024) */
     0,                  /* poolsize (default: 16384) */
     0,                  /* nodepoolsz (default: 4096) */
-    0                   /* label_prefix (default: 'L') */
+    0,                  /* label_prefix (default: 'L') */
+    predef_x86_64       /* predef_macros */
 };
 
 /* Darwin/macOS x86-64: same as x86-64 but with underscore prefix */
@@ -938,7 +951,8 @@ struct cg_arch cg_arch_x86_64_darwin = {
     0,                  /* nsymbols (default: 1024) */
     0,                  /* poolsize (default: 16384) */
     0,                  /* nodepoolsz (default: 4096) */
-    0                   /* label_prefix (default: 'L') */
+    0,                  /* label_prefix (default: 'L') */
+    predef_x86_64       /* predef_macros */
 };
 
 /*

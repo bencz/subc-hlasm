@@ -17,6 +17,16 @@
 #include "decl.h"
 
 /*
+ * Predefined macros for 8086 architecture
+ * Note: __SIZEOF_*__ and endianness macros are generated dynamically from cg_arch
+ */
+static struct cg_predef_macro predef_8086[] = {
+    { "__8086__", "1" },
+    { "__i8086__", "1" },
+    { NULL, NULL }
+};
+
+/*
  * Forward declarations for internal helper functions
  */
 static void m86_cgsynth(char *op);
@@ -1121,7 +1131,8 @@ struct cg_arch cg_arch_8086 = {
     512,                /* nsymbols (reduced from 1024) */
     8192,               /* poolsize (reduced from 16384) */
     2048,               /* nodepoolsz (reduced from 4096) */
-    0                   /* label_prefix (default: 'L') */
+    0,                  /* label_prefix (default: 'L') */
+    predef_8086         /* predef_macros */
 };
 
 /* 8086 with x87 coprocessor (8087/80287) */
@@ -1165,7 +1176,8 @@ struct cg_arch cg_arch_8086_x87 = {
     512,                /* nsymbols (reduced from 1024) */
     8192,               /* poolsize (reduced from 16384) */
     2048,               /* nodepoolsz (reduced from 4096) */
-    0                   /* label_prefix (default: 'L') */
+    0,                  /* label_prefix (default: 'L') */
+    predef_8086         /* predef_macros */
 };
 
 /*
