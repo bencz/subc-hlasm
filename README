@@ -39,18 +39,19 @@
 	DOS version, which emits TASM-style syntax). It targets the
 	following processors and operating systems:
 
-		FreeBSD		386	armv6	x86-64
-		Linux		386	-	x86-64
-		NetBSD		386	-	x86-64
-		OpenBSD		386	-	-
-		Windows/MinGW	386	-	-
-		Darwin		-	-	x86-64
+		FreeBSD		386	armv6	x86-64	-
+		Linux		386	-	x86-64	aarch64
+		NetBSD		386	-	x86-64	-
+		OpenBSD		386	-	-	-
+		Windows/MinGW	386	-	-	-
+		Darwin		-	-	x86-64	aarch64
 		DOS		8086
 
 	Available targets (use -L to list, -T to select):
 
 		linux-386        Linux i386 (ELF, GAS syntax)
 		linux-x86-64     Linux x86-64 (ELF, GAS syntax)
+		linux-aarch64    Linux AArch64/ARM64 (ELF, GAS syntax)
 		freebsd-386      FreeBSD i386 (ELF, GAS syntax)
 		freebsd-x86-64   FreeBSD x86-64 (ELF, GAS syntax)
 		freebsd-armv6    FreeBSD ARMv6 (ELF, GAS syntax)
@@ -58,6 +59,7 @@
 		netbsd-x86-64    NetBSD x86-64 (ELF, GAS syntax)
 		openbsd-386      OpenBSD i386 (ELF, GAS syntax)
 		darwin-x86-64    Darwin/macOS x86-64 (Mach-O, GAS syntax)
+		darwin-aarch64   Darwin/macOS AArch64 (Mach-O, GAS syntax)
 		windows-386      Windows i386 (PE, GAS syntax)
 		dos-8086         DOS 8086 (OMF, TASM syntax)
 
@@ -269,7 +271,8 @@
 		   targets/arch/i386/cg_i386.c \
 		   targets/arch/x86_64/cg_x86_64.c \
 		   targets/arch/8086/cg_8086.c \
-		   targets/arch/arm/cg_arm.c
+		   targets/arch/arm/cg_arm.c \
+		   targets/arch/aarch64/cg_aarch64.c
 
 	To compile and package the runtime library:
 

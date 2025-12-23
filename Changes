@@ -1,3 +1,14 @@
+2025-12-23 Added AArch64 (ARM64) architecture support:
+           - New targets: linux-aarch64, darwin-aarch64
+           - Full AAPCS64 calling convention (args in x0-x7)
+           - 16-byte stack alignment for Apple Silicon compatibility
+           - New cg_frame_info structure for stack frame layout abstraction
+           - Added cggetframeinfo(), cgparamoffset(), cglocaloffset(), cgalignlocal()
+             to vtable for architecture-specific frame management
+           - Updated decl.c to use new frame layout functions
+           - OS-aware code generation (OS_TYPE checks for Darwin vs Linux)
+           - Literal pool approach for Darwin Mach-O compatibility
+           - Implemented for all architectures: x86-64, i386, ARM, 8086, AArch64
 2025-12-23 Added comprehensive C89 test suite in tests/c89_suite/:
            - 38 test files covering operators, control flow, types, functions
            - Complex tests: vtables, linked lists, state machines, callbacks

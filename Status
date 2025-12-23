@@ -15,9 +15,15 @@
 
 	macOS/arm64 (Apple Silicon), clang 15.0, SubC 20251223
 		bootstrap	passed (make)
-		-L flag		works (lists 12 targets)
+		-L flag		works (lists 14 targets)
 		-T flag		works (tested all targets)
 		cross-compile	passed (generates correct asm for all targets)
+
+	AArch64 Support (2025-12-23):
+		linux-aarch64	code generation works
+		darwin-aarch64	code generation works (partial - switch WIP)
+		stack alignment	16-byte alignment implemented
+		frame layout	abstracted via cg_frame_info structure
 
 	Bug fixes (2025-12-23 session 2):
 		_va_arg		fixed (pointer arithmetic corrected)
@@ -32,9 +38,10 @@
 		runner		./run_tests.sh (-c compile, -C compare, -k keep)
 		docs		README_TESTS
 
-	Available cross-compilation targets (12):
+	Available cross-compilation targets (14):
 		linux-386	Linux i386 (ELF, GAS syntax)
 		linux-x86-64	Linux x86-64 (ELF, GAS syntax)
+		linux-aarch64	Linux AArch64/ARM64 (ELF, GAS syntax)
 		freebsd-386	FreeBSD i386 (ELF, GAS syntax)
 		freebsd-x86-64	FreeBSD x86-64 (ELF, GAS syntax)
 		freebsd-armv6	FreeBSD ARMv6 (ELF, GAS syntax)
@@ -42,6 +49,7 @@
 		netbsd-x86-64	NetBSD x86-64 (ELF, GAS syntax)
 		openbsd-386	OpenBSD i386 (ELF, GAS syntax)
 		darwin-x86-64	Darwin/macOS x86-64 (Mach-O, GAS syntax)
+		darwin-aarch64	Darwin/macOS AArch64 (Mach-O, GAS syntax)
 		windows-386	Windows i386 (PE, GAS syntax)
 		dos-8086	DOS 8086 (OMF, TASM, FP emulation)
 		dos-8086-x87	DOS 8086 with 8087 coprocessor

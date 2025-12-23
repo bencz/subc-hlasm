@@ -14,8 +14,8 @@ SCCDIR=		$(PREFIX)/lib/scc
 
 # Compiler flags
 CC=		cc
-CFLAGS=		-O2 -I.
-LINT=		gcc -O3 -c -o /dev/null -ansi -pedantic -Wall
+CFLAGS=		-O2 -I. -std=c89
+LINT=		gcc -O3 -std=c89 -c -o /dev/null -ansi -pedantic -Wall
 
 #
 # Source files
