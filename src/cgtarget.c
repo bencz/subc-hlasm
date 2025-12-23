@@ -43,6 +43,10 @@ extern struct cg_target cg_target_dos_8086_x87;
 /* ARM targets */
 extern struct cg_target cg_target_freebsd_armv6;
 
+/* AArch64 targets */
+extern struct cg_target cg_target_linux_aarch64;
+extern struct cg_target cg_target_darwin_aarch64;
+
 /*
  * Target registry - array of all available targets
  */
@@ -63,6 +67,9 @@ static struct cg_target *targets[] = {
     &cg_target_dos_8086_x87,
     /* ARM */
     &cg_target_freebsd_armv6,
+    /* AArch64 */
+    &cg_target_linux_aarch64,
+    &cg_target_darwin_aarch64,
     NULL
 };
 

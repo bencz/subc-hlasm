@@ -25,7 +25,8 @@ LINT=		gcc -O3 -c -o /dev/null -ansi -pedantic -Wall
 CG_ARCH=	targets/arch/i386/cg_i386.c \
 		targets/arch/x86_64/cg_x86_64.c \
 		targets/arch/8086/cg_8086.c \
-		targets/arch/arm/cg_arm.c
+		targets/arch/arm/cg_arm.c \
+		targets/arch/aarch64/cg_aarch64.c
 
 # Target management and OS configs
 CG_SRC=		cgtarget.c targets/os/cg_os_configs.c $(CG_ARCH)
