@@ -1,3 +1,9 @@
+2025-12-23 Implemented floating-point code generation for all architectures:
+           - i386: Full x87 FPU support (fld, fst, fadd, fsub, fmul, fdiv, etc.)
+           - x86-64: Full SSE2 support (movss/sd, addss/sd, comiss/sd, etc.)
+           - ARM: Full VFP support (vldr, vstr, vadd.f32/f64, vcmp, etc.)
+           - 8086: Completed IEEE 754 double emulation in fpemu.c
+             (comparison, arithmetic, int/float/double conversions)
 2025-12-23 Simplified build system for cross-compilation:
            - Removed configure script (no longer needed)
            - Updated Makefile for direct cross-compiler build
