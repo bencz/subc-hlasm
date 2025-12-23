@@ -23,6 +23,28 @@ int getln(char *buf, int max) {
 	return k;
 }
 
+/* Helper: strip // comments from macro definition */
+static void strip_line_comment(char *buf) {
+	char	*p;
+	int	in_string = 0, in_char = 0;
+
+	for (p = buf; *p; p++) {
+		if (!in_string && !in_char && *p == '/' && p[1] == '/') {
+			*p = '\0';
+			/* Trim trailing whitespace */
+			while (p > buf && isspace(p[-1]))
+				*--p = '\0';
+			return;
+		}
+		if (*p == '"' && !in_char)
+			in_string = !in_string;
+		else if (*p == '\'' && !in_string)
+			in_char = !in_char;
+		else if (*p == '\\' && p[1])
+			p++;  /* Skip escaped char */
+	}
+}
+
 static void defmac(void) {
 	char	name[NAMELEN+1];
 	char	buf[TEXTLEN+1], *p;
@@ -36,6 +58,7 @@ static void defmac(void) {
 		buf[0] = 0;
 	else
 		getln(buf, TEXTLEN-1);
+	strip_line_comment(buf);
 	for (p = buf; isspace(*p); p++)
 		;
 	if ((y = findmac(name)) != 0) {

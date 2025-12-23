@@ -1,24 +1,9 @@
 
 	UNRESOLVED BUGS
 
-	(As of version 2025-12-22 with cross-compilation support)
+	(As of version 2025-12-23)
 
 	Thanks to all submitters!
-
-
-	*** Submitted by Warren Toomey in 9/2019
-
-	//-comments in macros will mess up macro expansion. For
-	instance:
-
-	#define FOO 4 // 4 foos in every bar
-
-	expands to
-
-	printf("%d\n", 4 // 4 foos in every bar);
-
-	which is obviously a bad idea!
-	(So are //-comments. Just saying!)
 
 
 	*** Submitted by Volkmar Klatt in 12/2016
@@ -55,23 +40,4 @@
 	allows you to declare it in function parameters, e.g.:
 
 	void f(struct foo x) {}
-
-	Switch statements may contain duplicate cases.
-
-	SubC allows externs in local declarations to be initialized:
-
-	void f() { extern int a = 10; } /* should not be allowed! */
-
-	SubC can only index arrays using indexes of int types, e.g.:
-	given
-	int  a[10], b[2];
-	char x[10];
-	a[x[0]] does not work but a[b[0]] does work even though x[0]
-	does generate a valid integer index. Workaround: a[x[0]+0],
-	which will promote x[0] to int.
-
-	SubC currently allows any unary ops on any types, even on
-	structs: e.g.:
-
-	struct file f; !f;
 

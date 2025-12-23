@@ -330,7 +330,7 @@ static node *postfix(int *lv) {
 				n2 = exprlist(lv2, 1);
 				n2 = rvalue(n2, lv2);
 				p = lv[LVPRIM];
-				if (PINT != lv2[LVPRIM])
+				if (!inttype(lv2[LVPRIM]))
 					error("non-integer subscript", NULL);
 				if (    PINT == p || INTPTR == p ||
 					CHARPTR == p || VOIDPTR == p ||
@@ -541,6 +541,8 @@ static node *prefix(int *lv) {
 		Token = scan();
 		n = cast(lv);
 		n = rvalue(n, lv);
+		if (comptype(lv[LVPRIM]))
+			error("bad operand to unary '!'", NULL);
 		n = mkunop(OP_LOGNOT, n);
 		lv[LVPRIM] = PINT;
 		lv[LVADDR] = 0;

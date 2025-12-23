@@ -661,8 +661,10 @@ static int localdecls(void) {
 					label(), val);
 			}
 			else if (extn) {
+				if (ini)
+					error("initialization of local 'extern': %s", name);
 				addloc(name, prim, type, CEXTERN, size,
-					0, val);
+					0, 0);
 			}
 			else {
 				/*

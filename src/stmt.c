@@ -197,11 +197,21 @@ static void return_stmt(void) {
  *	| stmt
  */
 
+/* Helper: check for duplicate case value */
+static int dup_case(int *cval, int nc, int v) {
+	int	i;
+	for (i = 0; i < nc; i++)
+		if (cval[i] == v)
+			return 1;
+	return 0;
+}
+
 static void switch_block(void) {
 	int	lb, ls, ldflt = 0;
 	int	cval[MAXCASE];
 	int	clab[MAXCASE];
 	int	nc = 0;
+	int	v;
 
 	Token = scan();
 	pushbrk(lb = label());
@@ -215,7 +225,10 @@ static void switch_block(void) {
 		}
 		if (CASE == Token) {
 			Token = scan();
-			cval[nc] = constexpr();
+			v = constexpr();
+			if (dup_case(cval, nc, v))
+				error("duplicate case value in switch", NULL);
+			cval[nc] = v;
 			genlab(clab[nc++] = label());
 			colon();
 		}

@@ -1,3 +1,9 @@
+2025-12-23 Fixed multiple bugs:
+           - Fix: //-comments in macros now stripped during definition (prep.c)
+           - Fix: Switch statements now detect duplicate case values (stmt.c)
+           - Fix: Local extern declarations cannot be initialized (decl.c)
+           - Fix: Array indexing now works with char/short types (expr.c)
+           - Fix: Unary '!' operator now rejects struct/union operands (expr.c)
 2025-12-23 Cleaned up sym.c:
            - Extracted namecmp() helper for repeated symbol name comparisons
            - Extracted emitdef() helper for duplicated data emission logic
