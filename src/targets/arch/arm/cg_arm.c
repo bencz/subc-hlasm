@@ -641,6 +641,119 @@ static void arm_cgalign(void)       { gen(".align 2"); }
 
 /*
  * ============================================================================
+ * ARM AAPCS Calling Convention Support
+ * ============================================================================
+ *
+ * ARM AAPCS uses the following registers for integer arguments:
+ *   arg 0: r0
+ *   arg 1: r1
+ *   arg 2: r2
+ *   arg 3: r3
+ *   arg 4+: pushed on stack (right to left)
+ *
+ * Return value is in r0.
+ * r0-r3 are caller-saved (scratch registers)
+ * r4-r11 are callee-saved
+ */
+
+/* Argument register names for AAPCS */
+static char *arm_arg_regs[] = { "r0", "r1", "r2", "r3" };
+
+/*
+ * cgpusharg - Move accumulator to argument position
+ * For args 0-3: move to appropriate register
+ * For args 4+: push to stack
+ */
+static void arm_cgpusharg(int argnum) {
+    if (argnum < 4) {
+        sgen("%s\t%s,r0", "mov", arm_arg_regs[argnum]);
+    } else {
+        gen("push\t{r0}");
+    }
+}
+
+/* cgcallprep - Prepare for function call (align stack if needed) */
+static void arm_cgcallprep(int nargs) {
+    int stack_args;
+    
+    if (nargs <= 4) {
+        return;
+    }
+    
+    stack_args = nargs - 4;
+    /* Ensure 8-byte stack alignment for AAPCS */
+    if (stack_args & 1) {
+        gen("sub\tsp,sp,#4");
+    }
+}
+
+/*
+ * cgcallend - Clean up after function call
+ * Adjust stack pointer for stack-passed arguments only
+ */
+static void arm_cgcallend(int nargs) {
+    int stack_args;
+    int adjust;
+    
+    if (nargs <= 4) {
+        return;  /* No stack cleanup needed */
+    }
+    
+    stack_args = nargs - 4;
+    adjust = stack_args * 4;
+    
+    /* Add alignment padding if we added it in cgcallprep */
+    if (stack_args & 1) {
+        adjust += 4;
+    }
+    
+    ngen("%s\tsp,sp,#%d", "add", adjust);
+}
+
+/*
+ * cgfnentry - Function entry with parameter info
+ * For functions with register args, save registers to stack
+ * so they can be accessed via frame pointer offsets.
+ *
+ * Stack layout after cgfnentry for a function with N params (N <= 4):
+ *   r11-4:   saved r0 (arg 0)
+ *   r11-8:   saved r1 (arg 1)
+ *   r11-12:  saved r2 (arg 2)
+ *   r11-16:  saved r3 (arg 3)
+ *   r11-16-N: local variables start here
+ *
+ * For variadic functions (nparams < 0), we save all 4 argument registers.
+ */
+static void arm_cgfnentry(int nparams) {
+    int save_count;
+    
+    gen("push\t{r11,lr}");
+    gen("mov\tr11,sp");
+    
+    /* Determine how many registers to save */
+    if (nparams < 0) {
+        /* Variadic function: save all 4 argument registers */
+        save_count = 4;
+    } else if (nparams > 4) {
+        save_count = 4;
+    } else {
+        save_count = nparams;
+    }
+    
+    /* Save argument registers to stack */
+    if (save_count == 4) {
+        gen("push\t{r0,r1,r2,r3}");
+    } else if (save_count == 3) {
+        gen("push\t{r0,r1,r2}");
+    } else if (save_count == 2) {
+        gen("push\t{r0,r1}");
+    } else if (save_count == 1) {
+        gen("push\t{r0}");
+    }
+}
+
+/*
+ * ============================================================================
  * ARMv6 Architecture Description
  * ============================================================================
  */
@@ -664,10 +777,11 @@ struct cg_arch cg_arch_armv6 = {
     0,                  /* has_mod - uses software mod */
     1,                  /* has_byte_ops */
     1,                  /* needs_alignment */
-    8,                  /* param_offset_base (r11 + lr) */
-    1,                  /* param_offset_dir (positive: 8, 12, 16...) */
-    0,                  /* local_offset_base */
-    -1                  /* local_offset_dir (negative: -4, -8, -12...) */
+    8,                  /* param_offset_base - NOT USED for register args */
+    1,                  /* param_offset_dir */
+    0,                  /* local_offset_base - adjusted by cgfnentry */
+    -1,                 /* local_offset_dir (negative: -4, -8, -12...) */
+    4                   /* num_arg_regs (r0, r1, r2, r3) */
 };
 
 /*
@@ -851,6 +965,12 @@ struct cg_vtable cg_vtable_armv6 = {
     arm_cgstack,
     arm_cgentry,
     arm_cgexit,
+    
+    /* ABI-Compliant Calling Convention */
+    arm_cgpusharg,
+    arm_cgcallprep,
+    arm_cgcallend,
+    arm_cgfnentry,
     
     /* Data Definition */
     arm_cgdefb,

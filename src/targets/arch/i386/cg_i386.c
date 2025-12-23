@@ -328,6 +328,40 @@ static void i386_cgalign(void)      { /* unused */ }
 
 /*
  * ============================================================================
+ * i386 cdecl Calling Convention Support
+ * ============================================================================
+ *
+ * i386 cdecl passes ALL arguments on the stack (right to left).
+ * No registers are used for argument passing.
+ */
+
+/* cgpusharg - For cdecl, all args go to stack (same as cgpush) */
+static void i386_cgpusharg(int argnum) {
+    (void)argnum;  /* unused - all args go to stack */
+    gen("pushl\t%eax");
+}
+
+/* cgcallprep - No special preparation needed for cdecl */
+static void i386_cgcallprep(int nargs) {
+    (void)nargs;  /* unused */
+}
+
+/* cgcallend - Clean up stack after call */
+static void i386_cgcallend(int nargs) {
+    if (nargs > 0) {
+        ngen("%s\t$%d,%%esp", "addl", nargs * 4);
+    }
+}
+
+/* cgfnentry - Standard function entry (same as cgentry for cdecl) */
+static void i386_cgfnentry(int nparams) {
+    (void)nparams;  /* unused - params already on stack */
+    gen("pushl\t%ebp");
+    gen("movl\t%esp,%ebp");
+}
+
+/*
+ * ============================================================================
  * i386 Architecture Description
  * ============================================================================
  */
@@ -354,7 +388,8 @@ struct cg_arch cg_arch_i386 = {
     8,                  /* param_offset_base (return addr + saved ebp) */
     1,                  /* param_offset_dir (positive: 8, 12, 16...) */
     0,                  /* local_offset_base */
-    -1                  /* local_offset_dir (negative: -4, -8, -12...) */
+    -1,                 /* local_offset_dir (negative: -4, -8, -12...) */
+    0                   /* num_arg_regs (cdecl: all args on stack) */
 };
 
 /*
@@ -538,6 +573,12 @@ struct cg_vtable cg_vtable_i386 = {
     i386_cgstack,
     i386_cgentry,
     i386_cgexit,
+    
+    /* ABI-Compliant Calling Convention */
+    i386_cgpusharg,
+    i386_cgcallprep,
+    i386_cgcallend,
+    i386_cgfnentry,
     
     /* Data Definition */
     i386_cgdefb,

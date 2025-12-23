@@ -154,16 +154,34 @@ static int pmtrdecls(void) {
 	char	name[NAMELEN+1];
 	int	utype, prim, type, size, na, addr;
 	int	dummy;
+	int	num_arg_regs;
 
 	if (RPAREN == Token)
 		return 0;
 	na = 0;
+	num_arg_regs = CG_NUM_ARG_REGS;
+	
 	/*
-	 * Use architecture-specific parameter offset base.
-	 * For STACK_DOWN (x86): params at positive offsets (e.g., 8, 12, 16...)
-	 * For STACK_UP (S/370): params may be at different offsets
+	 * Calculate parameter offset base.
+	 * 
+	 * For register-based ABIs (x86-64, ARM):
+	 *   Parameters passed in registers are saved to stack by cgfnentry().
+	 *   They are at negative offsets: -8(%rbp), -16(%rbp), etc.
+	 *   Parameters beyond num_arg_regs are on the caller's stack at
+	 *   positive offsets.
+	 *
+	 * For stack-based ABIs (i386, 8086):
+	 *   All parameters are on the stack at positive offsets.
+	 *   Use CG_PARAM_OFFSET_BASE as before.
 	 */
-	addr = CG_PARAM_OFFSET_BASE;
+	if (num_arg_regs > 0) {
+		/* Register-based ABI: first param at -BPW from frame pointer */
+		addr = -BPW;
+	} else {
+		/* Stack-based ABI: use architecture-specific offset */
+		addr = CG_PARAM_OFFSET_BASE;
+	}
+	
 	for (;;) {
 		utype = 0;
 		if (na > 0 && ELLIPSIS == Token) {
@@ -203,12 +221,33 @@ static int pmtrdecls(void) {
 			type = TVARIABLE;
 		}
 		addloc(name, prim, type, CAUTO, size, addr, 0);
-		/*
-		 * Advance to next parameter using architecture-specific direction.
-		 * CG_PARAM_OFFSET_DIR is 1 for positive direction, -1 for negative.
-		 */
-		addr += CG_PARAM_OFFSET_DIR * BPW;
+		
 		na++;
+		/*
+		 * Advance to next parameter.
+		 * For register-based ABIs: continue with negative offsets
+		 * until we exceed num_arg_regs, then switch to positive.
+		 * For stack-based ABIs: use CG_PARAM_OFFSET_DIR.
+		 *
+		 * na is now the count of parameters processed (1-based).
+		 * If na < num_arg_regs, next param is still in registers.
+		 * If na == num_arg_regs, next param is first on stack.
+		 * If na > num_arg_regs, next param is on stack.
+		 */
+		if (num_arg_regs > 0) {
+			if (na < num_arg_regs) {
+				/* Next param still in register args: go more negative */
+				addr -= BPW;
+			} else if (na == num_arg_regs) {
+				/* Next param is first on stack */
+				addr = CG_PARAM_OFFSET_BASE;
+			} else {
+				/* Stack args: positive direction */
+				addr += BPW;
+			}
+		} else {
+			addr += CG_PARAM_OFFSET_DIR * BPW;
+		}
 		if (COMMA == Token)
 			Token = scan();
 		else
@@ -560,7 +599,7 @@ void decl(int clss, int prim, int utype) {
 				if (CPUBLIC == clss) genpublic(name);
 				genaligntext();
 				genname(name);
-				genentry();
+				genfnentry(size);  /* size contains nparams from pmtrdecls */
 				genstack(lsize);
 				genlocinit();
 				Retlab = label();

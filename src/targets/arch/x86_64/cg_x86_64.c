@@ -328,6 +328,124 @@ static void x64_cgalign(void)       { /* unused */ }
 
 /*
  * ============================================================================
+ * x86-64 System V ABI Calling Convention Support
+ * ============================================================================
+ *
+ * System V AMD64 ABI uses the following registers for integer arguments:
+ *   arg 0: %rdi
+ *   arg 1: %rsi
+ *   arg 2: %rdx
+ *   arg 3: %rcx
+ *   arg 4: %r8
+ *   arg 5: %r9
+ *   arg 6+: pushed on stack (right to left)
+ *
+ * Return value is in %rax.
+ * Caller saves: %rax, %rcx, %rdx, %rsi, %rdi, %r8, %r9, %r10, %r11
+ * Callee saves: %rbx, %rbp, %r12, %r13, %r14, %r15
+ */
+
+/* Argument register names for System V AMD64 ABI */
+static char *x64_arg_regs[] = { "%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9" };
+
+/*
+ * cgpusharg - Move accumulator to argument position
+ * For args 0-5: move to appropriate register
+ * For args 6+: push to stack
+ */
+static void x64_cgpusharg(int argnum) {
+    if (argnum < 6) {
+        sgen("%s\t%%rax,%s", "movq", x64_arg_regs[argnum]);
+    } else {
+        gen("pushq\t%rax");
+    }
+}
+
+/*
+ * cgcallprep - Prepare for function call
+ * Align stack to 16 bytes if needed for stack-passed arguments
+ */
+static void x64_cgcallprep(int nargs) {
+    int stack_args;
+    
+    if (nargs <= 6) {
+        stack_args = 0;
+    } else {
+        stack_args = nargs - 6;
+        /* Ensure 16-byte stack alignment before call */
+        if (stack_args & 1) {
+            gen("subq\t$8,%rsp");
+        }
+    }
+}
+
+/*
+ * cgcallend - Clean up after function call
+ * Adjust stack pointer for stack-passed arguments only
+ */
+static void x64_cgcallend(int nargs) {
+    int stack_args;
+    int adjust;
+    
+    if (nargs <= 6) {
+        return;  /* No stack cleanup needed */
+    }
+    
+    stack_args = nargs - 6;
+    adjust = stack_args * 8;
+    
+    /* Add alignment padding if we added it in cgcallprep */
+    if (stack_args & 1) {
+        adjust += 8;
+    }
+    
+    ngen("%s\t$%d,%%rsp", "addq", adjust);
+}
+
+/*
+ * cgfnentry - Function entry with parameter info
+ * For variadic functions or functions with register args, save registers to stack
+ * so they can be accessed via frame pointer offsets.
+ *
+ * Stack layout after cgfnentry for a function with N params (N <= 6):
+ *   rbp-8:     saved rdi (arg 0)
+ *   rbp-16:    saved rsi (arg 1)
+ *   rbp-24:    saved rdx (arg 2)
+ *   rbp-32:    saved rcx (arg 3)
+ *   rbp-40:    saved r8  (arg 4)
+ *   rbp-48:    saved r9  (arg 5)
+ *   rbp-48-N:  local variables start here
+ *
+ * For variadic functions (nparams < 0), we save all 6 argument registers.
+ */
+static void x64_cgfnentry(int nparams) {
+    int save_count;
+    
+    gen("pushq\t%rbp");
+    gen("movq\t%rsp,%rbp");
+    
+    /* Determine how many registers to save */
+    if (nparams < 0) {
+        /* Variadic function: save all 6 argument registers */
+        save_count = 6;
+    } else if (nparams > 6) {
+        save_count = 6;
+    } else {
+        save_count = nparams;
+    }
+    
+    /* Save argument registers to stack */
+    /* We save them in order so arg 0 is at rbp-8, arg 1 at rbp-16, etc. */
+    if (save_count >= 1) gen("pushq\t%rdi");
+    if (save_count >= 2) gen("pushq\t%rsi");
+    if (save_count >= 3) gen("pushq\t%rdx");
+    if (save_count >= 4) gen("pushq\t%rcx");
+    if (save_count >= 5) gen("pushq\t%r8");
+    if (save_count >= 6) gen("pushq\t%r9");
+}
+
+/*
+ * ============================================================================
  * x86-64 Architecture Description
  * ============================================================================
  */
@@ -351,10 +469,11 @@ struct cg_arch cg_arch_x86_64 = {
     1,                  /* has_mod */
     1,                  /* has_byte_ops */
     0,                  /* needs_alignment */
-    16,                 /* param_offset_base (return addr + saved rbp) */
-    1,                  /* param_offset_dir (positive: 16, 24, 32...) */
-    0,                  /* local_offset_base */
-    -1                  /* local_offset_dir (negative: -8, -16, -24...) */
+    16,                 /* param_offset_base - NOT USED for register args */
+    1,                  /* param_offset_dir */
+    0,                  /* local_offset_base - adjusted by cgfnentry */
+    -1,                 /* local_offset_dir (negative: -8, -16, -24...) */
+    6                   /* num_arg_regs (rdi, rsi, rdx, rcx, r8, r9) */
 };
 
 /*
@@ -538,6 +657,12 @@ struct cg_vtable cg_vtable_x86_64 = {
     x64_cgstack,
     x64_cgentry,
     x64_cgexit,
+    
+    /* ABI-Compliant Calling Convention */
+    x64_cgpusharg,
+    x64_cgcallprep,
+    x64_cgcallend,
+    x64_cgfnentry,
     
     /* Data Definition */
     x64_cgdefb,

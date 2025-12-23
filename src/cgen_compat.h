@@ -252,6 +252,17 @@
 
 /*
  * ============================================================================
+ * ABI-Compliant Calling Convention Support
+ * ============================================================================
+ */
+#define cgpusharg(n)    (CG->vtable->cgpusharg(n))
+#define cgcallprep(n)   (CG->vtable->cgcallprep(n))
+#define cgcallend(n)    (CG->vtable->cgcallend(n))
+#define cgfnentry(n)    (CG->vtable->cgfnentry(n))
+#define CG_NUM_ARG_REGS (CG->arch->num_arg_regs)
+
+/*
+ * ============================================================================
  * Data Definition
  * ============================================================================
  */

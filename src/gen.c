@@ -555,6 +555,11 @@ void genentry(void) {
 	cgentry();
 }
 
+void genfnentry(int nparams) {
+	gentext();
+	cgfnentry(nparams);
+}
+
 void genexit(void) {
 	gentext();
 	cgexit();

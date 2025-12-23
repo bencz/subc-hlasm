@@ -308,6 +308,36 @@ struct cg_vtable {
     void (*cgentry)(void);
     void (*cgexit)(void);
     
+    /*
+     * ABI-Compliant Calling Convention Support
+     * 
+     * These functions implement proper argument passing according to the
+     * target ABI. For register-based ABIs (x86-64, ARM), arguments are
+     * passed in registers first, then on the stack.
+     *
+     * cgpusharg: Move accumulator to argument position (register or stack)
+     *   - argnum: 0-based argument number (0 = first arg)
+     *   - For x86-64: args 0-5 go to rdi,rsi,rdx,rcx,r8,r9; rest to stack
+     *   - For ARM: args 0-3 go to r0-r3; rest to stack
+     *   - For i386/8086: all args go to stack (same as cgpush)
+     *
+     * cgcallprep: Prepare for function call (called before pushing args)
+     *   - nargs: total number of arguments
+     *   - May need to align stack for some ABIs
+     *
+     * cgcallend: Clean up after function call
+     *   - nargs: total number of arguments
+     *   - Adjusts stack pointer for stack-passed arguments only
+     *
+     * cgfnentry: Function entry with parameter info (replaces cgentry)
+     *   - nparams: number of declared parameters (negative if variadic)
+     *   - For register ABIs: saves register args to stack for access
+     */
+    void (*cgpusharg)(int argnum);
+    void (*cgcallprep)(int nargs);
+    void (*cgcallend)(int nargs);
+    void (*cgfnentry)(int nparams);
+    
     /* Data Definition */
     void (*cgdefb)(int v);
     void (*cgdefw)(int v);
@@ -379,6 +409,21 @@ struct cg_arch {
     int  param_offset_dir;    /* Direction for subsequent params: 1 or -1 */
     int  local_offset_base;   /* Initial offset for local variables from FP */
     int  local_offset_dir;    /* Direction for subsequent locals: 1 or -1 */
+    
+    /*
+     * Register-based Calling Convention Support
+     * 
+     * For ABIs that pass arguments in registers (x86-64, ARM, RISC-V):
+     *   - num_arg_regs: Number of registers used for integer arguments
+     *   - For x86-64 System V: 6 (rdi, rsi, rdx, rcx, r8, r9)
+     *   - For ARM AAPCS: 4 (r0, r1, r2, r3)
+     *   - For i386 cdecl: 0 (all on stack)
+     *
+     * When num_arg_regs > 0, the code generator must implement:
+     *   - cgpusharg(int argnum): Push/move argument to correct location
+     *   - cgargstack(int nargs): Adjust stack after call (only for stack args)
+     */
+    int  num_arg_regs;        /* Number of registers for integer arguments */
 };
 
 /*

@@ -402,6 +402,40 @@ static void m86_cgalign(void)       { /* unused */ }
 
 /*
  * ============================================================================
+ * 8086 cdecl Calling Convention Support
+ * ============================================================================
+ *
+ * 8086 cdecl passes ALL arguments on the stack (right to left).
+ * No registers are used for argument passing.
+ */
+
+/* cgpusharg - For cdecl, all args go to stack (same as cgpush) */
+static void m86_cgpusharg(int argnum) {
+    (void)argnum;  /* unused - all args go to stack */
+    gen("push\tax");
+}
+
+/* cgcallprep - No special preparation needed for cdecl */
+static void m86_cgcallprep(int nargs) {
+    (void)nargs;  /* unused */
+}
+
+/* cgcallend - Clean up stack after call */
+static void m86_cgcallend(int nargs) {
+    if (nargs > 0) {
+        ngen("%s\tsp,%d", "add", nargs * 2);
+    }
+}
+
+/* cgfnentry - Standard function entry (same as cgentry for cdecl) */
+static void m86_cgfnentry(int nparams) {
+    (void)nparams;  /* unused - params already on stack */
+    gen("push\tbp");
+    gen("mov\tbp,sp");
+}
+
+/*
+ * ============================================================================
  * 8086 Architecture Description
  * ============================================================================
  */
@@ -428,7 +462,8 @@ struct cg_arch cg_arch_8086 = {
     4,                  /* param_offset_base (return addr + saved bp) */
     1,                  /* param_offset_dir (positive: 4, 6, 8...) */
     0,                  /* local_offset_base */
-    -1                  /* local_offset_dir (negative: -2, -4, -6...) */
+    -1,                 /* local_offset_dir (negative: -2, -4, -6...) */
+    0                   /* num_arg_regs (cdecl: all args on stack) */
 };
 
 /*
@@ -612,6 +647,12 @@ struct cg_vtable cg_vtable_8086 = {
     m86_cgstack,
     m86_cgentry,
     m86_cgexit,
+    
+    /* ABI-Compliant Calling Convention */
+    m86_cgpusharg,
+    m86_cgcallprep,
+    m86_cgcallend,
+    m86_cgfnentry,
     
     /* Data Definition */
     m86_cgdefb,

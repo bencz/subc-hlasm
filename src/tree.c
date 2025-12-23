@@ -201,6 +201,35 @@ void emitcond(node *a, int ex) {
 	emittree1(a->right);
 }
 
+/*
+ * Count the number of arguments in a GLUE chain
+ */
+static int countargs(node *a) {
+	int count = 0;
+	while (a != NULL) {
+		count++;
+		a = a->left;
+	}
+	return count;
+}
+
+/*
+ * Emit arguments using ABI-compliant calling convention.
+ * Arguments are processed right-to-left, but we need to know
+ * the argument number for register-based ABIs.
+ *
+ * We use clear(0) before each argument to prevent spill() from
+ * pushing the previous argument value again.
+ */
+static void emitargs_abi(node *a, int argnum) {
+	if (NULL == a) return;
+	clear(0);
+	emittree1(a->right);
+	commit();
+	cgpusharg(argnum);
+	emitargs_abi(a->left, argnum - 1);
+}
+
 void emitargs(node *a) {
 	if (NULL == a) return;
 	emittree1(a->right);
@@ -325,21 +354,25 @@ static void emittree1(node *a) {
 			case OP_SUB:	gensub(a->args[0], a->args[1], 1);						break;
 			}
 			break;
-	case OP_CALL:	emitargs(a->left);
-			commit();
-			spill();
+	case OP_CALL:	{
+			int nargs = a->args[1];
+			cgcallprep(nargs);
+			emitargs_abi(a->left, nargs - 1);
 			gencall(a->args[0]);
-			genstack((a->args[1]) * BPW);
+			cgcallend(nargs);
+			}
 			break;
-	case OP_CALR:	emitargs(a->left);
-			commit();
-			spill();
+	case OP_CALR:	{
+			int nargs = a->args[1];
+			cgcallprep(nargs);
+			emitargs_abi(a->left, nargs - 1);
 			clear(0);
 			lv[LVPRIM] = FUNPTR;
 			lv[LVSYM] = a->args[0];
 			genrval(lv);
 			gencalr();
-			genstack((a->args[1]) * BPW);
+			cgcallend(nargs);
+			}
 			break;
 	case OP_ASSIGN: if (OP_IDENT == a->left->op) {
 				emittree1(a->right);
