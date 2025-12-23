@@ -142,6 +142,60 @@ enum cg_obj_format {
 
 /*
  * ============================================================================
+ * SECTION: Stack Frame Layout Information
+ * ============================================================================
+ *
+ * This structure describes the stack frame layout for a function.
+ * It is populated by cgframesetup() at function entry and used by
+ * decl.c to calculate parameter and local variable offsets.
+ *
+ * This abstraction allows each architecture to define its own stack
+ * frame model without hardcoding assumptions in the frontend.
+ */
+struct cg_frame_info {
+    /*
+     * Parameter access offsets.
+     * For register-based ABIs: offsets where register args are saved.
+     * For stack-based ABIs: offsets where caller pushed args.
+     *
+     * param_base: Offset of first parameter from frame pointer
+     * param_dir: Direction for subsequent params (+1 or -1)
+     *   - Positive: params at increasing offsets (fp+8, fp+16, ...)
+     *   - Negative: params at decreasing offsets (fp-8, fp-16, ...)
+     */
+    int param_base;
+    int param_dir;
+    
+    /*
+     * Local variable offsets.
+     * local_base: Starting offset for first local variable
+     * local_dir: Direction for subsequent locals (+1 or -1)
+     */
+    int local_base;
+    int local_dir;
+    
+    /*
+     * Stack alignment requirement.
+     * The stack pointer must be aligned to this value.
+     * Common values: 4 (i386), 8 (ARM), 16 (x86-64, AArch64)
+     */
+    int stack_align;
+    
+    /*
+     * Number of register arguments for this function.
+     * Used to determine when to switch from register to stack offsets.
+     */
+    int num_reg_args;
+    
+    /*
+     * Offset where stack arguments begin (for functions with > num_reg_args params).
+     * This is typically a positive offset from fp (caller's stack frame).
+     */
+    int stack_arg_base;
+};
+
+/*
+ * ============================================================================
  * SECTION: Code Generation Vtable
  * ============================================================================
  *
@@ -355,6 +409,38 @@ struct cg_vtable {
     void (*cgcallprep)(int nargs);
     void (*cgcallend)(int nargs);
     void (*cgfnentry)(int nparams);
+    
+    /*
+     * Stack Frame Layout Functions
+     *
+     * These functions allow the code generator to control how parameters
+     * and local variables are laid out in the stack frame.
+     *
+     * cggetframeinfo: Get frame layout information for current function
+     *   - nparams: number of parameters (negative if variadic)
+     *   - Returns pointer to static cg_frame_info structure
+     *   - Called by decl.c before processing parameters/locals
+     *
+     * cgparamoffset: Calculate offset for parameter N
+     *   - paramnum: 0-based parameter number
+     *   - nparams: total number of parameters
+     *   - Returns offset from frame pointer
+     *   - Handles register vs stack parameters automatically
+     *
+     * cglocaloffset: Calculate offset for local variable
+     *   - size: size of the variable in bytes
+     *   - current_offset: current local offset (updated by caller)
+     *   - Returns offset from frame pointer for this variable
+     *
+     * cgalignlocal: Align local variable offset
+     *   - offset: current offset
+     *   - size: size of variable
+     *   - Returns aligned offset
+     */
+    struct cg_frame_info *(*cggetframeinfo)(int nparams);
+    int (*cgparamoffset)(int paramnum, int nparams);
+    int (*cglocaloffset)(int size, int current_offset);
+    int (*cgalignlocal)(int offset, int size);
     
     /* Data Definition */
     void (*cgdefb)(int v);      /* Define byte (1 byte) */

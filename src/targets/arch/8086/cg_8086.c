@@ -1007,6 +1007,71 @@ static void m86_cgfnentry(int nparams) {
 
 /*
  * ============================================================================
+ * Stack Frame Layout Functions
+ * ============================================================================
+ */
+
+static struct cg_frame_info m86_frame_info;
+
+/*
+ * Get frame layout information for 8086.
+ * All parameters are on the stack (cdecl calling convention).
+ * Stack layout:
+ *   bp+4:  first parameter
+ *   bp+6:  second parameter
+ *   ...
+ *   bp+0:  saved bp
+ *   bp-2:  first local variable
+ *   bp-4:  second local variable
+ *   ...
+ */
+static struct cg_frame_info *m86_cggetframeinfo(int nparams) {
+    (void)nparams;
+    
+    /* Parameters at positive offsets from bp */
+    m86_frame_info.param_base = 4;    /* first param at bp+4 */
+    m86_frame_info.param_dir = 1;     /* increasing: +4, +6, +8... */
+    
+    /* Locals at negative offsets from bp */
+    m86_frame_info.local_base = 0;
+    m86_frame_info.local_dir = -1;    /* decreasing: -2, -4, -6... */
+    
+    m86_frame_info.stack_align = 2;
+    m86_frame_info.num_reg_args = 0;  /* cdecl: all args on stack */
+    m86_frame_info.stack_arg_base = 4;
+    
+    return &m86_frame_info;
+}
+
+/*
+ * Calculate offset for parameter N (0-based).
+ * All params on stack at bp+4, bp+6, bp+8, ...
+ */
+static int m86_cgparamoffset(int paramnum, int nparams) {
+    (void)nparams;
+    return 4 + paramnum * 2;  /* +4, +6, +8, ... */
+}
+
+/*
+ * Calculate offset for local variable.
+ * Locals grow downward from bp.
+ */
+static int m86_cglocaloffset(int size, int current_offset) {
+    /* Align size to 2 bytes */
+    int aligned_size = (size + 1) & ~1;
+    return current_offset - aligned_size;
+}
+
+/*
+ * Align local variable offset.
+ */
+static int m86_cgalignlocal(int offset, int size) {
+    int aligned_size = (size + 1) & ~1;
+    return (offset - aligned_size + 1) & ~1;
+}
+
+/*
+ * ============================================================================
  * 8086 Architecture Description
  * ============================================================================
  */
@@ -1286,6 +1351,12 @@ struct cg_vtable cg_vtable_8086 = {
     m86_cgcallend,
     m86_cgfnentry,
     
+    /* Stack Frame Layout */
+    m86_cggetframeinfo,
+    m86_cgparamoffset,
+    m86_cglocaloffset,
+    m86_cgalignlocal,
+    
     /* Data Definition */
     m86_cgdefb,
     m86_cgdefh,
@@ -1532,6 +1603,12 @@ struct cg_vtable cg_vtable_8086_x87 = {
     m86_cgcallprep,
     m86_cgcallend,
     m86_cgfnentry,
+    
+    /* Stack Frame Layout */
+    m86_cggetframeinfo,
+    m86_cgparamoffset,
+    m86_cglocaloffset,
+    m86_cgalignlocal,
     
     /* Data Definition */
     m86_cgdefb,

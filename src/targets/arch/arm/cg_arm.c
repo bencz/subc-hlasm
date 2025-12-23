@@ -1037,6 +1037,75 @@ static void arm_cgfnentry(int nparams) {
 
 /*
  * ============================================================================
+ * Stack Frame Layout Functions
+ * ============================================================================
+ */
+
+static struct cg_frame_info arm_frame_info;
+
+/*
+ * Get frame layout information for ARM (AAPCS).
+ * Register args (0-3) are saved at negative offsets from r11 (fp).
+ * Stack args (4+) are at positive offsets from fp.
+ */
+static struct cg_frame_info *arm_cggetframeinfo(int nparams) {
+    int save_count;
+    
+    if (nparams < 0) {
+        save_count = 4;  /* variadic: save all */
+    } else if (nparams > 4) {
+        save_count = 4;
+    } else {
+        save_count = nparams;
+    }
+    
+    /* Register args saved at fp-4, fp-8, etc. */
+    arm_frame_info.param_base = -4;
+    arm_frame_info.param_dir = -1;  /* decreasing: -4, -8, -12, -16 */
+    
+    /* Locals start after saved register args */
+    arm_frame_info.local_base = -save_count * 4;
+    arm_frame_info.local_dir = -1;  /* decreasing */
+    
+    arm_frame_info.stack_align = 8;
+    arm_frame_info.num_reg_args = 4;
+    arm_frame_info.stack_arg_base = 8;  /* first stack arg at fp+8 */
+    
+    return &arm_frame_info;
+}
+
+/*
+ * Calculate offset for parameter N.
+ * Params 0-3: in registers, saved at fp-4, fp-8, fp-12, fp-16
+ * Params 4+: on stack at fp+8, fp+12, ...
+ */
+static int arm_cgparamoffset(int paramnum, int nparams) {
+    (void)nparams;
+    if (paramnum < 4) {
+        return -4 * (paramnum + 1);  /* -4, -8, -12, -16 */
+    } else {
+        return 8 + (paramnum - 4) * 4;  /* +8, +12, +16, ... */
+    }
+}
+
+/*
+ * Calculate offset for local variable.
+ */
+static int arm_cglocaloffset(int size, int current_offset) {
+    int aligned_size = (size + 3) & ~3;
+    return current_offset - aligned_size;
+}
+
+/*
+ * Align local variable offset.
+ */
+static int arm_cgalignlocal(int offset, int size) {
+    int aligned_size = (size + 3) & ~3;
+    return (offset - aligned_size + 1) & ~3;
+}
+
+/*
+ * ============================================================================
  * ARMv6 Architecture Description
  * ============================================================================
  */
@@ -1270,6 +1339,12 @@ struct cg_vtable cg_vtable_armv6 = {
     arm_cgcallprep,
     arm_cgcallend,
     arm_cgfnentry,
+    
+    /* Stack Frame Layout */
+    arm_cggetframeinfo,
+    arm_cgparamoffset,
+    arm_cglocaloffset,
+    arm_cgalignlocal,
     
     /* Data Definition */
     arm_cgdefb,

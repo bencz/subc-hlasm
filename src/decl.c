@@ -313,33 +313,10 @@ static int pmtrdecls(void) {
 	char	name[NAMELEN+1];
 	int	utype, prim, type, size, na, addr;
 	int	dummy;
-	int	num_arg_regs;
 
 	if (RPAREN == Token)
 		return 0;
 	na = 0;
-	num_arg_regs = CG_NUM_ARG_REGS;
-	
-	/*
-	 * Calculate parameter offset base.
-	 * 
-	 * For register-based ABIs (x86-64, ARM):
-	 *   Parameters passed in registers are saved to stack by cgfnentry().
-	 *   They are at negative offsets: -8(%rbp), -16(%rbp), etc.
-	 *   Parameters beyond num_arg_regs are on the caller's stack at
-	 *   positive offsets.
-	 *
-	 * For stack-based ABIs (i386, 8086):
-	 *   All parameters are on the stack at positive offsets.
-	 *   Use CG_PARAM_OFFSET_BASE as before.
-	 */
-	if (num_arg_regs > 0) {
-		/* Register-based ABI: first param at -BPW from frame pointer */
-		addr = -BPW;
-	} else {
-		/* Stack-based ABI: use architecture-specific offset */
-		addr = CG_PARAM_OFFSET_BASE;
-	}
 	
 	for (;;) {
 		utype = 0;
@@ -379,34 +356,16 @@ static int pmtrdecls(void) {
 		}
 		if (comptype(prim))
 			error("struct/union by value not supported, use pointer: %s", name);
+		
+		/*
+		 * Use code generator's cgparamoffset() to calculate the
+		 * offset for this parameter. This allows each architecture
+		 * to define its own stack frame layout.
+		 */
+		addr = cgparamoffset(na, -1);  /* -1 = nparams unknown yet */
 		addloc(name, prim, type, CAUTO, size, addr, 0);
 		
 		na++;
-		/*
-		 * Advance to next parameter.
-		 * For register-based ABIs: continue with negative offsets
-		 * until we exceed num_arg_regs, then switch to positive.
-		 * For stack-based ABIs: use CG_PARAM_OFFSET_DIR.
-		 *
-		 * na is now the count of parameters processed (1-based).
-		 * If na < num_arg_regs, next param is still in registers.
-		 * If na == num_arg_regs, next param is first on stack.
-		 * If na > num_arg_regs, next param is on stack.
-		 */
-		if (num_arg_regs > 0) {
-			if (na < num_arg_regs) {
-				/* Next param still in register args: go more negative */
-				addr -= BPW;
-			} else if (na == num_arg_regs) {
-				/* Next param is first on stack */
-				addr = CG_PARAM_OFFSET_BASE;
-			} else {
-				/* Stack args: positive direction */
-				addr += BPW;
-			}
-		} else {
-			addr += CG_PARAM_OFFSET_DIR * BPW;
-		}
 		if (COMMA == Token)
 			Token = scan();
 		else
@@ -644,18 +603,24 @@ int upgrade_array(int utype, int type, int *size) {
  *	| declarator , ldecl_list
  */
 
-static int localdecls(void) {
+static int localdecls(int nparams) {
 	char	name[NAMELEN+1];
 	int	utype, prim, type, size, addr, val, ini;
 	int	stat, extn;
 	int	pbase, rsize;
+	struct cg_frame_info *frame;
 
 	/*
-	 * Use architecture-specific local variable offset base.
-	 * For STACK_DOWN (x86): locals at negative offsets (e.g., -4, -8, -12...)
-	 * For STACK_UP (S/370): locals at positive offsets from save area
+	 * Get frame layout info from code generator.
+	 * This tells us where local variables should start, accounting
+	 * for any space used by saved register arguments.
 	 */
-	addr = CG_LOCAL_OFFSET_BASE;
+	frame = cggetframeinfo(nparams);
+	if (frame) {
+		addr = frame->local_base;
+	} else {
+		addr = CG_LOCAL_OFFSET_BASE;
+	}
 	Nli = 0;
 	utype = 0;
 	while ( AUTO == Token || EXTERN == Token || REGISTER == Token ||
@@ -715,10 +680,11 @@ static int localdecls(void) {
 			}
 			else {
 				/*
-				 * Allocate local variable using arch-specific direction.
-				 * CG_LOCAL_OFFSET_DIR is -1 for STACK_DOWN, 1 for STACK_UP.
+				 * Use code generator's cglocaloffset() to calculate
+				 * the offset for this local variable. This handles
+				 * architecture-specific alignment and stack direction.
 				 */
-				addr += CG_LOCAL_OFFSET_DIR * rsize;
+				addr = cglocaloffset(rsize, addr);
 				addloc(name, prim, type, CAUTO, size, addr, 0);
 			}
 			if (ini && !stat) {
@@ -797,7 +763,7 @@ void decl(int clss, int prim, int utype) {
 				Thisfn = addglob(name, prim, type, clss, size,
 					0, NULL, 0);
 				Token = scan();
-				lsize = localdecls();
+				lsize = localdecls(size);  /* size = nparams from pmtrdecls */
 				gentext();
 				if (CPUBLIC == clss) genpublic(name);
 				genaligntext();

@@ -758,6 +758,77 @@ static void x64_cgfnentry(int nparams) {
 
 /*
  * ============================================================================
+ * Stack Frame Layout Functions
+ * ============================================================================
+ */
+
+static struct cg_frame_info x64_frame_info;
+
+/*
+ * Get frame layout information for x86-64.
+ * Register args (0-5) are saved at negative offsets from rbp.
+ * Stack args (6+) are at positive offsets from rbp.
+ */
+static struct cg_frame_info *x64_cggetframeinfo(int nparams) {
+    int save_count;
+    
+    if (nparams < 0) {
+        save_count = 6;  /* variadic: save all */
+    } else if (nparams > 6) {
+        save_count = 6;
+    } else {
+        save_count = nparams;
+    }
+    
+    /* Register args saved at rbp-8, rbp-16, etc. */
+    x64_frame_info.param_base = -8;
+    x64_frame_info.param_dir = -1;  /* decreasing: -8, -16, -24... */
+    
+    /* Locals start after saved register args */
+    x64_frame_info.local_base = -save_count * 8;
+    x64_frame_info.local_dir = -1;  /* decreasing */
+    
+    x64_frame_info.stack_align = 16;
+    x64_frame_info.num_reg_args = 6;
+    x64_frame_info.stack_arg_base = 16;  /* first stack arg at rbp+16 */
+    
+    return &x64_frame_info;
+}
+
+/*
+ * Calculate offset for parameter N.
+ * Params 0-5: in registers, saved at rbp-8, rbp-16, ...
+ * Params 6+: on stack at rbp+16, rbp+24, ...
+ */
+static int x64_cgparamoffset(int paramnum, int nparams) {
+    (void)nparams;
+    if (paramnum < 6) {
+        return -8 * (paramnum + 1);  /* -8, -16, -24, -32, -40, -48 */
+    } else {
+        return 16 + (paramnum - 6) * 8;  /* +16, +24, +32, ... */
+    }
+}
+
+/*
+ * Calculate offset for local variable.
+ * Locals grow downward from the end of saved register args.
+ */
+static int x64_cglocaloffset(int size, int current_offset) {
+    /* Align size to 8 bytes */
+    int aligned_size = (size + 7) & ~7;
+    return current_offset - aligned_size;
+}
+
+/*
+ * Align local variable offset.
+ */
+static int x64_cgalignlocal(int offset, int size) {
+    int aligned_size = (size + 7) & ~7;
+    return (offset - aligned_size + 1) & ~7;
+}
+
+/*
+ * ============================================================================
  * Symbol Transform Functions
  * ============================================================================
  */
@@ -1049,6 +1120,12 @@ struct cg_vtable cg_vtable_x86_64 = {
     x64_cgcallprep,
     x64_cgcallend,
     x64_cgfnentry,
+    
+    /* Stack Frame Layout */
+    x64_cggetframeinfo,
+    x64_cgparamoffset,
+    x64_cglocaloffset,
+    x64_cgalignlocal,
     
     /* Data Definition */
     x64_cgdefb,

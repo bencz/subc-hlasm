@@ -263,6 +263,16 @@
 
 /*
  * ============================================================================
+ * Stack Frame Layout Functions
+ * ============================================================================
+ */
+#define cggetframeinfo(n)       (CG->vtable->cggetframeinfo ? CG->vtable->cggetframeinfo(n) : NULL)
+#define cgparamoffset(p,n)      (CG->vtable->cgparamoffset ? CG->vtable->cgparamoffset(p,n) : 0)
+#define cglocaloffset(s,o)      (CG->vtable->cglocaloffset ? CG->vtable->cglocaloffset(s,o) : (o))
+#define cgalignlocal(o,s)       (CG->vtable->cgalignlocal ? CG->vtable->cgalignlocal(o,s) : (o))
+
+/*
+ * ============================================================================
  * Data Definition
  * ============================================================================
  */
@@ -359,6 +369,10 @@
 #define INTSIZE         (CG->arch->int_size)
 #define PTRSIZE         (CG->arch->ptr_size)
 #define CPU             (CG->arch->name)
+#define CG_STACK_ALIGN  (CG->arch->align_stack)
+#define CG_DATA_ALIGN   (CG->arch->align_data)
+#define CG_FUNC_ALIGN   (CG->arch->align_func)
+#define CG_STACK_DIR    (CG->arch->stack_dir)
 
 /*
  * ============================================================================

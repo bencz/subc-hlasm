@@ -675,6 +675,71 @@ static void i386_cgfnentry(int nparams) {
 
 /*
  * ============================================================================
+ * Stack Frame Layout Functions
+ * ============================================================================
+ */
+
+static struct cg_frame_info i386_frame_info;
+
+/*
+ * Get frame layout information for i386.
+ * All parameters are on the stack (cdecl calling convention).
+ * Stack layout:
+ *   ebp+8:  first parameter
+ *   ebp+12: second parameter
+ *   ...
+ *   ebp+0:  saved ebp
+ *   ebp-4:  first local variable
+ *   ebp-8:  second local variable
+ *   ...
+ */
+static struct cg_frame_info *i386_cggetframeinfo(int nparams) {
+    (void)nparams;
+    
+    /* Parameters at positive offsets from ebp */
+    i386_frame_info.param_base = 8;   /* first param at ebp+8 */
+    i386_frame_info.param_dir = 1;    /* increasing: +8, +12, +16... */
+    
+    /* Locals at negative offsets from ebp */
+    i386_frame_info.local_base = 0;
+    i386_frame_info.local_dir = -1;   /* decreasing: -4, -8, -12... */
+    
+    i386_frame_info.stack_align = 4;
+    i386_frame_info.num_reg_args = 0; /* cdecl: all args on stack */
+    i386_frame_info.stack_arg_base = 8;
+    
+    return &i386_frame_info;
+}
+
+/*
+ * Calculate offset for parameter N (0-based).
+ * All params on stack at ebp+8, ebp+12, ebp+16, ...
+ */
+static int i386_cgparamoffset(int paramnum, int nparams) {
+    (void)nparams;
+    return 8 + paramnum * 4;  /* +8, +12, +16, ... */
+}
+
+/*
+ * Calculate offset for local variable.
+ * Locals grow downward from ebp.
+ */
+static int i386_cglocaloffset(int size, int current_offset) {
+    /* Align size to 4 bytes */
+    int aligned_size = (size + 3) & ~3;
+    return current_offset - aligned_size;
+}
+
+/*
+ * Align local variable offset.
+ */
+static int i386_cgalignlocal(int offset, int size) {
+    int aligned_size = (size + 3) & ~3;
+    return (offset - aligned_size + 1) & ~3;
+}
+
+/*
+ * ============================================================================
  * Symbol Transform Functions
  * ============================================================================
  */
@@ -966,6 +1031,12 @@ struct cg_vtable cg_vtable_i386 = {
     i386_cgcallprep,
     i386_cgcallend,
     i386_cgfnentry,
+    
+    /* Stack Frame Layout */
+    i386_cggetframeinfo,
+    i386_cgparamoffset,
+    i386_cglocaloffset,
+    i386_cgalignlocal,
     
     /* Data Definition */
     i386_cgdefb,

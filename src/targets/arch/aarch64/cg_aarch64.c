@@ -1099,6 +1099,7 @@ static void a64_cgcallend(int nargs) {
  */
 static void a64_cgfnentry(int nparams) {
     int save_count;
+    int total_size;
     
     gen("stp\tx29,x30,[sp,#-16]!");
     gen("mov\tx29,sp");
@@ -1113,24 +1114,120 @@ static void a64_cgfnentry(int nparams) {
         save_count = nparams;
     }
     
+    if (save_count == 0) return;
+    
     /*
      * Save argument registers to stack for access via frame pointer.
-     * decl.c expects: arg0 at fp-8, arg1 at fp-16, arg2 at fp-24, etc.
-     * We use str with pre-decrement to match this layout.
+     * cgparamoffset() returns: arg0 at fp-8, arg1 at fp-16, etc.
+     * 
+     * We allocate space first (aligned to 16 bytes), then store registers
+     * at the correct offsets from the new sp.
+     *
+     * Stack layout after this (for 2 params):
+     *   fp+0:   [saved fp]
+     *   fp-8:   x0 (arg 0)
+     *   fp-16:  x1 (arg 1)
+     *   sp = fp-16
      */
-    if (save_count >= 1) gen("str\tx0,[sp,#-8]!");
-    if (save_count >= 2) gen("str\tx1,[sp,#-8]!");
-    if (save_count >= 3) gen("str\tx2,[sp,#-8]!");
-    if (save_count >= 4) gen("str\tx3,[sp,#-8]!");
-    if (save_count >= 5) gen("str\tx4,[sp,#-8]!");
-    if (save_count >= 6) gen("str\tx5,[sp,#-8]!");
-    if (save_count >= 7) gen("str\tx6,[sp,#-8]!");
-    if (save_count >= 8) gen("str\tx7,[sp,#-8]!");
+    total_size = save_count * 8;
+    /* Round up to 16-byte alignment */
+    total_size = (total_size + 15) & ~15;
     
-    /* Ensure 16-byte stack alignment after saving odd number of registers */
-    if (save_count > 0 && (save_count & 1)) {
-        gen("sub\tsp,sp,#8");
+    ngen("%s\tsp,sp,#%d", "sub", total_size);
+    
+    /* Store registers at correct offsets from fp */
+    if (save_count >= 1) gen("str\tx0,[x29,#-8]");
+    if (save_count >= 2) gen("str\tx1,[x29,#-16]");
+    if (save_count >= 3) gen("str\tx2,[x29,#-24]");
+    if (save_count >= 4) gen("str\tx3,[x29,#-32]");
+    if (save_count >= 5) gen("str\tx4,[x29,#-40]");
+    if (save_count >= 6) gen("str\tx5,[x29,#-48]");
+    if (save_count >= 7) gen("str\tx6,[x29,#-56]");
+    if (save_count >= 8) gen("str\tx7,[x29,#-64]");
+}
+
+/*
+ * ============================================================================
+ * Stack Frame Layout Functions
+ * ============================================================================
+ */
+
+static struct cg_frame_info a64_frame_info;
+
+/*
+ * Get frame layout information for AArch64.
+ * Register args (0-7) are saved at negative offsets from x29 (fp).
+ * Stack args (8+) are at positive offsets from fp.
+ *
+ * After cgfnentry with N params:
+ *   fp-8:  x0 (arg 0)
+ *   fp-16: x1 (arg 1)
+ *   ...
+ *   fp-N*8: xN-1 (arg N-1)
+ */
+static struct cg_frame_info *a64_cggetframeinfo(int nparams) {
+    int save_count;
+    
+    if (nparams < 0) {
+        save_count = 8;  /* variadic: save all */
+    } else if (nparams > 8) {
+        save_count = 8;
+    } else {
+        save_count = nparams;
     }
+    
+    /* Register args saved at fp-8, fp-16, etc. */
+    a64_frame_info.param_base = -8;
+    a64_frame_info.param_dir = -1;  /* decreasing: -8, -16, -24... */
+    
+    /* Account for alignment padding if odd number of registers */
+    int saved_space = save_count * 8;
+    if (save_count > 0 && (save_count & 1)) {
+        saved_space += 8;  /* alignment padding */
+    }
+    
+    /* Locals start after saved register args */
+    a64_frame_info.local_base = -saved_space;
+    a64_frame_info.local_dir = -1;  /* decreasing */
+    
+    a64_frame_info.stack_align = 16;
+    a64_frame_info.num_reg_args = 8;
+    a64_frame_info.stack_arg_base = 16;  /* first stack arg at fp+16 */
+    
+    return &a64_frame_info;
+}
+
+/*
+ * Calculate offset for parameter N.
+ * Params 0-7: in registers, saved at fp-8, fp-16, ...
+ * Params 8+: on stack at fp+16, fp+24, ...
+ */
+static int a64_cgparamoffset(int paramnum, int nparams) {
+    (void)nparams;
+    if (paramnum < 8) {
+        return -8 * (paramnum + 1);  /* -8, -16, -24, -32, -40, -48, -56, -64 */
+    } else {
+        return 16 + (paramnum - 8) * 8;  /* +16, +24, +32, ... */
+    }
+}
+
+/*
+ * Calculate offset for local variable.
+ * Locals grow downward from the end of saved register args.
+ * Must maintain 16-byte alignment.
+ */
+static int a64_cglocaloffset(int size, int current_offset) {
+    /* Align size to 8 bytes minimum */
+    int aligned_size = (size + 7) & ~7;
+    return current_offset - aligned_size;
+}
+
+/*
+ * Align local variable offset for AArch64.
+ */
+static int a64_cgalignlocal(int offset, int size) {
+    int aligned_size = (size + 7) & ~7;
+    return (offset - aligned_size + 1) & ~7;
 }
 
 /*
@@ -1426,6 +1523,12 @@ struct cg_vtable cg_vtable_aarch64 = {
     a64_cgcallprep,
     a64_cgcallend,
     a64_cgfnentry,
+    
+    /* Stack Frame Layout */
+    a64_cggetframeinfo,
+    a64_cgparamoffset,
+    a64_cglocaloffset,
+    a64_cgalignlocal,
     
     /* Data Definition */
     a64_cgdefb,
