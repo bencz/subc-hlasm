@@ -229,6 +229,10 @@
 
 		./scc0 -T linux-x86-64 -S myprogram.c
 
+	To specify a custom output filename, use the -o flag:
+
+		./scc0 -T linux-x86-64 -S -o output.s myprogram.c
+
 	To see all available targets:
 
 		./scc0 -L

@@ -83,13 +83,13 @@ static void compile(char *file, char *def) {
 	out = stdout;
 	ofile = NULL;
 	if (file) {
-		ofile = newfilename(file, 's');
+		if (O_asmonly && O_outfile)
+			ofile = O_outfile;
+		else
+			ofile = newfilename(file, 's');
 		if ((in = fopen(file, "r")) == NULL)
 			cmderror("no such file: %s", file);
 		if (!O_testonly) {
-			if ((out = fopen(ofile, "r")) != NULL)
-				cmderror("will not overwrite file: %s",
-					ofile);
 			if ((out = fopen(ofile, "w")) == NULL)
 				cmderror("cannot create file: %s", ofile);
 		}
@@ -193,7 +193,7 @@ static void longusage(void) {
 	printf(	"\n"
 		"-c       compile only, do not link\n"
 		"-d opt   activate debug option OPT, ? = list\n"
-		"-o file  write linker output to FILE\n"
+		"-o file  write output to FILE (linker or assembly with -S)\n"
 		"-t       test only, generate no code\n"
 		"-v       verbose, more v's = more verbose\n"
 		"-D m=v   define macro M with optional value V\n"

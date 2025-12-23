@@ -1,3 +1,7 @@
+2025-12-23 Improved -o flag and removed assembly file override restriction:
+           - The -o flag now works with -S to specify custom assembly output filename
+           - Removed restriction that prevented overwriting existing .s files
+           - Updated help text to reflect -o works for both linker and assembly output
 2025-12-23 Completed floating-point integration in expr.c, gen.c, tree.c:
            - Added FP operators to ops.h: OP_FLIT, OP_DLIT, OP_FADD/SUB/MUL/DIV,
              OP_DADD/SUB/MUL/DIV, OP_FNEG, OP_DNEG, OP_FEQ/NE/LT/GT/LE/GE,
