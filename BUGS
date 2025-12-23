@@ -18,8 +18,3 @@
 	from the scc0 and scc1 bootstrap will use 8-byte int on
 	x86_64, so that will be correct.
 
-	SubC does not support passing struct/unions as values, but it
-	allows you to declare it in function parameters, e.g.:
-
-	void f(struct foo x) {}
-

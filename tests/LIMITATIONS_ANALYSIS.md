@@ -92,7 +92,31 @@ Para arquiteturas como HLASM que têm regras específicas para labels
 
 ---
 
-## 6. Cast de Ponteiro para Inteiro
+## 6. Struct/Union por Valor
+
+O SubC não suporta passagem de struct/union por valor em parâmetros de função
+nem retorno de struct/union por valor.
+
+```c
+/* NÃO SUPORTADO */
+void print_point(struct point p);      /* erro na declaração */
+struct point get_origin(void);         /* erro no retorno */
+
+/* SUPORTADO - usar ponteiros */
+void print_point(struct point *p);     /* OK */
+void get_origin(struct point *result); /* OK */
+```
+
+**Localização**: `src/decl.c` na função `pmtrdecls()`
+
+**Motivo**: Implementar passagem por valor requer:
+- Cópia de estrutura na pilha (memcpy implícito)
+- Conhecimento do tamanho da estrutura em tempo de chamada
+- Convenções de chamada específicas por arquitetura
+
+---
+
+## 7. Cast de Ponteiro para Inteiro
 
 O SubC não suporta cast direto de ponteiro para inteiro em plataformas de 64 bits.
 Isso requer um workaround com macro condicional:
@@ -116,11 +140,12 @@ adicionar tipo `intptr_t` / `uintptr_t` para conversões ponteiro↔inteiro.
 
 ---
 
-## 7. Resumo das Limitações
+## 8. Resumo das Limitações
 
 | Limitação | Severidade | Arquivo |
 |-----------|------------|---------|
 | _va_arg aritmética de ponteiro | Médio | varargs.c |
+| Struct/union por valor | Médio | decl.c |
 | Cast ponteiro→inteiro (64-bit) | Médio | sym.c |
 | `LPREFIX` fixo | Baixo | defs.h |
 | Campos align_* não usados | Baixo | cgtarget.h |

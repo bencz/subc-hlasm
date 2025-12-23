@@ -6,6 +6,7 @@
            - Fix: Unary '!' operator now rejects struct/union operands (expr.c)
            - Fix: char assignment now truncates result value (tree.c, gen.c)
            - Fix: printf %x/%o now treats values as unsigned (runtime/lib/vformat.c)
+           - Fix: struct/union by value in function parameters now rejected (decl.c)
 2025-12-23 Cleaned up sym.c:
            - Extracted namecmp() helper for repeated symbol name comparisons
            - Extracted emitdef() helper for duplicated data emission logic

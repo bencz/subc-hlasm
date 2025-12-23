@@ -347,6 +347,8 @@ static int pmtrdecls(void) {
 			prim = pointerto(prim);
 			type = TVARIABLE;
 		}
+		if (comptype(prim))
+			error("struct/union by value not supported, use pointer: %s", name);
 		addloc(name, prim, type, CAUTO, size, addr, 0);
 		
 		na++;
