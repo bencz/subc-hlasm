@@ -352,8 +352,9 @@ struct cg_arch cg_arch_i386 = {
     1,                  /* has_byte_ops */
     0,                  /* needs_alignment */
     8,                  /* param_offset_base (return addr + saved ebp) */
-    0,                  /* param_offset_dir */
-    0                   /* local_offset_base */
+    1,                  /* param_offset_dir (positive: 8, 12, 16...) */
+    0,                  /* local_offset_base */
+    -1                  /* local_offset_dir (negative: -4, -8, -12...) */
 };
 
 /*

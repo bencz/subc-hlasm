@@ -664,9 +664,10 @@ struct cg_arch cg_arch_armv6 = {
     0,                  /* has_mod - uses software mod */
     1,                  /* has_byte_ops */
     1,                  /* needs_alignment */
-    8,                  /* param_offset_base */
-    0,                  /* param_offset_dir */
-    0                   /* local_offset_base */
+    8,                  /* param_offset_base (r11 + lr) */
+    1,                  /* param_offset_dir (positive: 8, 12, 16...) */
+    0,                  /* local_offset_base */
+    -1                  /* local_offset_dir (negative: -4, -8, -12...) */
 };
 
 /*

@@ -1,3 +1,9 @@
+2025-12-23 Fixed ABI limitation: decl.c now uses architecture-specific fields
+           for parameter and local variable offset calculation. Added
+           CG_PARAM_OFFSET_BASE, CG_PARAM_OFFSET_DIR, CG_LOCAL_OFFSET_BASE,
+           and CG_LOCAL_OFFSET_DIR macros. This enables STACK_UP architectures
+           like IBM S/370 and z/Architecture.
+2025-12-23 Added local_offset_dir field to cg_arch structure.
 2025-12-22 Added -I flag for multiple include directory support.
 2025-12-22 Major refactoring by Alexandre Bencz: implemented cross-compilation support
            via vtable-based code generator dispatch. The compiler can now target

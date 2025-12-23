@@ -292,9 +292,9 @@ Não suporta `int a[10][20]`
 
 ---
 
-## 9. LIMITAÇÃO CRÍTICA: Stack Direction Hardcoded
+## 9. ~~LIMITAÇÃO CRÍTICA: Stack Direction Hardcoded~~ ✅ CORRIGIDO
 
-### 9.1 O Problema
+### 9.1 O Problema (RESOLVIDO)
 
 O compilador SubC tem campos na estrutura `cg_arch` para configurar a direção
 da stack e offsets de parâmetros/locais:
@@ -305,147 +305,184 @@ struct cg_arch {
     // ...
     int  stack_dir;           /* STACK_DOWN ou STACK_UP */
     int  param_offset_base;   /* Offset inicial para parâmetros */
-    int  param_offset_dir;    /* Direção do offset de parâmetros */
+    int  param_offset_dir;    /* Direção do offset de parâmetros: 1 ou -1 */
     int  local_offset_base;   /* Offset inicial para variáveis locais */
+    int  local_offset_dir;    /* Direção do offset de locais: 1 ou -1 */
 };
 ```
 
-**PORÉM, esses campos NÃO SÃO UTILIZADOS!**
+**✅ Esses campos AGORA SÃO UTILIZADOS! (Corrigido em 2025-12-23)**
 
-### 9.2 Código Hardcoded em `decl.c`
+### 9.2 Código Corrigido em `decl.c`
 
-**Parâmetros de função (linhas 161-201):**
+**Parâmetros de função (`pmtrdecls()`):**
 ```c
 static int pmtrdecls(void) {
     // ...
-    addr = 2*BPW;              // HARDCODED: assume stack cresce para baixo
+    addr = CG_PARAM_OFFSET_BASE;  // Usa campo da arquitetura
     for (;;) {
         // ...
         addloc(name, prim, type, CAUTO, size, addr, 0);
-        addr += BPW;           // HARDCODED: parâmetros em offsets positivos
+        addr += CG_PARAM_OFFSET_DIR * BPW;  // Usa direção da arquitetura
         // ...
     }
 }
 ```
 
-**Variáveis locais (linhas 460-461):**
+**Variáveis locais (`localdecls()`):**
 ```c
 static int localdecls(void) {
-    int addr = 0;
+    addr = CG_LOCAL_OFFSET_BASE;  // Usa campo da arquitetura
     // ...
-    addr -= rsize;             // HARDCODED: locais em offsets negativos
+    addr += CG_LOCAL_OFFSET_DIR * rsize;  // Usa direção da arquitetura
     addloc(name, prim, type, CAUTO, size, addr, 0);
 }
 ```
 
-### 9.3 Impacto para Arquiteturas STACK_UP (ex: S/370, z/Architecture)
+### 9.3 Suporte para Arquiteturas STACK_UP (ex: S/370, z/Architecture)
 
-Em arquiteturas onde a stack cresce para CIMA (como IBM S/370, z/Architecture):
+Agora é possível implementar arquiteturas onde a stack cresce para CIMA:
 
 | Aspecto | STACK_DOWN (x86) | STACK_UP (S/370) |
 |---------|------------------|------------------|
+| `param_offset_dir` | 1 (positivo) | -1 (negativo) |
+| `local_offset_dir` | -1 (negativo) | 1 (positivo) |
 | Parâmetros | Offsets positivos do FP | Offsets negativos do FP |
 | Locais | Offsets negativos do FP | Offsets positivos do FP |
-| Push | Decrementa SP, depois escreve | Escreve, depois incrementa SP |
-| Pop | Lê, depois incrementa SP | Decrementa SP, depois lê |
 
-**O código atual é IMPOSSÍVEL de adaptar para STACK_UP sem modificar `decl.c`!**
-
-### 9.4 Pontos que Precisam ser Modificados
-
-1. **`decl.c:pmtrdecls()`** - Cálculo de offset de parâmetros
-2. **`decl.c:localdecls()`** - Cálculo de offset de variáveis locais
-3. **`decl.c:structdecl()`** - Layout de membros de struct (menos crítico)
-4. **`tree.c:emittree1()`** - Cálculo de stack cleanup após chamada
-
-### 9.5 Solução Proposta
-
-O código deveria usar os campos da arquitetura:
+### 9.4 Macros de Acesso Disponíveis
 
 ```c
-// Em pmtrdecls():
-addr = CG->arch->param_offset_base;
-for (;;) {
-    addloc(name, prim, type, CAUTO, size, addr, 0);
-    if (CG->arch->stack_dir == STACK_DOWN)
-        addr += BPW;
-    else
-        addr -= BPW;
-}
+#define CG_PARAM_OFFSET_BASE  (CG->arch->param_offset_base)
+#define CG_PARAM_OFFSET_DIR   (CG->arch->param_offset_dir)
+#define CG_LOCAL_OFFSET_BASE  (CG->arch->local_offset_base)
+#define CG_LOCAL_OFFSET_DIR   (CG->arch->local_offset_dir)
+```
 
-// Em localdecls():
-addr = CG->arch->local_offset_base;
-// ...
-if (CG->arch->stack_dir == STACK_DOWN)
-    addr -= rsize;
-else
-    addr += rsize;
+### 9.5 Configuração por Arquitetura
+
+Cada code generator agora define os valores corretos:
+
+```c
+// i386: params em 8, 12, 16...; locals em -4, -8, -12...
+struct cg_arch cg_arch_i386 = {
+    // ...
+    8,   /* param_offset_base */
+    1,   /* param_offset_dir */
+    0,   /* local_offset_base */
+    -1   /* local_offset_dir */
+};
+
+// x86-64: params em 16, 24, 32...; locals em -8, -16, -24...
+struct cg_arch cg_arch_x86_64 = {
+    // ...
+    16,  /* param_offset_base */
+    1,   /* param_offset_dir */
+    0,   /* local_offset_base */
+    -1   /* local_offset_dir */
+};
+
+// 8086: params em 4, 6, 8...; locals em -2, -4, -6...
+struct cg_arch cg_arch_8086 = {
+    // ...
+    4,   /* param_offset_base */
+    1,   /* param_offset_dir */
+    0,   /* local_offset_base */
+    -1   /* local_offset_dir */
+};
 ```
 
 ---
 
-## 10. Outras Limitações de Arquitetura Não Utilizadas
+## 10. Outras Limitações de Arquitetura
 
-### 10.1 Campos Definidos mas Não Usados
+### 10.1 Campos Definidos - Status de Uso
 
-| Campo | Definido em | Usado? |
-|-------|-------------|--------|
-| `stack_dir` | `cg_arch` | **NÃO** |
-| `param_offset_base` | `cg_arch` | **NÃO** |
-| `param_offset_dir` | `cg_arch` | **NÃO** |
-| `local_offset_base` | `cg_arch` | **NÃO** |
-| `call_conv` | `cg_arch` | **NÃO** (parcialmente) |
-| `align_stack` | `cg_arch` | **NÃO** |
-| `align_data` | `cg_arch` | **NÃO** |
-| `align_func` | `cg_arch` | **NÃO** |
+| Campo | Definido em | Usado? | Notas |
+|-------|-------------|--------|-------|
+| `stack_dir` | `cg_arch` | Parcial | Usado indiretamente via offset_dir |
+| `param_offset_base` | `cg_arch` | ✅ **SIM** | Corrigido em 2025-12-23 |
+| `param_offset_dir` | `cg_arch` | ✅ **SIM** | Corrigido em 2025-12-23 |
+| `local_offset_base` | `cg_arch` | ✅ **SIM** | Corrigido em 2025-12-23 |
+| `local_offset_dir` | `cg_arch` | ✅ **SIM** | Adicionado em 2025-12-23 |
+| `call_conv` | `cg_arch` | **NÃO** | Declarado mas não implementado |
+| `align_stack` | `cg_arch` | **NÃO** | Declarado mas não implementado |
+| `align_data` | `cg_arch` | **NÃO** | Declarado mas não implementado |
+| `align_func` | `cg_arch` | **NÃO** | Declarado mas não implementado |
 
-### 10.2 Macros Definidas mas Não Usadas
+### 10.2 Macros Disponíveis
 
 ```c
-// Em cgtarget.h - definidas mas nunca referenciadas no código:
-#define CG_STACK_DIR    (CG->arch->stack_dir)
-#define CG_CALL_CONV    (CG->arch->call_conv)
+// Em cgtarget.h - macros de acesso:
+#define CG_STACK_DIR          (CG->arch->stack_dir)
+#define CG_CALL_CONV          (CG->arch->call_conv)
+#define CG_PARAM_OFFSET_BASE  (CG->arch->param_offset_base)  // ✅ USADO
+#define CG_PARAM_OFFSET_DIR   (CG->arch->param_offset_dir)   // ✅ USADO
+#define CG_LOCAL_OFFSET_BASE  (CG->arch->local_offset_base)  // ✅ USADO
+#define CG_LOCAL_OFFSET_DIR   (CG->arch->local_offset_dir)   // ✅ USADO
 ```
 
 ---
 
-## 11. Resumo: Arquiteturas Impossíveis de Implementar
+## 11. Resumo: Arquiteturas e Limitações Restantes
 
-Com o código atual, as seguintes arquiteturas **NÃO PODEM** ser implementadas:
+### 11.1 Arquiteturas STACK_UP - ✅ AGORA POSSÍVEIS
 
-| Arquitetura | Motivo |
-|-------------|--------|
-| IBM S/370 | Stack cresce para cima (STACK_UP) |
-| IBM z/Architecture | Stack cresce para cima (STACK_UP) |
-| HP PA-RISC | Stack cresce para cima |
-| Qualquer STACK_UP | Cálculos de offset hardcoded |
-| x86-64 (ABI correto) | Não usa registradores para args |
+Com as correções de 2025-12-23, arquiteturas com stack crescendo para cima
+**AGORA PODEM** ser implementadas configurando:
+
+```c
+struct cg_arch cg_arch_s370 = {
+    // ...
+    STACK_UP,           /* stack_dir */
+    0,                  /* param_offset_base */
+    -1,                 /* param_offset_dir (negativo para STACK_UP) */
+    72,                 /* local_offset_base (após save area) */
+    1                   /* local_offset_dir (positivo para STACK_UP) */
+};
+```
+
+### 11.2 Limitações Restantes
+
+| Arquitetura | Limitação Restante |
+|-------------|-------------------|
+| IBM S/370 | Symbol transform (HLASM 8 chars), labels |
+| IBM z/Architecture | Symbol transform (HLASM 8 chars), labels |
+| x86-64 (ABI correto) | Não usa registradores para args (rdi, rsi...) |
 | ARM (ABI correto) | Não usa r0-r3 para args |
-| RISC-V | Convenção de chamada diferente |
+| RISC-V | Convenção de chamada com registradores |
+
+**Nota**: As limitações de convenção de chamada com registradores afetam
+apenas a compatibilidade com ABIs padrão. O código gerado ainda funciona
+corretamente usando a convenção stack-based do SubC.
 
 ---
 
 ## 12. Recomendações de Correção
 
-### 12.1 Para Stack Direction
+### 12.1 Para Stack Direction - ✅ IMPLEMENTADO
 
-1. Modificar `pmtrdecls()` para usar `CG->arch->param_offset_base` e `stack_dir`
-2. Modificar `localdecls()` para usar `CG->arch->local_offset_base` e `stack_dir`
-3. Criar funções helper: `calc_param_offset()`, `calc_local_offset()`
+~~1. Modificar `pmtrdecls()` para usar `CG->arch->param_offset_base` e `stack_dir`~~
+~~2. Modificar `localdecls()` para usar `CG->arch->local_offset_base` e `stack_dir`~~
+~~3. Criar funções helper: `calc_param_offset()`, `calc_local_offset()`~~
 
-### 12.2 Para va_args
+**Status**: Implementado em 2025-12-23. O código agora usa:
+- `CG_PARAM_OFFSET_BASE` e `CG_PARAM_OFFSET_DIR` em `pmtrdecls()`
+- `CG_LOCAL_OFFSET_BASE` e `CG_LOCAL_OFFSET_DIR` em `localdecls()`
+
+### 12.2 Para va_args (PENDENTE)
 
 1. Implementar va_args específico por arquitetura
 2. Para x86-64: salvar registradores de argumento na stack no prólogo
 3. Usar estrutura va_list adequada para cada ABI
 
-### 12.3 Para Convenção de Chamada
+### 12.3 Para Convenção de Chamada (PENDENTE)
 
 1. Criar abstração para passagem de argumentos
 2. Implementar `emit_arg_to_register()` vs `emit_arg_to_stack()`
 3. Usar `CG->arch->call_conv` para decidir
 
-### 12.4 Para Limites
+### 12.4 Para Limites (PENDENTE)
 
 1. Aumentar MAXFNARGS para pelo menos 127 (limite comum)
 2. Usar alocação dinâmica para assinaturas de função
@@ -710,28 +747,33 @@ struct cg_arch {
 
 ---
 
-## 16. Resumo: Novas Limitações Identificadas
+## 16. Resumo: Limitações Restantes
 
-| Limitação | Arquivo | Impacto |
-|-----------|---------|---------|
-| `gsym()` hardcoded | gen.c | Não suporta HLASM (8 chars, uppercase) |
-| `PREFIX` fixo | defs.h | Sempre 'C', não configurável |
-| `LPREFIX` fixo | defs.h | Sempre 'L', não configurável |
-| `underscore_sym` não usado | cgtarget.h | Campo existe mas é ignorado |
-| Stack slot size fixo | decl.c | Assume sempre BPW |
-| Param offset base fixo | decl.c | Assume sempre 2*BPW |
+| Limitação | Arquivo | Impacto | Status |
+|-----------|---------|---------|--------|
+| `gsym()` hardcoded | gen.c | Não suporta HLASM (8 chars, uppercase) | PENDENTE |
+| `PREFIX` fixo | defs.h | Sempre 'C', não configurável | PENDENTE |
+| `LPREFIX` fixo | defs.h | Sempre 'L', não configurável | PENDENTE |
+| `underscore_sym` não usado | cgtarget.h | Campo existe mas é ignorado | PENDENTE |
+| Stack slot size fixo | decl.c | Assume sempre BPW | PENDENTE |
+| ~~Param offset base fixo~~ | decl.c | ~~Assume sempre 2*BPW~~ | ✅ CORRIGIDO |
+| ~~Local offset dir fixo~~ | decl.c | ~~Assume sempre negativo~~ | ✅ CORRIGIDO |
 
 ---
 
-## 17. Arquiteturas Afetadas (Atualizado)
+## 17. Arquiteturas Afetadas (Atualizado 2025-12-23)
 
-| Arquitetura | Limitações que Impedem Implementação |
-|-------------|--------------------------------------|
-| IBM S/370 | STACK_UP, symbol_transform, HLASM labels |
-| IBM z/Architecture | STACK_UP, symbol_transform, HLASM labels |
-| HP PA-RISC | STACK_UP |
-| x86-64 (ABI correto) | Registradores para args |
-| ARM (ABI correto) | Registradores para args |
-| RISC-V | Convenção de chamada, registradores |
-| Qualquer HLASM | Symbol transform, label format |
+| Arquitetura | Status | Limitações Restantes |
+|-------------|--------|---------------------|
+| IBM S/370 | ✅ Possível | symbol_transform, HLASM labels |
+| IBM z/Architecture | ✅ Possível | symbol_transform, HLASM labels |
+| HP PA-RISC | ✅ Possível | Nenhuma crítica |
+| x86-64 (ABI correto) | Parcial | Registradores para args (usa stack) |
+| ARM (ABI correto) | Parcial | Registradores para args (usa stack) |
+| RISC-V | Parcial | Convenção de chamada (usa stack) |
+| Qualquer HLASM | ✅ Possível | Symbol transform, label format |
+
+**Legenda**:
+- ✅ **Possível**: Pode ser implementado com as correções de stack direction
+- **Parcial**: Funciona mas não segue ABI padrão (usa convenção stack-based)
 

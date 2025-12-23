@@ -362,10 +362,23 @@ struct cg_arch {
      * Stack Frame Layout Configuration
      * These fields allow different architectures to specify how parameters
      * and local variables are laid out relative to the frame pointer.
+     *
+     * For STACK_DOWN architectures (x86, ARM):
+     *   - Parameters are at positive offsets from FP (above the frame)
+     *   - Locals are at negative offsets from FP (below the frame)
+     *   - param_offset_dir = 1 (positive direction)
+     *   - local_offset_dir = -1 (negative direction)
+     *
+     * For STACK_UP architectures (S/370, PA-RISC):
+     *   - Parameters may be at negative offsets or passed via registers
+     *   - Locals are at positive offsets from FP
+     *   - param_offset_dir = -1 or via register area
+     *   - local_offset_dir = 1 (positive direction)
      */
-    int  param_offset_base;   /* Initial offset for first parameter */
-    int  param_offset_dir;    /* 0 = follows stack_dir, 1 = always positive */
-    int  local_offset_base;   /* Initial offset for local variables */
+    int  param_offset_base;   /* Initial offset for first parameter from FP */
+    int  param_offset_dir;    /* Direction for subsequent params: 1 or -1 */
+    int  local_offset_base;   /* Initial offset for local variables from FP */
+    int  local_offset_dir;    /* Direction for subsequent locals: 1 or -1 */
 };
 
 /*
@@ -433,6 +446,12 @@ extern struct cg_target *CG;
 #define CG_STACK_DIR    (CG->arch->stack_dir)
 #define CG_ASM_SYNTAX   (CG->arch->asm_syntax)
 #define CG_CALL_CONV    (CG->arch->call_conv)
+
+/* Stack frame layout accessor macros */
+#define CG_PARAM_OFFSET_BASE  (CG->arch->param_offset_base)
+#define CG_PARAM_OFFSET_DIR   (CG->arch->param_offset_dir)
+#define CG_LOCAL_OFFSET_BASE  (CG->arch->local_offset_base)
+#define CG_LOCAL_OFFSET_DIR   (CG->arch->local_offset_dir)
 
 /* OS property accessor macros */
 #define CG_OS_TYPE      (CG->os->os_type)

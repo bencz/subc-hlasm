@@ -352,8 +352,9 @@ struct cg_arch cg_arch_x86_64 = {
     1,                  /* has_byte_ops */
     0,                  /* needs_alignment */
     16,                 /* param_offset_base (return addr + saved rbp) */
-    0,                  /* param_offset_dir */
-    0                   /* local_offset_base */
+    1,                  /* param_offset_dir (positive: 16, 24, 32...) */
+    0,                  /* local_offset_base */
+    -1                  /* local_offset_dir (negative: -8, -16, -24...) */
 };
 
 /*

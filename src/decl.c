@@ -158,7 +158,12 @@ static int pmtrdecls(void) {
 	if (RPAREN == Token)
 		return 0;
 	na = 0;
-	addr = 2*BPW;
+	/*
+	 * Use architecture-specific parameter offset base.
+	 * For STACK_DOWN (x86): params at positive offsets (e.g., 8, 12, 16...)
+	 * For STACK_UP (S/370): params may be at different offsets
+	 */
+	addr = CG_PARAM_OFFSET_BASE;
 	for (;;) {
 		utype = 0;
 		if (na > 0 && ELLIPSIS == Token) {
@@ -198,7 +203,11 @@ static int pmtrdecls(void) {
 			type = TVARIABLE;
 		}
 		addloc(name, prim, type, CAUTO, size, addr, 0);
-		addr += BPW;
+		/*
+		 * Advance to next parameter using architecture-specific direction.
+		 * CG_PARAM_OFFSET_DIR is 1 for positive direction, -1 for negative.
+		 */
+		addr += CG_PARAM_OFFSET_DIR * BPW;
 		na++;
 		if (COMMA == Token)
 			Token = scan();
@@ -392,10 +401,16 @@ int upgrade_array(int utype, int type, int *size) {
 
 static int localdecls(void) {
 	char	name[NAMELEN+1];
-	int	utype, prim, type, size, addr = 0, val, ini;
+	int	utype, prim, type, size, addr, val, ini;
 	int	stat, extn;
 	int	pbase, rsize;
 
+	/*
+	 * Use architecture-specific local variable offset base.
+	 * For STACK_DOWN (x86): locals at negative offsets (e.g., -4, -8, -12...)
+	 * For STACK_UP (S/370): locals at positive offsets from save area
+	 */
+	addr = CG_LOCAL_OFFSET_BASE;
 	Nli = 0;
 	utype = 0;
 	while ( AUTO == Token || EXTERN == Token || REGISTER == Token ||
@@ -457,7 +472,11 @@ static int localdecls(void) {
 					0, val);
 			}
 			else {
-				addr -= rsize;
+				/*
+				 * Allocate local variable using arch-specific direction.
+				 * CG_LOCAL_OFFSET_DIR is -1 for STACK_DOWN, 1 for STACK_UP.
+				 */
+				addr += CG_LOCAL_OFFSET_DIR * rsize;
 				addloc(name, prim, type, CAUTO, size, addr, 0);
 			}
 			if (ini && !stat) {
