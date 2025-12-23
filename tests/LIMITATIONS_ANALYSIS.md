@@ -49,13 +49,22 @@ O keyword `goto` não é reconhecido.
 
 ---
 
-## 3. Campos de Arquitetura Não Utilizados
+## 3. Campos de Alinhamento Não Utilizados
 
 | Campo | Definido em | Status |
 |-------|-------------|--------|
-| `align_stack` | `cg_arch` | Declarado mas não implementado |
-| `align_data` | `cg_arch` | Declarado mas não implementado |
-| `align_func` | `cg_arch` | Declarado mas não implementado |
+| `align_stack` | `cg_arch` | Declarado e definido, mas não acessado no código |
+| `align_data` | `cg_arch` | Declarado e definido, mas não acessado no código |
+| `align_func` | `cg_arch` | Declarado e definido, mas não acessado no código |
+
+**Nota**: Esses campos já estão definidos com valores corretos para cada arquitetura
+(ex: x86-64 usa align_stack=16, align_data=8). Porém, o código de geração ainda não
+os utiliza. Para arquiteturas com requisitos de alinhamento rigorosos (como IBM S/370
+que requer alinhamento de fullword/doubleword), será necessário implementar o uso
+desses campos em:
+- `cgalign()` - para alinhar dados
+- `cgentry()`/`cgfnentry()` - para alinhar stack e funções
+- Emissão de diretivas `.align` apropriadas
 
 ---
 
