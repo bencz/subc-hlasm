@@ -331,6 +331,314 @@ static void i386_cgalign(void)      { /* unused */ }
 
 /*
  * ============================================================================
+ * i386 x87 Floating-Point Operations
+ * ============================================================================
+ *
+ * The x87 FPU uses a stack-based architecture with 8 registers (ST0-ST7).
+ * ST0 is the top of stack. Operations typically work on ST0 and ST1.
+ * Since 486, the x87 FPU is integrated into the CPU.
+ *
+ * IEEE 754 format:
+ *   float (32-bit):  1 sign + 8 exponent + 23 mantissa
+ *   double (64-bit): 1 sign + 11 exponent + 52 mantissa
+ */
+
+/* Load float from local variable to ST0 */
+static void i386_cgfloads(int n) {
+    ngen("%s\t%d(%%ebp)", "flds", n);
+}
+
+/* Load double from local variable to ST0 */
+static void i386_cgfloadd(int n) {
+    ngen("%s\t%d(%%ebp)", "fldl", n);
+}
+
+/* Load float from global symbol to ST0 */
+static void i386_cgfloadgs(char *s) {
+    sgen("%s\t%s", "flds", s);
+}
+
+/* Load double from global symbol to ST0 */
+static void i386_cgfloadgd(char *s) {
+    sgen("%s\t%s", "fldl", s);
+}
+
+/* Store ST0 to local float variable */
+static void i386_cgfstores(int n) {
+    ngen("%s\t%d(%%ebp)", "fstps", n);
+}
+
+/* Store ST0 to local double variable */
+static void i386_cgfstored(int n) {
+    ngen("%s\t%d(%%ebp)", "fstpl", n);
+}
+
+/* Store ST0 to global float symbol */
+static void i386_cgfstoregs(char *s) {
+    sgen("%s\t%s", "fstps", s);
+}
+
+/* Store ST0 to global double symbol */
+static void i386_cgfstoregsd(char *s) {
+    sgen("%s\t%s", "fstpl", s);
+}
+
+/* Load float literal from label */
+static void i386_cgflits(int lab) {
+    lgen("%s\t%c%d", "flds", lab);
+}
+
+/* Load double literal from label */
+static void i386_cgflitd(int lab) {
+    lgen("%s\t%c%d", "fldl", lab);
+}
+
+/* Float addition: ST0 = ST1 + ST0, pop ST1 */
+static void i386_cgfadds(void) {
+    gen("faddp\t%st,%st(1)");
+}
+
+/* Double addition (same as float on x87) */
+static void i386_cgfaddd(void) {
+    gen("faddp\t%st,%st(1)");
+}
+
+/* Float subtraction: ST0 = ST1 - ST0, pop ST1 */
+static void i386_cgfsubs(void) {
+    gen("fsubrp\t%st,%st(1)");
+}
+
+/* Double subtraction */
+static void i386_cgfsubd(void) {
+    gen("fsubrp\t%st,%st(1)");
+}
+
+/* Float multiplication: ST0 = ST1 * ST0, pop ST1 */
+static void i386_cgfmuls(void) {
+    gen("fmulp\t%st,%st(1)");
+}
+
+/* Double multiplication */
+static void i386_cgfmuld(void) {
+    gen("fmulp\t%st,%st(1)");
+}
+
+/* Float division: ST0 = ST1 / ST0, pop ST1 */
+static void i386_cgfdivs(void) {
+    gen("fdivrp\t%st,%st(1)");
+}
+
+/* Double division */
+static void i386_cgfdivd(void) {
+    gen("fdivrp\t%st,%st(1)");
+}
+
+/* Float negation: ST0 = -ST0 */
+static void i386_cgfnegs(void) {
+    gen("fchs");
+}
+
+/* Double negation */
+static void i386_cgfnegd(void) {
+    gen("fchs");
+}
+
+/* Compare floats and set CPU flags */
+static void i386_cgfcmps(void) {
+    gen("fcompp");
+    gen("fnstsw\t%ax");
+    gen("sahf");
+}
+
+/* Compare doubles */
+static void i386_cgfcmpd(void) {
+    gen("fcompp");
+    gen("fnstsw\t%ax");
+    gen("sahf");
+}
+
+/* Float == comparison, result in EAX (0 or 1) */
+static void i386_cgfeqs(void) {
+    int lab = label();
+    i386_cgfcmps();
+    gen("xorl\t%eax,%eax");
+    lgen("%s\t%c%d", "jne", lab);
+    gen("incl\t%eax");
+    genlab(lab);
+}
+
+static void i386_cgfeqd(void) {
+    int lab = label();
+    i386_cgfcmpd();
+    gen("xorl\t%eax,%eax");
+    lgen("%s\t%c%d", "jne", lab);
+    gen("incl\t%eax");
+    genlab(lab);
+}
+
+/* Float != comparison */
+static void i386_cgfnes(void) {
+    int lab = label();
+    i386_cgfcmps();
+    gen("xorl\t%eax,%eax");
+    lgen("%s\t%c%d", "je", lab);
+    gen("incl\t%eax");
+    genlab(lab);
+}
+
+static void i386_cgfned(void) {
+    int lab = label();
+    i386_cgfcmpd();
+    gen("xorl\t%eax,%eax");
+    lgen("%s\t%c%d", "je", lab);
+    gen("incl\t%eax");
+    genlab(lab);
+}
+
+/* Float < comparison */
+static void i386_cgflts(void) {
+    int lab = label();
+    i386_cgfcmps();
+    gen("xorl\t%eax,%eax");
+    lgen("%s\t%c%d", "jae", lab);
+    gen("incl\t%eax");
+    genlab(lab);
+}
+
+static void i386_cgfltd(void) {
+    int lab = label();
+    i386_cgfcmpd();
+    gen("xorl\t%eax,%eax");
+    lgen("%s\t%c%d", "jae", lab);
+    gen("incl\t%eax");
+    genlab(lab);
+}
+
+/* Float > comparison */
+static void i386_cgfgts(void) {
+    int lab = label();
+    i386_cgfcmps();
+    gen("xorl\t%eax,%eax");
+    lgen("%s\t%c%d", "jbe", lab);
+    gen("incl\t%eax");
+    genlab(lab);
+}
+
+static void i386_cgfgtd(void) {
+    int lab = label();
+    i386_cgfcmpd();
+    gen("xorl\t%eax,%eax");
+    lgen("%s\t%c%d", "jbe", lab);
+    gen("incl\t%eax");
+    genlab(lab);
+}
+
+/* Float <= comparison */
+static void i386_cgfles(void) {
+    int lab = label();
+    i386_cgfcmps();
+    gen("xorl\t%eax,%eax");
+    lgen("%s\t%c%d", "ja", lab);
+    gen("incl\t%eax");
+    genlab(lab);
+}
+
+static void i386_cgfled(void) {
+    int lab = label();
+    i386_cgfcmpd();
+    gen("xorl\t%eax,%eax");
+    lgen("%s\t%c%d", "ja", lab);
+    gen("incl\t%eax");
+    genlab(lab);
+}
+
+/* Float >= comparison */
+static void i386_cgfges(void) {
+    int lab = label();
+    i386_cgfcmps();
+    gen("xorl\t%eax,%eax");
+    lgen("%s\t%c%d", "jb", lab);
+    gen("incl\t%eax");
+    genlab(lab);
+}
+
+static void i386_cgfged(void) {
+    int lab = label();
+    i386_cgfcmpd();
+    gen("xorl\t%eax,%eax");
+    lgen("%s\t%c%d", "jb", lab);
+    gen("incl\t%eax");
+    genlab(lab);
+}
+
+/* Convert integer (in EAX) to float in ST0 */
+static void i386_cgitofs(void) {
+    gen("pushl\t%eax");
+    gen("fildl\t(%esp)");
+    gen("addl\t$4,%esp");
+}
+
+/* Convert integer to double in ST0 */
+static void i386_cgitofd(void) {
+    gen("pushl\t%eax");
+    gen("fildl\t(%esp)");
+    gen("addl\t$4,%esp");
+}
+
+/* Convert float in ST0 to integer in EAX */
+static void i386_cgftois(void) {
+    gen("subl\t$4,%esp");
+    gen("fistpl\t(%esp)");
+    gen("popl\t%eax");
+}
+
+/* Convert double in ST0 to integer in EAX */
+static void i386_cgftoid(void) {
+    gen("subl\t$4,%esp");
+    gen("fistpl\t(%esp)");
+    gen("popl\t%eax");
+}
+
+/* Convert float to double (no-op on x87, both are 80-bit internally) */
+static void i386_cgstod(void) {
+    /* No operation needed - x87 uses 80-bit extended precision internally */
+}
+
+/* Convert double to float (no-op on x87) */
+static void i386_cgdtos(void) {
+    /* No operation needed */
+}
+
+/* Push FP value (duplicate ST0) */
+static void i386_cgfpush(void) {
+    gen("fld\t%st(0)");
+}
+
+/* Pop FP stack (discard ST0) */
+static void i386_cgfpop(void) {
+    gen("fstp\t%st(0)");
+}
+
+/* Exchange ST0 and ST1 */
+static void i386_cgfxch(void) {
+    gen("fxch\t%st(1)");
+}
+
+/* Define float constant in data section */
+static void i386_cgdeffloat(int lab, unsigned int bits) {
+    genlab(lab);
+    ngen("%s\t%u", ".long", bits);
+}
+
+/* Define double constant in data section */
+static void i386_cgdefdouble(int lab, unsigned int hi, unsigned int lo) {
+    genlab(lab);
+    ngen("%s\t%u", ".long", lo);
+    ngen("%s\t%u", ".long", hi);
+}
+
+/*
+ * ============================================================================
  * i386 cdecl Calling Convention Support
  * ============================================================================
  *
@@ -652,21 +960,52 @@ struct cg_vtable cg_vtable_i386 = {
     /* Alignment */
     i386_cgalign,
     
-    /* Floating-Point Operations - TODO: implement x87 FP for i386 */
-    NULL, NULL, NULL, NULL,  /* cgfloads, cgfloadd, cgfloadgs, cgfloadgd */
-    NULL, NULL, NULL, NULL,  /* cgfstores, cgfstored, cgfstoregs, cgfstoregsd */
-    NULL, NULL,              /* cgflits, cgflitd */
-    NULL, NULL, NULL, NULL,  /* cgfadds, cgfaddd, cgfsubs, cgfsubd */
-    NULL, NULL, NULL, NULL,  /* cgfmuls, cgfmuld, cgfdivs, cgfdivd */
-    NULL, NULL,              /* cgfnegs, cgfnegd */
-    NULL, NULL,              /* cgfcmps, cgfcmpd */
-    NULL, NULL, NULL, NULL,  /* cgfeqs, cgfeqd, cgfnes, cgfned */
-    NULL, NULL, NULL, NULL,  /* cgflts, cgfltd, cgfgts, cgfgtd */
-    NULL, NULL, NULL, NULL,  /* cgfles, cgfled, cgfges, cgfged */
-    NULL, NULL, NULL, NULL,  /* cgitofs, cgitofd, cgftois, cgftoid */
-    NULL, NULL,              /* cgstod, cgdtos */
-    NULL, NULL, NULL,        /* cgfpush, cgfpop, cgfxch */
-    NULL, NULL               /* cgdeffloat, cgdefdouble */
+    /* Floating-Point Operations - x87 FPU */
+    i386_cgfloads,
+    i386_cgfloadd,
+    i386_cgfloadgs,
+    i386_cgfloadgd,
+    i386_cgfstores,
+    i386_cgfstored,
+    i386_cgfstoregs,
+    i386_cgfstoregsd,
+    i386_cgflits,
+    i386_cgflitd,
+    i386_cgfadds,
+    i386_cgfaddd,
+    i386_cgfsubs,
+    i386_cgfsubd,
+    i386_cgfmuls,
+    i386_cgfmuld,
+    i386_cgfdivs,
+    i386_cgfdivd,
+    i386_cgfnegs,
+    i386_cgfnegd,
+    i386_cgfcmps,
+    i386_cgfcmpd,
+    i386_cgfeqs,
+    i386_cgfeqd,
+    i386_cgfnes,
+    i386_cgfned,
+    i386_cgflts,
+    i386_cgfltd,
+    i386_cgfgts,
+    i386_cgfgtd,
+    i386_cgfles,
+    i386_cgfled,
+    i386_cgfges,
+    i386_cgfged,
+    i386_cgitofs,
+    i386_cgitofd,
+    i386_cgftois,
+    i386_cgftoid,
+    i386_cgstod,
+    i386_cgdtos,
+    i386_cgfpush,
+    i386_cgfpop,
+    i386_cgfxch,
+    i386_cgdeffloat,
+    i386_cgdefdouble
 };
 
 /*

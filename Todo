@@ -15,12 +15,10 @@
 	  (currently only code generation is cross-platform)
 
 	- Integrate floating-point code generation into expr.c/gen.c
-	  (vtable functions implemented for 8086, stubs for other archs)
+	  (vtable functions implemented for all architectures)
 
-	- Implement FP code generation for i386 (x87), x86-64 (SSE), ARM (VFP)
-	  (8086 has full x87 and emulation support)
-
+	DONE (2025-12-23):
+	- Implement FP code generation for i386 (x87), x86-64 (SSE2), ARM (VFP)
 	- Complete double (64-bit) emulation in runtime/dos-8086/fpemu.c
-	  (float operations work, double operations are stubs)
 
 	? clean up sym.c

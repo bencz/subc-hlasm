@@ -644,6 +644,284 @@ static void arm_cgalign(void)       { gen(".align 2"); }
 
 /*
  * ============================================================================
+ * ARM VFP Floating-Point Operations
+ * ============================================================================
+ *
+ * ARM VFP (Vector Floating Point) provides hardware floating-point support.
+ * VFPv2 and later use s0-s31 for single-precision and d0-d15 for double.
+ * We use s0/d0 as the primary FP accumulator and s1/d1 as secondary.
+ *
+ * IEEE 754 format:
+ *   float (32-bit):  1 sign + 8 exponent + 23 mantissa
+ *   double (64-bit): 1 sign + 11 exponent + 52 mantissa
+ */
+
+/* Load float from local variable to s0 */
+static void arm_cgfloads(int n) {
+    arm_cglocladdr(n, 1);
+    gen("vldr\ts0,[r1]");
+}
+
+/* Load double from local variable to d0 */
+static void arm_cgfloadd(int n) {
+    arm_cglocladdr(n, 1);
+    gen("vldr\td0,[r1]");
+}
+
+/* Load float from global symbol to s0 */
+static void arm_cgfloadgs(char *s) {
+    arm_cgglobaddr(s, 1);
+    gen("vldr\ts0,[r1]");
+}
+
+/* Load double from global symbol to d0 */
+static void arm_cgfloadgd(char *s) {
+    arm_cgglobaddr(s, 1);
+    gen("vldr\td0,[r1]");
+}
+
+/* Store s0 to local float variable */
+static void arm_cgfstores(int n) {
+    arm_cglocladdr(n, 1);
+    gen("vstr\ts0,[r1]");
+}
+
+/* Store d0 to local double variable */
+static void arm_cgfstored(int n) {
+    arm_cglocladdr(n, 1);
+    gen("vstr\td0,[r1]");
+}
+
+/* Store s0 to global float symbol */
+static void arm_cgfstoregs(char *s) {
+    arm_cgglobaddr(s, 1);
+    gen("vstr\ts0,[r1]");
+}
+
+/* Store d0 to global double symbol */
+static void arm_cgfstoregsd(char *s) {
+    arm_cgglobaddr(s, 1);
+    gen("vstr\td0,[r1]");
+}
+
+/* Load float literal from label */
+static void arm_cgflits(int lab) {
+    arm_cgstataddr(lab, 1);
+    gen("vldr\ts0,[r1]");
+}
+
+/* Load double literal from label */
+static void arm_cgflitd(int lab) {
+    arm_cgstataddr(lab, 1);
+    gen("vldr\td0,[r1]");
+}
+
+/* Float addition: s0 = s0 + s1 */
+static void arm_cgfadds(void) {
+    gen("vadd.f32\ts0,s0,s1");
+}
+
+/* Double addition */
+static void arm_cgfaddd(void) {
+    gen("vadd.f64\td0,d0,d1");
+}
+
+/* Float subtraction: s0 = s0 - s1 */
+static void arm_cgfsubs(void) {
+    gen("vsub.f32\ts0,s0,s1");
+}
+
+/* Double subtraction */
+static void arm_cgfsubd(void) {
+    gen("vsub.f64\td0,d0,d1");
+}
+
+/* Float multiplication */
+static void arm_cgfmuls(void) {
+    gen("vmul.f32\ts0,s0,s1");
+}
+
+/* Double multiplication */
+static void arm_cgfmuld(void) {
+    gen("vmul.f64\td0,d0,d1");
+}
+
+/* Float division */
+static void arm_cgfdivs(void) {
+    gen("vdiv.f32\ts0,s0,s1");
+}
+
+/* Double division */
+static void arm_cgfdivd(void) {
+    gen("vdiv.f64\td0,d0,d1");
+}
+
+/* Float negation: s0 = -s0 */
+static void arm_cgfnegs(void) {
+    gen("vneg.f32\ts0,s0");
+}
+
+/* Double negation */
+static void arm_cgfnegd(void) {
+    gen("vneg.f64\td0,d0");
+}
+
+/* Compare floats: s0 vs s1, set FPSCR flags */
+static void arm_cgfcmps(void) {
+    gen("vcmp.f32\ts0,s1");
+    gen("vmrs\tAPSR_nzcv,FPSCR");
+}
+
+/* Compare doubles */
+static void arm_cgfcmpd(void) {
+    gen("vcmp.f64\td0,d1");
+    gen("vmrs\tAPSR_nzcv,FPSCR");
+}
+
+/* Float == comparison, result in r0 (0 or 1) */
+static void arm_cgfeqs(void) {
+    arm_cgfcmps();
+    gen("mov\tr0,#0");
+    gen("moveq\tr0,#1");
+}
+
+static void arm_cgfeqd(void) {
+    arm_cgfcmpd();
+    gen("mov\tr0,#0");
+    gen("moveq\tr0,#1");
+}
+
+/* Float != comparison */
+static void arm_cgfnes(void) {
+    arm_cgfcmps();
+    gen("mov\tr0,#0");
+    gen("movne\tr0,#1");
+}
+
+static void arm_cgfned(void) {
+    arm_cgfcmpd();
+    gen("mov\tr0,#0");
+    gen("movne\tr0,#1");
+}
+
+/* Float < comparison */
+static void arm_cgflts(void) {
+    arm_cgfcmps();
+    gen("mov\tr0,#0");
+    gen("movlt\tr0,#1");
+}
+
+static void arm_cgfltd(void) {
+    arm_cgfcmpd();
+    gen("mov\tr0,#0");
+    gen("movlt\tr0,#1");
+}
+
+/* Float > comparison */
+static void arm_cgfgts(void) {
+    arm_cgfcmps();
+    gen("mov\tr0,#0");
+    gen("movgt\tr0,#1");
+}
+
+static void arm_cgfgtd(void) {
+    arm_cgfcmpd();
+    gen("mov\tr0,#0");
+    gen("movgt\tr0,#1");
+}
+
+/* Float <= comparison */
+static void arm_cgfles(void) {
+    arm_cgfcmps();
+    gen("mov\tr0,#0");
+    gen("movle\tr0,#1");
+}
+
+static void arm_cgfled(void) {
+    arm_cgfcmpd();
+    gen("mov\tr0,#0");
+    gen("movle\tr0,#1");
+}
+
+/* Float >= comparison */
+static void arm_cgfges(void) {
+    arm_cgfcmps();
+    gen("mov\tr0,#0");
+    gen("movge\tr0,#1");
+}
+
+static void arm_cgfged(void) {
+    arm_cgfcmpd();
+    gen("mov\tr0,#0");
+    gen("movge\tr0,#1");
+}
+
+/* Convert integer (in r0) to float in s0 */
+static void arm_cgitofs(void) {
+    gen("vmov\ts0,r0");
+    gen("vcvt.f32.s32\ts0,s0");
+}
+
+/* Convert integer to double in d0 */
+static void arm_cgitofd(void) {
+    gen("vmov\ts0,r0");
+    gen("vcvt.f64.s32\td0,s0");
+}
+
+/* Convert float in s0 to integer in r0 */
+static void arm_cgftois(void) {
+    gen("vcvt.s32.f32\ts0,s0");
+    gen("vmov\tr0,s0");
+}
+
+/* Convert double in d0 to integer in r0 */
+static void arm_cgftoid(void) {
+    gen("vcvt.s32.f64\ts0,d0");
+    gen("vmov\tr0,s0");
+}
+
+/* Convert float to double */
+static void arm_cgstod(void) {
+    gen("vcvt.f64.f32\td0,s0");
+}
+
+/* Convert double to float */
+static void arm_cgdtos(void) {
+    gen("vcvt.f32.f64\ts0,d0");
+}
+
+/* Push FP value (copy s0 to s1 for binary ops) */
+static void arm_cgfpush(void) {
+    gen("vmov.f32\ts1,s0");
+}
+
+/* Pop FP stack (no-op for VFP) */
+static void arm_cgfpop(void) {
+    /* No operation needed */
+}
+
+/* Exchange s0 and s1 */
+static void arm_cgfxch(void) {
+    gen("vmov.f32\ts2,s0");
+    gen("vmov.f32\ts0,s1");
+    gen("vmov.f32\ts1,s2");
+}
+
+/* Define float constant in data section */
+static void arm_cgdeffloat(int lab, unsigned int bits) {
+    genlab(lab);
+    ngen("%s\t%u", ".long", bits);
+}
+
+/* Define double constant in data section */
+static void arm_cgdefdouble(int lab, unsigned int hi, unsigned int lo) {
+    genlab(lab);
+    ngen("%s\t%u", ".long", lo);
+    ngen("%s\t%u", ".long", hi);
+}
+
+/*
+ * ============================================================================
  * ARM AAPCS Calling Convention Support
  * ============================================================================
  *
@@ -996,21 +1274,52 @@ struct cg_vtable cg_vtable_armv6 = {
     /* Alignment */
     arm_cgalign,
     
-    /* Floating-Point Operations - TODO: implement VFP for ARM */
-    NULL, NULL, NULL, NULL,  /* cgfloads, cgfloadd, cgfloadgs, cgfloadgd */
-    NULL, NULL, NULL, NULL,  /* cgfstores, cgfstored, cgfstoregs, cgfstoregsd */
-    NULL, NULL,              /* cgflits, cgflitd */
-    NULL, NULL, NULL, NULL,  /* cgfadds, cgfaddd, cgfsubs, cgfsubd */
-    NULL, NULL, NULL, NULL,  /* cgfmuls, cgfmuld, cgfdivs, cgfdivd */
-    NULL, NULL,              /* cgfnegs, cgfnegd */
-    NULL, NULL,              /* cgfcmps, cgfcmpd */
-    NULL, NULL, NULL, NULL,  /* cgfeqs, cgfeqd, cgfnes, cgfned */
-    NULL, NULL, NULL, NULL,  /* cgflts, cgfltd, cgfgts, cgfgtd */
-    NULL, NULL, NULL, NULL,  /* cgfles, cgfled, cgfges, cgfged */
-    NULL, NULL, NULL, NULL,  /* cgitofs, cgitofd, cgftois, cgftoid */
-    NULL, NULL,              /* cgstod, cgdtos */
-    NULL, NULL, NULL,        /* cgfpush, cgfpop, cgfxch */
-    NULL, NULL               /* cgdeffloat, cgdefdouble */
+    /* Floating-Point Operations - VFP */
+    arm_cgfloads,
+    arm_cgfloadd,
+    arm_cgfloadgs,
+    arm_cgfloadgd,
+    arm_cgfstores,
+    arm_cgfstored,
+    arm_cgfstoregs,
+    arm_cgfstoregsd,
+    arm_cgflits,
+    arm_cgflitd,
+    arm_cgfadds,
+    arm_cgfaddd,
+    arm_cgfsubs,
+    arm_cgfsubd,
+    arm_cgfmuls,
+    arm_cgfmuld,
+    arm_cgfdivs,
+    arm_cgfdivd,
+    arm_cgfnegs,
+    arm_cgfnegd,
+    arm_cgfcmps,
+    arm_cgfcmpd,
+    arm_cgfeqs,
+    arm_cgfeqd,
+    arm_cgfnes,
+    arm_cgfned,
+    arm_cgflts,
+    arm_cgfltd,
+    arm_cgfgts,
+    arm_cgfgtd,
+    arm_cgfles,
+    arm_cgfled,
+    arm_cgfges,
+    arm_cgfged,
+    arm_cgitofs,
+    arm_cgitofd,
+    arm_cgftois,
+    arm_cgftoid,
+    arm_cgstod,
+    arm_cgdtos,
+    arm_cgfpush,
+    arm_cgfpop,
+    arm_cgfxch,
+    arm_cgdeffloat,
+    arm_cgdefdouble
 };
 
 /*

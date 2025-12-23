@@ -331,6 +331,313 @@ static void x64_cgalign(void)       { /* unused */ }
 
 /*
  * ============================================================================
+ * x86-64 SSE2 Floating-Point Operations
+ * ============================================================================
+ *
+ * x86-64 uses SSE/SSE2 for floating-point operations (mandatory on all x86-64).
+ * SSE uses XMM registers (xmm0-xmm15), each 128 bits wide.
+ * We use xmm0 as the primary FP accumulator and xmm1 as secondary.
+ *
+ * IEEE 754 format:
+ *   float (32-bit):  1 sign + 8 exponent + 23 mantissa  (scalar: ss suffix)
+ *   double (64-bit): 1 sign + 11 exponent + 52 mantissa (scalar: sd suffix)
+ */
+
+/* Load float from local variable to xmm0 */
+static void x64_cgfloads(int n) {
+    ngen("%s\t%d(%%rbp),%%xmm0", "movss", n);
+}
+
+/* Load double from local variable to xmm0 */
+static void x64_cgfloadd(int n) {
+    ngen("%s\t%d(%%rbp),%%xmm0", "movsd", n);
+}
+
+/* Load float from global symbol to xmm0 */
+static void x64_cgfloadgs(char *s) {
+    sgen("%s\t%s(%%rip),%%xmm0", "movss", s);
+}
+
+/* Load double from global symbol to xmm0 */
+static void x64_cgfloadgd(char *s) {
+    sgen("%s\t%s(%%rip),%%xmm0", "movsd", s);
+}
+
+/* Store xmm0 to local float variable */
+static void x64_cgfstores(int n) {
+    ngen("%s\t%%xmm0,%d(%%rbp)", "movss", n);
+}
+
+/* Store xmm0 to local double variable */
+static void x64_cgfstored(int n) {
+    ngen("%s\t%%xmm0,%d(%%rbp)", "movsd", n);
+}
+
+/* Store xmm0 to global float symbol */
+static void x64_cgfstoregs(char *s) {
+    sgen("%s\t%%xmm0,%s(%%rip)", "movss", s);
+}
+
+/* Store xmm0 to global double symbol */
+static void x64_cgfstoregsd(char *s) {
+    sgen("%s\t%%xmm0,%s(%%rip)", "movsd", s);
+}
+
+/* Load float literal from label */
+static void x64_cgflits(int lab) {
+    lgen("%s\t%c%d(%%rip),%%xmm0", "movss", lab);
+}
+
+/* Load double literal from label */
+static void x64_cgflitd(int lab) {
+    lgen("%s\t%c%d(%%rip),%%xmm0", "movsd", lab);
+}
+
+/* Float addition: xmm0 = xmm0 + xmm1 */
+static void x64_cgfadds(void) {
+    gen("addss\t%xmm1,%xmm0");
+}
+
+/* Double addition */
+static void x64_cgfaddd(void) {
+    gen("addsd\t%xmm1,%xmm0");
+}
+
+/* Float subtraction: xmm0 = xmm0 - xmm1 */
+static void x64_cgfsubs(void) {
+    gen("subss\t%xmm1,%xmm0");
+}
+
+/* Double subtraction */
+static void x64_cgfsubd(void) {
+    gen("subsd\t%xmm1,%xmm0");
+}
+
+/* Float multiplication */
+static void x64_cgfmuls(void) {
+    gen("mulss\t%xmm1,%xmm0");
+}
+
+/* Double multiplication */
+static void x64_cgfmuld(void) {
+    gen("mulsd\t%xmm1,%xmm0");
+}
+
+/* Float division */
+static void x64_cgfdivs(void) {
+    gen("divss\t%xmm1,%xmm0");
+}
+
+/* Double division */
+static void x64_cgfdivd(void) {
+    gen("divsd\t%xmm1,%xmm0");
+}
+
+/* Float negation: xmm0 = -xmm0 */
+static void x64_cgfnegs(void) {
+    /* XOR with sign bit mask (0x80000000) */
+    gen("movd\t%xmm0,%eax");
+    gen("xorl\t$0x80000000,%eax");
+    gen("movd\t%eax,%xmm0");
+}
+
+/* Double negation */
+static void x64_cgfnegd(void) {
+    /* XOR with sign bit mask (0x8000000000000000) */
+    gen("movq\t%xmm0,%rax");
+    gen("movabsq\t$0x8000000000000000,%rcx");
+    gen("xorq\t%rcx,%rax");
+    gen("movq\t%rax,%xmm0");
+}
+
+/* Compare floats: xmm0 vs xmm1, set flags via COMISS */
+static void x64_cgfcmps(void) {
+    gen("comiss\t%xmm1,%xmm0");
+}
+
+/* Compare doubles */
+static void x64_cgfcmpd(void) {
+    gen("comisd\t%xmm1,%xmm0");
+}
+
+/* Float == comparison, result in RAX (0 or 1) */
+static void x64_cgfeqs(void) {
+    int lab = label();
+    x64_cgfcmps();
+    gen("xorq\t%rax,%rax");
+    lgen("%s\t%c%d", "jne", lab);
+    lgen("%s\t%c%d", "jp", lab);  /* Also check parity for NaN */
+    gen("incq\t%rax");
+    genlab(lab);
+}
+
+static void x64_cgfeqd(void) {
+    int lab = label();
+    x64_cgfcmpd();
+    gen("xorq\t%rax,%rax");
+    lgen("%s\t%c%d", "jne", lab);
+    lgen("%s\t%c%d", "jp", lab);
+    gen("incq\t%rax");
+    genlab(lab);
+}
+
+/* Float != comparison */
+static void x64_cgfnes(void) {
+    int lab = label();
+    x64_cgfcmps();
+    gen("xorq\t%rax,%rax");
+    lgen("%s\t%c%d", "je", lab);
+    gen("incq\t%rax");
+    genlab(lab);
+}
+
+static void x64_cgfned(void) {
+    int lab = label();
+    x64_cgfcmpd();
+    gen("xorq\t%rax,%rax");
+    lgen("%s\t%c%d", "je", lab);
+    gen("incq\t%rax");
+    genlab(lab);
+}
+
+/* Float < comparison */
+static void x64_cgflts(void) {
+    int lab = label();
+    x64_cgfcmps();
+    gen("xorq\t%rax,%rax");
+    lgen("%s\t%c%d", "jae", lab);
+    gen("incq\t%rax");
+    genlab(lab);
+}
+
+static void x64_cgfltd(void) {
+    int lab = label();
+    x64_cgfcmpd();
+    gen("xorq\t%rax,%rax");
+    lgen("%s\t%c%d", "jae", lab);
+    gen("incq\t%rax");
+    genlab(lab);
+}
+
+/* Float > comparison */
+static void x64_cgfgts(void) {
+    int lab = label();
+    x64_cgfcmps();
+    gen("xorq\t%rax,%rax");
+    lgen("%s\t%c%d", "jbe", lab);
+    gen("incq\t%rax");
+    genlab(lab);
+}
+
+static void x64_cgfgtd(void) {
+    int lab = label();
+    x64_cgfcmpd();
+    gen("xorq\t%rax,%rax");
+    lgen("%s\t%c%d", "jbe", lab);
+    gen("incq\t%rax");
+    genlab(lab);
+}
+
+/* Float <= comparison */
+static void x64_cgfles(void) {
+    int lab = label();
+    x64_cgfcmps();
+    gen("xorq\t%rax,%rax");
+    lgen("%s\t%c%d", "ja", lab);
+    gen("incq\t%rax");
+    genlab(lab);
+}
+
+static void x64_cgfled(void) {
+    int lab = label();
+    x64_cgfcmpd();
+    gen("xorq\t%rax,%rax");
+    lgen("%s\t%c%d", "ja", lab);
+    gen("incq\t%rax");
+    genlab(lab);
+}
+
+/* Float >= comparison */
+static void x64_cgfges(void) {
+    int lab = label();
+    x64_cgfcmps();
+    gen("xorq\t%rax,%rax");
+    lgen("%s\t%c%d", "jb", lab);
+    gen("incq\t%rax");
+    genlab(lab);
+}
+
+static void x64_cgfged(void) {
+    int lab = label();
+    x64_cgfcmpd();
+    gen("xorq\t%rax,%rax");
+    lgen("%s\t%c%d", "jb", lab);
+    gen("incq\t%rax");
+    genlab(lab);
+}
+
+/* Convert integer (in RAX) to float in xmm0 */
+static void x64_cgitofs(void) {
+    gen("cvtsi2ssq\t%rax,%xmm0");
+}
+
+/* Convert integer to double in xmm0 */
+static void x64_cgitofd(void) {
+    gen("cvtsi2sdq\t%rax,%xmm0");
+}
+
+/* Convert float in xmm0 to integer in RAX */
+static void x64_cgftois(void) {
+    gen("cvttss2siq\t%xmm0,%rax");
+}
+
+/* Convert double in xmm0 to integer in RAX */
+static void x64_cgftoid(void) {
+    gen("cvttsd2siq\t%xmm0,%rax");
+}
+
+/* Convert float to double */
+static void x64_cgstod(void) {
+    gen("cvtss2sd\t%xmm0,%xmm0");
+}
+
+/* Convert double to float */
+static void x64_cgdtos(void) {
+    gen("cvtsd2ss\t%xmm0,%xmm0");
+}
+
+/* Push FP value (copy xmm0 to xmm1 for binary ops) */
+static void x64_cgfpush(void) {
+    gen("movaps\t%xmm0,%xmm1");
+}
+
+/* Pop FP stack (no-op for SSE - values stay in registers) */
+static void x64_cgfpop(void) {
+    /* No operation needed */
+}
+
+/* Exchange xmm0 and xmm1 */
+static void x64_cgfxch(void) {
+    gen("movaps\t%xmm0,%xmm2");
+    gen("movaps\t%xmm1,%xmm0");
+    gen("movaps\t%xmm2,%xmm1");
+}
+
+/* Define float constant in data section */
+static void x64_cgdeffloat(int lab, unsigned int bits) {
+    genlab(lab);
+    ngen("%s\t%u", ".long", bits);
+}
+
+/* Define double constant in data section */
+static void x64_cgdefdouble(int lab, unsigned int hi, unsigned int lo) {
+    genlab(lab);
+    ngen("%s\t%u", ".long", lo);
+    ngen("%s\t%u", ".long", hi);
+}
+
+/*
+ * ============================================================================
  * x86-64 System V ABI Calling Convention Support
  * ============================================================================
  *
@@ -736,21 +1043,52 @@ struct cg_vtable cg_vtable_x86_64 = {
     /* Alignment */
     x64_cgalign,
     
-    /* Floating-Point Operations - TODO: implement SSE FP for x86-64 */
-    NULL, NULL, NULL, NULL,  /* cgfloads, cgfloadd, cgfloadgs, cgfloadgd */
-    NULL, NULL, NULL, NULL,  /* cgfstores, cgfstored, cgfstoregs, cgfstoregsd */
-    NULL, NULL,              /* cgflits, cgflitd */
-    NULL, NULL, NULL, NULL,  /* cgfadds, cgfaddd, cgfsubs, cgfsubd */
-    NULL, NULL, NULL, NULL,  /* cgfmuls, cgfmuld, cgfdivs, cgfdivd */
-    NULL, NULL,              /* cgfnegs, cgfnegd */
-    NULL, NULL,              /* cgfcmps, cgfcmpd */
-    NULL, NULL, NULL, NULL,  /* cgfeqs, cgfeqd, cgfnes, cgfned */
-    NULL, NULL, NULL, NULL,  /* cgflts, cgfltd, cgfgts, cgfgtd */
-    NULL, NULL, NULL, NULL,  /* cgfles, cgfled, cgfges, cgfged */
-    NULL, NULL, NULL, NULL,  /* cgitofs, cgitofd, cgftois, cgftoid */
-    NULL, NULL,              /* cgstod, cgdtos */
-    NULL, NULL, NULL,        /* cgfpush, cgfpop, cgfxch */
-    NULL, NULL               /* cgdeffloat, cgdefdouble */
+    /* Floating-Point Operations - SSE2 */
+    x64_cgfloads,
+    x64_cgfloadd,
+    x64_cgfloadgs,
+    x64_cgfloadgd,
+    x64_cgfstores,
+    x64_cgfstored,
+    x64_cgfstoregs,
+    x64_cgfstoregsd,
+    x64_cgflits,
+    x64_cgflitd,
+    x64_cgfadds,
+    x64_cgfaddd,
+    x64_cgfsubs,
+    x64_cgfsubd,
+    x64_cgfmuls,
+    x64_cgfmuld,
+    x64_cgfdivs,
+    x64_cgfdivd,
+    x64_cgfnegs,
+    x64_cgfnegd,
+    x64_cgfcmps,
+    x64_cgfcmpd,
+    x64_cgfeqs,
+    x64_cgfeqd,
+    x64_cgfnes,
+    x64_cgfned,
+    x64_cgflts,
+    x64_cgfltd,
+    x64_cgfgts,
+    x64_cgfgtd,
+    x64_cgfles,
+    x64_cgfled,
+    x64_cgfges,
+    x64_cgfged,
+    x64_cgitofs,
+    x64_cgitofd,
+    x64_cgftois,
+    x64_cgftoid,
+    x64_cgstod,
+    x64_cgdtos,
+    x64_cgfpush,
+    x64_cgfpop,
+    x64_cgfxch,
+    x64_cgdeffloat,
+    x64_cgdefdouble
 };
 
 /*

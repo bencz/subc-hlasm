@@ -8,9 +8,9 @@ Este documento lista as limitações ainda existentes no compilador SubC.
 
 ## 0. Status do Suporte a Ponto Flutuante
 
-**PARCIALMENTE IMPLEMENTADO** (2025-12-23)
+**IMPLEMENTADO** (2025-12-23)
 
-A infraestrutura de código para ponto flutuante foi adicionada:
+A infraestrutura de código para ponto flutuante foi completamente implementada:
 
 | Componente | Status |
 |------------|--------|
@@ -18,16 +18,14 @@ A infraestrutura de código para ponto flutuante foi adicionada:
 | `fpu_type` em `cg_arch` | ✅ Implementado |
 | 46 funções FP na vtable | ✅ Definidas |
 | 8086 x87 (8087) | ✅ Implementado |
-| 8086 emulação IEEE 754 | ✅ Implementado (float), stubs (double) |
-| i386 x87 | ⏳ Stubs (NULL) |
-| x86-64 SSE | ⏳ Stubs (NULL) |
-| ARM VFP | ⏳ Stubs (NULL) |
+| 8086 emulação IEEE 754 | ✅ Implementado (float e double) |
+| i386 x87 | ✅ Implementado |
+| x86-64 SSE2 | ✅ Implementado |
+| ARM VFP | ✅ Implementado |
 | Integração em expr.c/gen.c | ⏳ Pendente |
 
 **Próximos passos:**
 1. Integrar chamadas FP em `expr.c` e `gen.c` usando `IS_FLOATTYPE()`
-2. Implementar funções FP para i386, x86-64, ARM
-3. Completar emulação de double para 8086
 
 ---
 
@@ -77,19 +75,21 @@ O código incrementa o valor apontado por `*ap`, não o ponteiro `ap` em si.
 
 ## 3. Aritmética de Ponto Flutuante
 
-**PARCIALMENTE RESOLVIDO** - Ver seção 0 acima.
+**RESOLVIDO** - Ver seção 0 acima.
 
 Os tipos `float` e `double` são parseados e armazenados corretamente.
-A infraestrutura de code generation foi implementada (vtable com 46 funções).
+A infraestrutura de code generation foi completamente implementada (vtable com 46 funções).
 
 **Implementado:**
 - 8086: Suporte completo a x87 (8087/80287)
-- 8086: Emulação IEEE 754 em software (float funcional, double stubs)
-- Targets: `dos-8086` (emulação) e `dos-8086-x87` (hardware)
+- 8086: Emulação IEEE 754 em software (float e double)
+- i386: Suporte completo a x87 FPU
+- x86-64: Suporte completo a SSE2
+- ARM: Suporte completo a VFP
+- Targets: `dos-8086` (emulação), `dos-8086-x87` (hardware), todos os outros
 
 **Pendente:**
 - Integração no parser (expr.c/gen.c)
-- Implementação para i386, x86-64, ARM
 
 ---
 
@@ -140,7 +140,8 @@ Para arquiteturas como HLASM que têm regras específicas para labels
 | Limitação | Severidade | Arquivo | Status |
 |-----------|------------|---------|--------|
 | Integração FP em expr.c/gen.c | Médio | expr.c, gen.c | Pendente |
-| FP para i386/x86-64/ARM | Médio | cg_*.c | Stubs |
+| FP para i386/x86-64/ARM | Médio | cg_*.c | ✅ Resolvido |
+| Emulação double 8086 | Médio | fpemu.c | ✅ Resolvido |
 | _va_arg aritmética de ponteiro | Médio | varargs.c | Bug |
 | `LPREFIX` fixo | Baixo | defs.h | - |
 | Campos align_* não usados | Baixo | cgtarget.h | - |
