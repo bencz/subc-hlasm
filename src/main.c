@@ -166,7 +166,9 @@ static void link(void) {
 	k = strlen(cmd);
 	for (i=0; i<Nf; i++)
 		k = concat(k, cmd, Files[i]);
-	k = concat(k, cmd, SCCLIBC);
+	/* SCCLIBC only for targets that need SubC runtime (e.g., DOS) */
+	if (SCCLIBC != NULL)
+		k = concat(k, cmd, SCCLIBC);
 	concat(k, cmd, SYSLIBC);
 	sprintf(cmd2, cmd, SCCDIR);
 	if (O_verbose > 1) printf("%s\n", cmd2);

@@ -33,8 +33,10 @@
 	Bug fixes (2025-12-23 session 3):
 		32+ params	fixed (AArch64 stack param offset calculation)
 		refactored	all targets now use CG->arch macros for offsets
+		scc_libc	moved to cg_os_config (only DOS needs it)
+		darwin ld	fixed SDK library path for modern macOS
 
-	C89 Test Suite (2025-12-23):
+	C89 Test Suite (2025-12-23 - updated with full build comparison):
 		location	tests/c89_suite/
 		tests		38 test files
 		categories	operators, control flow, types, functions,

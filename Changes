@@ -1,3 +1,16 @@
+2025-12-23 Added scc_libc field to cg_os_config structure:
+           - SubC runtime library (libscc.a) now defined per-OS in cg_os_configs.c
+           - Only DOS targets need scc_libc, other targets use system libc directly
+           - Removed hardcoded SCCLIBC from defs.h
+           - main.c link() now checks if scc_libc is NULL before adding it
+2025-12-23 Fixed Darwin linker command for modern macOS:
+           - Added SDK library path to ld_cmd for darwin targets
+           - ld -o %s -L /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib
+           - darwin-aarch64 now fully compiles, assembles, and links executables
+2025-12-23 Updated run_tests.sh for full SubC build comparison:
+           - Compare mode (-C) now compiles, assembles, links, and runs SubC binaries
+           - Compares actual execution output between SubC and native compiler
+           - Auto-detects darwin-aarch64 on Apple Silicon
 2025-12-23 Fixed functions with many parameters (32+) on AArch64:
            - Stack-passed parameter offsets were calculated with 8-byte spacing
            - But caller pushes with 16-byte alignment (str x0,[sp,#-16]!)

@@ -24,6 +24,7 @@ struct cg_os_config cg_os_linux = {
     "ld -o %s -dynamic-linker /lib64/ld-linux-x86-64.so.2 " 
         "/usr/lib/crt1.o /usr/lib/crti.o -lc /usr/lib/crtn.o",  /* ld_cmd */
     "-lc",              /* sys_libc */
+    NULL,               /* scc_libc - not needed, uses system libc */
     "a.out"             /* aout_name */
 };
 
@@ -42,6 +43,7 @@ struct cg_os_config cg_os_freebsd = {
     "ld -o %s -dynamic-linker /libexec/ld-elf.so.1 "
         "/usr/lib/crt1.o /usr/lib/crti.o -lc /usr/lib/crtn.o",  /* ld_cmd */
     "-lc",              /* sys_libc */
+    NULL,               /* scc_libc - not needed, uses system libc */
     "a.out"             /* aout_name */
 };
 
@@ -60,6 +62,7 @@ struct cg_os_config cg_os_netbsd = {
     "ld -o %s -dynamic-linker /libexec/ld.elf_so "
         "/usr/lib/crt0.o /usr/lib/crti.o -lc /usr/lib/crtn.o",  /* ld_cmd */
     "-lc",              /* sys_libc */
+    NULL,               /* scc_libc - not needed, uses system libc */
     "a.out"             /* aout_name */
 };
 
@@ -78,6 +81,7 @@ struct cg_os_config cg_os_openbsd = {
     "ld -o %s -dynamic-linker /usr/libexec/ld.so "
         "/usr/lib/crt0.o -lc",  /* ld_cmd */
     "-lc",              /* sys_libc */
+    NULL,               /* scc_libc - not needed, uses system libc */
     "a.out"             /* aout_name */
 };
 
@@ -93,8 +97,9 @@ struct cg_os_config cg_os_darwin = {
     1,                  /* underscore_sym */
     "Darwin",           /* os_name */
     "as -o %s %s",      /* asm_cmd */
-    "ld -o %s -lSystem",  /* ld_cmd */
+    "ld -o %s -L /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib",  /* ld_cmd */
     "-lSystem",         /* sys_libc */
+    NULL,               /* scc_libc - not needed, uses system libc */
     "a.out"             /* aout_name */
 };
 
@@ -112,6 +117,7 @@ struct cg_os_config cg_os_windows = {
     "as -o %s %s",      /* asm_cmd */
     "ld -o %s -lmsvcrt",  /* ld_cmd */
     "-lmsvcrt",         /* sys_libc */
+    NULL,               /* scc_libc - not needed, uses system libc */
     "a.exe"             /* aout_name */
 };
 
@@ -129,6 +135,7 @@ struct cg_os_config cg_os_dos = {
     "s86 -o %s %s",     /* asm_cmd */
     "sld -o %s",        /* ld_cmd */
     "",                 /* sys_libc */
+    "%s/lib/libscc.a", /* scc_libc - DOS needs SubC runtime library */
     "a.exe"             /* aout_name */
 };
 
@@ -146,5 +153,6 @@ struct cg_os_config cg_os_mvs = {
     NULL,               /* asm_cmd - HLASM handled differently */
     NULL,               /* ld_cmd - Binder handled differently */
     "",                 /* sys_libc */
+    NULL,               /* scc_libc - not needed */
     "MODULE"            /* aout_name */
 };

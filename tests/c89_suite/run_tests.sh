@@ -200,7 +200,10 @@ detect_target() {
             esac
             ;;
         Darwin)
-            echo "darwin-x86-64"
+            case "$arch" in
+                arm64)  echo "darwin-aarch64" ;;
+                *)      echo "darwin-x86-64" ;;
+            esac
             ;;
         FreeBSD)
             case "$arch" in
@@ -287,8 +290,8 @@ echo ""
 echo -e "${BOLD}----------------------------------------${NC}"
 echo ""
 
-# Function to compile with SubC (with timeout protection)
-compile_subc() {
+# Function to compile with SubC (with timeout protection) - assembly only
+compile_subc_asm() {
     local src="$1"
     local name=$(basename "$src" .c)
     local asm="$OUTPUT_DIR/subc/${name}.s"
@@ -304,6 +307,32 @@ compile_subc() {
         return 124
     elif [ $status -eq 0 ]; then
         echo "$asm"
+        return 0
+    else
+        echo "$output"
+        return $status
+    fi
+}
+
+# Function to compile with SubC (full: compile + assemble + link)
+compile_subc_full() {
+    local src="$1"
+    local name=$(basename "$src" .c)
+    local exe="$OUTPUT_DIR/subc/${name}"
+    
+    if [ $VERBOSE -eq 1 ]; then
+        echo "[DEBUG] SubC full build: $src -> $exe (timeout: ${TIMEOUT_SECONDS}s)" >&2
+    fi
+    
+    local output
+    output=$(run_with_timeout "$TIMEOUT_SECONDS" "$SCC" -T "$TARGET" -I "$INCLUDE_DIR" -o "$exe" "$src" 2>&1)
+    local status=$?
+    
+    if [ $status -eq 124 ]; then
+        echo "TIMEOUT: compilation exceeded ${TIMEOUT_SECONDS} seconds"
+        return 124
+    elif [ $status -eq 0 ]; then
+        echo "$exe"
         return 0
     else
         echo "$output"
@@ -339,9 +368,9 @@ run_compare_test() {
     
     echo -n "Comparing $name... "
     
-    # Compile with SubC
-    local subc_output
-    subc_output=$(compile_subc "$src" 2>&1)
+    # Compile with SubC (full build: compile + assemble + link)
+    local subc_result
+    subc_result=$(compile_subc_full "$src" 2>&1)
     local subc_status=$?
     
     if [ $subc_status -eq 124 ]; then
@@ -350,14 +379,21 @@ run_compare_test() {
         FAILED_TESTS+=("$name (timeout)")
         return 1
     elif [ $subc_status -ne 0 ]; then
-        log_fail "SubC compilation failed"
+        log_fail "SubC build failed"
         if [ $VERBOSE -eq 1 ]; then
-            echo "SubC error: $subc_output"
+            echo "SubC error: $subc_result"
         fi
         FAILED=$((FAILED + 1))
-        FAILED_TESTS+=("$name (subc compile)")
+        FAILED_TESTS+=("$name (subc build)")
         return 1
     fi
+    
+    # subc_result contains the executable path
+    local subc_exe="$subc_result"
+    
+    # Run SubC executable
+    local subc_output
+    subc_output=$("$subc_exe" 2>&1) || true
     
     # Compile and run with native compiler
     local native_output
@@ -370,23 +406,39 @@ run_compare_test() {
         return 0
     fi
     
-    # For now, we can only compare if we can also run SubC output
-    # Since SubC doesn't have full runtime, we compare compilation success
-    # and native execution output
+    # Compare outputs
+    local subc_pass=0
+    local native_pass=0
     
-    # Check if native test passed
+    if echo "$subc_output" | grep -q "^PASS:"; then
+        subc_pass=1
+    fi
     if echo "$native_output" | grep -q "^PASS:"; then
-        log_success "SubC compiled OK, Native: PASS"
+        native_pass=1
+    fi
+    
+    if [ $subc_pass -eq 1 ] && [ $native_pass -eq 1 ]; then
+        log_success "SubC: PASS, Native: PASS"
         PASSED=$((PASSED + 1))
         PASSED_TESTS+=("$name")
         COMPARE_MATCH=$((COMPARE_MATCH + 1))
-    else
-        log_warn "SubC compiled OK, Native: output differs"
+    elif [ $subc_pass -eq 0 ] && [ $native_pass -eq 1 ]; then
+        log_fail "SubC: FAIL, Native: PASS"
         if [ $VERBOSE -eq 1 ]; then
-            echo "Native output: $native_output"
+            echo "SubC output: $subc_output"
         fi
+        FAILED=$((FAILED + 1))
+        FAILED_TESTS+=("$name (subc runtime)")
         COMPARE_MISMATCH=$((COMPARE_MISMATCH + 1))
         MISMATCH_TESTS+=("$name")
+    elif [ $subc_pass -eq 1 ] && [ $native_pass -eq 0 ]; then
+        log_warn "SubC: PASS, Native: FAIL (test issue?)"
+        COMPARE_MISMATCH=$((COMPARE_MISMATCH + 1))
+        MISMATCH_TESTS+=("$name")
+    else
+        log_fail "SubC: FAIL, Native: FAIL"
+        FAILED=$((FAILED + 1))
+        FAILED_TESTS+=("$name (both fail)")
     fi
 }
 
@@ -399,9 +451,9 @@ run_test() {
     
     echo -n "Testing $name... "
     
-    # Compile with SubC
+    # Compile with SubC (assembly only for standard test)
     local compile_output
-    compile_output=$(compile_subc "$src" 2>&1)
+    compile_output=$(compile_subc_asm "$src" 2>&1)
     local compile_status=$?
     
     if [ $compile_status -eq 124 ]; then

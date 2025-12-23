@@ -1,157 +1,140 @@
-# SubC Compiler - Limitations Analysis
+# SubC Compiler - Limitations
 
 ## Version: 2025-12-23
 
-This document lists the limitations and known issues in the SubC compiler,
-discovered through the C89 conformance test suite (`tests/c89_suite/`).
+This document describes the **intentional design limitations** of the SubC
+compiler. These are not bugs - they are deliberate simplifications that make
+SubC a small, fast, and self-compiling C compiler.
+
+For bugs, see the `BUGS` file. For test results, run `tests/c89_suite/run_tests.sh`.
 
 ---
 
-## 1. Critical Bugs
+## 1. Language Limitations
 
-### 1.1 Infinite Loop on Valid C89 Code
+### 1.1 Maximum Two Levels of Indirection
 
-The compiler enters an infinite loop (hangs) when compiling certain valid C89
-constructs. This requires killing the process. Affected patterns include:
-
-| Test File | Pattern |
-|-----------|---------|
-| `t_array_complex.c` | Complex array operations with pointer arrays |
-| `t_const_expr.c` | Constant expressions in array sizes |
-| `t_global.c` | Global array initialization with values |
-| `t_state_machine.c` | Enum with function pointer arrays |
-
-**Severity**: Critical - compiler must be killed
-**Status**: Unresolved
-
----
-
-## 2. C89 Features Not Supported
-
-These are valid C89 features that SubC does not support:
-
-### 2.1 Block-Scoped Declarations
-
-C89 allows variable declarations at the beginning of any compound statement
-(block), not just at function level. SubC only supports declarations at the
-start of functions.
+SubC supports at most two levels of pointer indirection.
 
 ```c
-/* Valid C89, fails in SubC */
-if (condition) {
-    int x;  /* SubC: "syntax error at: int" */
-    x = 5;
+int *p;      /* OK */
+int **pp;    /* OK */
+int ***ppp;  /* NOT supported */
+```
+
+### 1.2 One-Dimensional Arrays Only
+
+SubC only supports one-dimensional arrays.
+
+```c
+int a[10];       /* OK */
+int b[10][20];   /* NOT supported */
+```
+
+**Workaround**: Use pointer arithmetic or flatten to 1D.
+
+### 1.3 No goto Statement
+
+The `goto` keyword is not recognized.
+
+### 1.4 No Struct/Union by Value
+
+Structures and unions cannot be passed or returned by value.
+
+```c
+struct point { int x, y; };
+
+struct point make_point(int x, int y);  /* NOT supported */
+void use_point(struct point p);         /* NOT supported */
+
+struct point *make_point(int x, int y); /* OK - return pointer */
+void use_point(struct point *p);        /* OK - pass pointer */
+```
+
+### 1.5 No Parameterized Macros
+
+The preprocessor does not support function-like macros.
+
+```c
+#define MAX(a,b) ((a)>(b)?(a):(b))  /* NOT supported */
+#define PI 3.14159                   /* OK - object-like macro */
+```
+
+### 1.6 Function-Level Declarations Only
+
+Variable declarations are only allowed at the start of functions,
+not inside blocks.
+
+```c
+void foo(void) {
+    int x;           /* OK - function start */
+    x = 1;
+    if (x) {
+        int y;       /* NOT supported - block scope */
+        y = 2;
+    }
 }
 ```
 
-**Affected tests**: `t_for.c`, `t_pointer.c`, `t_pointer2.c`, `t_scope.c`,
-`t_recursion.c`, `t_linked_list.c`, `t_struct_complex.c`, `t_typedef_complex.c`
+### 1.7 Enum Variable Declarations
 
-### 2.2 Enum Variable Declarations
-
-SubC has issues with enum type variables:
+Enum types cannot be used directly in variable declarations.
 
 ```c
 enum color { RED, GREEN, BLUE };
-enum color c;  /* SubC: "'{' expected" */
-c = GREEN;     /* SubC: "lvalue expected" */
+enum color c;   /* NOT supported */
+int c;          /* OK - use int instead */
+c = GREEN;      /* OK */
 ```
 
-**Affected tests**: `t_enum.c`, `t_state_machine.c`
+---
 
-### 2.3 Pointer Cast in Expressions
+## 2. Type Limitations
 
-Certain pointer casts in expressions fail:
+### 2.1 Function Pointer Return Types
+
+Internally, all function pointers are treated as returning `int`.
+
+### 2.2 Limited Pointer Casts
+
+Some pointer cast expressions may not work:
 
 ```c
-pc = (char *)pi;  /* SubC: "invalid operands to binary operator" */
+int *pi;
+char *pc;
+pc = (char *)pi;  /* May fail in some contexts */
 ```
 
-**Affected tests**: `t_cast.c`
+### 2.3 Complex Typedef Patterns
 
-### 2.4 Complex Typedef with Function Pointers
-
-Advanced typedef patterns with function pointers in structs:
+Advanced typedef patterns with function pointers in structs may not work:
 
 ```c
 typedef int (*BinaryOp)(int, int);
 typedef struct {
-    BinaryOp operation;
+    BinaryOp operation;  /* May not work */
 } NamedOp;
 ```
 
-**Affected tests**: `t_callback.c`, `t_typedef_complex.c`, `t_vtable.c`
-
-### 2.5 String Library Functions with Pointers
-
-Some string operations with pointer returns:
-
-**Affected tests**: `t_string.c`
-
 ---
 
-## 3. Design Limitations (Documented)
+## 3. Preprocessor Limitations
 
-These are intentional SubC limitations, not bugs:
-
-| Limitation | Description |
-|------------|-------------|
-| Max 2 levels of indirection | `int **` valid, `int ***` invalid |
-| 1D arrays only | `int a[10]` valid, `int a[10][20]` invalid |
-| No goto | `goto` keyword not recognized |
-| Struct/union by value | Use pointers: `void fn(struct x *p)` |
-| No parameterized macros | `#define FOO(x)` not supported |
+- No function-like macros (`#define FOO(x)`)
+- No `#pragma`
+- No `#error` or `#warning`
+- No token pasting (`##`) or stringification (`#`)
 
 ---
 
 ## 4. Bootstrap Limitations
 
-### 4.1 System Includes
+### 4.1 System Headers
 
-SubC cannot compile files that include system headers.
-For bootstrap, use SubC's own headers in `runtime/include/`.
+SubC cannot compile files that include system headers directly.
+For self-compilation, use SubC's own headers in `runtime/include/`.
 
-### 4.2 Function Pointer Return Types
+### 4.2 Runtime Library
 
-SubC treats all function pointers as returning `int` internally.
-
----
-
-## 5. Test Suite Results Summary
-
-From `tests/c89_suite/` with 49 tests:
-
-| Result | Count | Percentage |
-|--------|-------|------------|
-| Passed | 32 | 65% |
-| Failed (compile) | 13 | 27% |
-| Failed (timeout) | 4 | 8% |
-
-### Passing Tests (32)
-`t_arithmetic`, `t_array`, `t_array_ptr`, `t_assignment`, `t_binary_search`,
-`t_bitfield_sim`, `t_bitwise`, `t_char`, `t_comma`, `t_comparison`, `t_ctype`,
-`t_do_while`, `t_fnptr`, `t_function`, `t_if_else`, `t_increment`, `t_literals`,
-`t_logical`, `t_memory`, `t_precedence`, `t_preproc`, `t_printf`, `t_sizeof`,
-`t_static`, `t_stdlib`, `t_struct`, `t_switch`, `t_ternary`, `t_typedef`,
-`t_union`, `t_void`, `t_while`
-
-### Failed Tests (17)
-- **Timeout (4)**: `t_array_complex`, `t_const_expr`, `t_global`, `t_state_machine`
-- **Block declarations (8)**: `t_for`, `t_pointer`, `t_pointer2`, `t_scope`,
-  `t_recursion`, `t_linked_list`, `t_struct_complex`, `t_typedef_complex`
-- **Enum issues (1)**: `t_enum`
-- **Cast issues (1)**: `t_cast`
-- **Callback/vtable (2)**: `t_callback`, `t_vtable`
-- **String ops (1)**: `t_string`
-
----
-
-## 6. Priority for Fixes
-
-| Issue | Severity | Priority |
-|-------|----------|----------|
-| Infinite loop bug | Critical | High |
-| Block-scoped declarations | High | Medium |
-| Enum variables | Medium | Medium |
-| Pointer casts | Medium | Low |
-| Complex typedefs | Low | Low |
+The SubC runtime library (`runtime/lib/`) must be compiled separately
+for each target platform. Currently only DOS has a complete runtime.

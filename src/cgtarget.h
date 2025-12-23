@@ -674,6 +674,7 @@ struct cg_os_config {
     char *asm_cmd;          /* Assembler command template */
     char *ld_cmd;           /* Linker command template */
     char *sys_libc;         /* System libc to link */
+    char *scc_libc;         /* SubC runtime library (NULL if not needed) */
     char *aout_name;        /* Default output name */
 };
 

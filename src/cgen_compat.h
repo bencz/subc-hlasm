@@ -395,5 +395,6 @@
 #define LDCMD           (CG->os->ld_cmd)
 #define ASCMD           (CG->os->asm_cmd)
 #define SYSLIBC         (CG->os->sys_libc)
+#define SCCLIBC         (CG->os->scc_libc)
 
 #endif /* CGEN_COMPAT_H */

@@ -29,8 +29,6 @@
  #define SCCDIR		"."
 #endif
 
-#define SCCLIBC		"%s/lib/libscc.a"
-
 #define PREFIX		'C'
 #define LPREFIX		'L'
 
