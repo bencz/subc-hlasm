@@ -112,6 +112,8 @@ char	*labname(int id);
 void	lbrace(void);
 void	lgen(char *s, char *inst, int n);
 void	lgen2(char *s, int v1, int v2);
+void	lgen3(char *s, int v1, int v2, int v3);
+void	lgen4(char *s, int v1, int v2);
 void	load(void);
 void	lparen(void);
 node	*mkbinop(int op, node *left, node *right);

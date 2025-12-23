@@ -3,9 +3,6 @@
 
 	- fgetpos()/fsetpos() should support longer seek.
 
-	- AArch64/Darwin: Fix switch statement text relocations
-	  (switch tables need PC-relative addressing for Mach-O)
-
 	- Add more target architectures:
 		? RISC-V (rv32/rv64)
 		? MIPS
@@ -14,8 +11,3 @@
 
 	- Implement runtime library cross-compilation support
 	  (currently only code generation is cross-platform)
-
-	DONE (2025-12-23):
-	- AArch64 (ARM64) support for Linux and Darwin
-	- Stack frame layout abstraction (cg_frame_info)
-	- 16-byte stack alignment for Apple Silicon

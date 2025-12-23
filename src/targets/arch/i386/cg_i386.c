@@ -291,7 +291,7 @@ static void i386_cgbrfalse(int n)   { i386_cgbr("jnz", n); }
 static void i386_cgjump(int n)      { lgen("%s\t%c%d", "jmp", n); }
 static void i386_cgldswtch(int n)   { lgen("%s\t$%c%d,%%edx", "movl", n); }
 static void i386_cgcalswtch(void)   { gen("jmp\tswitch"); }
-static void i386_cgcase(int v, int l) { lgen2(".long\t%d,%c%d", v, l); }
+static void i386_cgcase(int v, int l, int tbl) { (void)tbl; lgen2(".long\t%d,%c%d", v, l); }
 
 static void i386_cgstorib(void)     { ngen("%s\t%%al,(%%edx)", "movb", 0); }
 static void i386_cgstoriw(void)     { ngen("%s\t%%eax,(%%edx)", "movl", 0); }
@@ -322,7 +322,7 @@ static void i386_cgdefh(int v)      { ngen("%s\t%d", ".word", v); }   /* 2 bytes
 static void i386_cgdefw(int v)      { ngen("%s\t%d", ".long", v); }   /* 4 bytes (native int) */
 static void i386_cgdefd(int v)      { ngen("%s\t%d", ".long", v); }   /* 4 bytes (for long) */
 static void i386_cgdefp(int v)      { ngen("%s\t%d", ".long", v); }
-static void i386_cgdefl(int v)      { lgen("%s\t%c%d", ".long", v); }
+static void i386_cgdefl(int v, int tbl) { (void)tbl; lgen("%s\t%c%d", ".long", v); }
 static void i386_cgdefq(int v)      { ngen("%s\t%d", ".long", v); ngen("%s\t%d", ".long", 0); } /* 8 bytes */
 static void i386_cgdefc(int c)      { ngen("%s\t'%c'", ".byte", c); }
 static void i386_cggbss(char *s, int z) { ngen(".comm\t%s,%d", s, z); }

@@ -291,7 +291,7 @@ static void x64_cgbrfalse(int n)    { x64_cgbr("jnz", n); }
 static void x64_cgjump(int n)       { lgen("%s\t%c%d", "jmp", n); }
 static void x64_cgldswtch(int n)    { lgen("%s\t$%c%d,%%rdx", "movq", n); }
 static void x64_cgcalswtch(void)    { gen("jmp\tswitch"); }
-static void x64_cgcase(int v, int l) { lgen2(".quad\t%d,%c%d", v, l); }
+static void x64_cgcase(int v, int l, int tbl) { (void)tbl; lgen2(".quad\t%d,%c%d", v, l); }
 
 static void x64_cgstorib(void)      { ngen("%s\t%%al,(%%rdx)", "movb", 0); }
 static void x64_cgstoriw(void)      { ngen("%s\t%%rax,(%%rdx)", "movq", 0); }
@@ -322,7 +322,7 @@ static void x64_cgdefh(int v)       { ngen("%s\t%d", ".word", v); }   /* 2 bytes
 static void x64_cgdefw(int v)       { ngen("%s\t%d", ".quad", v); }   /* 8 bytes on x86-64 (native int) */
 static void x64_cgdefd(int v)       { ngen("%s\t%d", ".long", v); }   /* 4 bytes */
 static void x64_cgdefp(int v)       { ngen("%s\t%d", ".quad", v); }
-static void x64_cgdefl(int v)       { lgen("%s\t%c%d", ".quad", v); }
+static void x64_cgdefl(int v, int tbl) { (void)tbl; lgen("%s\t%c%d", ".quad", v); }
 static void x64_cgdefq(int v)       { ngen("%s\t%d", ".quad", v); }   /* 8 bytes */
 static void x64_cgdefc(int c)       { ngen("%s\t'%c'", ".byte", c); }
 static void x64_cggbss(char *s, int z) { ngen(".comm\t%s,%d", s, z); }

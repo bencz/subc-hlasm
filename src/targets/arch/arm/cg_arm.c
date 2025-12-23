@@ -35,7 +35,7 @@ static void arm_cgpop2(void);
 static void arm_cgindb(void);
 static void arm_cgindw(void);
 static void arm_cgdefw(int v);
-static void arm_cgdefl(int v);
+static void arm_cgdefl(int v, int tbl);
 
 /*
  * ============================================================================
@@ -114,7 +114,7 @@ static void arm_cgstataddr(int n, int aux) {
     skip = label();
     lgen("%s\t%c%d", "b", skip);
     genlab(l);
-    arm_cgdefl(n);
+    arm_cgdefl(n, 0);
     genlab(skip);
 }
 
@@ -574,7 +574,7 @@ static void arm_cgbrfalse(int n)    { arm_cgbr("bne", n); }
 static void arm_cgjump(int n)       { lgen("%s\t%c%d", "b", n); }
 static void arm_cgldswtch(int n)    { arm_cgstataddr(n, 1); }
 static void arm_cgcalswtch(void)    { gen("b\tswitch"); }
-static void arm_cgcase(int v, int l) { lgen2(".long\t%d,%c%d", v, l); }
+static void arm_cgcase(int v, int l, int tbl) { (void)tbl; lgen2(".long\t%d,%c%d", v, l); }
 
 static void arm_cgstorib(void)      { gen("strb\tr0,[r2]"); }
 static void arm_cgstoriw(void)      { gen("str\tr0,[r2]"); }
@@ -635,7 +635,7 @@ static void arm_cgdefh(int v)       { ngen("%s\t%d", ".short", v); }  /* 2 bytes
 static void arm_cgdefw(int v)       { ngen("%s\t%d", ".long", v); }   /* 4 bytes (native int) */
 static void arm_cgdefd(int v)       { ngen("%s\t%d", ".long", v); }   /* 4 bytes (for long) */
 static void arm_cgdefp(int v)       { ngen("%s\t%d", ".long", v); }
-static void arm_cgdefl(int v)       { lgen("%s\t%c%d", ".long", v); }
+static void arm_cgdefl(int v, int tbl) { (void)tbl; lgen("%s\t%c%d", ".long", v); }
 static void arm_cgdefq(int v)       { ngen("%s\t%d", ".long", v); ngen("%s\t%d", ".long", 0); } /* 8 bytes */
 static void arm_cgdefc(int c)       { ngen("%s\t'%c'", ".byte", c); }
 static void arm_cggbss(char *s, int z) { ngen(".comm\t%s,%d", s, z); }

@@ -14,12 +14,3 @@
 	     - t_state_machine.c (enum with function pointer arrays)
 	     Workaround: None. These patterns should be avoided until fixed.
 
-	BUG: AArch64/Darwin switch statements cause text relocation errors
-	     On Darwin/macOS AArch64, switch statement tables generate
-	     illegal text relocations that the linker rejects. This is
-	     because Mach-O requires position-independent code in the
-	     text segment.
-	     Affected: darwin-aarch64 target with switch statements
-	     Workaround: Use if-else chains instead of switch on Darwin/AArch64
-	     Status: Work in progress (needs PC-relative table addressing)
-

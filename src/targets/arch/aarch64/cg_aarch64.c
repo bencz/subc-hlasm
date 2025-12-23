@@ -71,7 +71,44 @@ static void a64_cgdata(void)        { gen(".data"); }
 static void a64_cgtext(void)        { gen(".text"); }
 
 static void a64_cgprelude(void) {
-    /* No special prelude needed for AArch64 GAS */
+    /*
+     * Generate the switch helper function.
+     * This function is called by switch statements to dispatch to the correct case.
+     *
+     * Input:
+     *   x0 = value to match
+     *   x1 = pointer to switch table
+     *
+     * Table format:
+     *   .quad count        ; number of cases
+     *   .quad val0, off0   ; case value and offset from table base
+     *   .quad val1, off1
+     *   ...
+     *   .quad default_off  ; default offset
+     *
+     * The offsets are relative to the table base, so we can use PC-relative
+     * addressing which is required for Darwin/Mach-O position-independent code.
+     */
+    char *switch_name = (OS_TYPE == OS_DARWIN) ? "_switch" : "switch";
+    
+    gen(".text");
+    ngen(".globl\t%s", switch_name, 0);
+    ngen("%s:", switch_name, 0);
+    gen("mov\tx4,x1");           /* x4 = table base */
+    gen("ldr\tx2,[x1],#8");      /* x2 = count, x1 += 8 */
+    gen("0:");
+    gen("cbz\tx2,1f");           /* if count == 0, go to default */
+    gen("ldr\tx3,[x1],#8");      /* x3 = case value */
+    gen("ldr\tx5,[x1],#8");      /* x5 = case offset */
+    gen("cmp\tx0,x3");           /* compare value with case */
+    gen("b.eq\t2f");             /* if equal, jump to case */
+    gen("sub\tx2,x2,#1");        /* count-- */
+    gen("b\t0b");                /* next case */
+    gen("1:");                   /* default: */
+    gen("ldr\tx5,[x1]");         /* x5 = default offset */
+    gen("2:");                   /* found: */
+    gen("add\tx5,x4,x5");        /* x5 = table_base + offset */
+    gen("br\tx5");               /* jump to target */
 }
 
 static void a64_cgpostlude(void)    { }
@@ -176,23 +213,18 @@ static void a64_cglocladdr(int n, int aux) {
 /*
  * Load static/label address.
  * - Linux ELF: can use simple adr instruction
- * - Darwin Mach-O: requires literal pool since adr doesn't work across sections
+ * - Darwin Mach-O: use adrp + add for PC-relative addressing
  */
 static void a64_cgstataddr(int n, int aux) {
     if (OS_TYPE == OS_DARWIN) {
-        /* Darwin: use literal pool approach */
-        int l, skip;
-        
-        l = label();
-        if (aux)
-            lgen("%s\tx1,%c%d", "ldr", l);
-        else
-            lgen("%s\tx0,%c%d", "ldr", l);
-        skip = label();
-        lgen("%s\t%c%d", "b", skip);
-        genlab(l);
-        lgen("%s\t%c%d", ".quad", n);
-        genlab(skip);
+        /* Darwin: use adrp + add for PC-relative addressing */
+        if (aux) {
+            lgen("%s\tx1,%c%d@PAGE", "adrp", n);
+            lgen("%s\tx1,x1,%c%d@PAGEOFF", "add", n);
+        } else {
+            lgen("%s\tx0,%c%d@PAGE", "adrp", n);
+            lgen("%s\tx0,x0,%c%d@PAGEOFF", "add", n);
+        }
     } else {
         /* Linux/other: use adr instruction */
         if (aux)
@@ -203,22 +235,35 @@ static void a64_cgstataddr(int n, int aux) {
 }
 
 /*
- * Load global address using literal pool (similar to ARM approach)
- * AArch64's adrp/add sequence is complex, so we use a simpler approach
+ * Load global address.
+ * - Linux ELF: use literal pool approach (simpler)
+ * - Darwin Mach-O: use adrp + add for PC-relative addressing
  */
 static void a64_cgglobaddr(char *s, int aux) {
-    int l, skip;
-    
-    l = label();
-    if (aux)
-        lgen("%s\tx1,%c%d", "ldr", l);
-    else
-        lgen("%s\tx0,%c%d", "ldr", l);
-    skip = label();
-    lgen("%s\t%c%d", "b", skip);
-    genlab(l);
-    sgen("%s\t%s", ".quad", s);
-    genlab(skip);
+    if (OS_TYPE == OS_DARWIN) {
+        /* Darwin: use adrp + add for PC-relative addressing */
+        if (aux) {
+            sgen("%s\tx1,%s@PAGE", "adrp", s);
+            sgen("%s\tx1,x1,%s@PAGEOFF", "add", s);
+        } else {
+            sgen("%s\tx0,%s@PAGE", "adrp", s);
+            sgen("%s\tx0,x0,%s@PAGEOFF", "add", s);
+        }
+    } else {
+        /* Linux/other: use literal pool approach */
+        int l, skip;
+        
+        l = label();
+        if (aux)
+            lgen("%s\tx1,%c%d", "ldr", l);
+        else
+            lgen("%s\tx0,%c%d", "ldr", l);
+        skip = label();
+        lgen("%s\t%c%d", "b", skip);
+        genlab(l);
+        sgen("%s\t%s", ".quad", s);
+        genlab(skip);
+    }
 }
 
 static void a64_cgind2b(void)       { gen("ldrb\tw1,[x1]"); }
@@ -672,8 +717,24 @@ static void a64_cgbrtrue(int n)     { a64_cgbr("b.eq", n); }
 static void a64_cgbrfalse(int n)    { a64_cgbr("b.ne", n); }
 static void a64_cgjump(int n)       { lgen("%s\t%c%d", "b", n); }
 static void a64_cgldswtch(int n)    { a64_cgstataddr(n, 1); }
-static void a64_cgcalswtch(void)    { gen("b\tswitch"); }
-static void a64_cgcase(int v, int l) { lgen2(".quad\t%d,%c%d", v, l); }
+static void a64_cgcalswtch(void) {
+    if (OS_TYPE == OS_DARWIN)
+        gen("b\t_switch");
+    else
+        gen("b\tswitch");
+}
+
+static void a64_cgcase(int v, int l, int tbl) {
+    if (OS_TYPE == OS_DARWIN) {
+        /* Darwin: use relative offset from table base for PC-relative addressing */
+        /* lgen3 format: fprintf(s, v1, PREFIX, v2, PREFIX, v3) -> "v1,Lv2-Lv3" */
+        lgen3(".quad\t%d,%c%d-%c%d", v, l, tbl);
+    } else {
+        /* Linux/other: absolute addresses work fine */
+        (void)tbl;
+        lgen2(".quad\t%d,%c%d", v, l);
+    }
+}
 
 static void a64_cgstorib(void)      { gen("strb\tw0,[x2]"); }
 static void a64_cgstoriw(void)      { gen("str\tx0,[x2]"); }
@@ -760,7 +821,16 @@ static void a64_cgdefh(int v)       { ngen("%s\t%d", ".hword", v); }  /* 2 bytes
 static void a64_cgdefw(int v)       { ngen("%s\t%d", ".quad", v); }   /* 8 bytes (native int on AArch64) */
 static void a64_cgdefd(int v)       { ngen("%s\t%d", ".word", v); }   /* 4 bytes */
 static void a64_cgdefp(int v)       { ngen("%s\t%d", ".quad", v); }
-static void a64_cgdefl(int v)       { lgen("%s\t%c%d", ".quad", v); }
+static void a64_cgdefl(int v, int tbl) {
+    if (OS_TYPE == OS_DARWIN && tbl != 0) {
+        /* Darwin: use relative offset from table base */
+        /* lgen4 format: ".quad Lv-Ltbl" */
+        lgen4(".quad\t%c%d-%c%d", v, tbl);
+    } else {
+        (void)tbl;
+        lgen("%s\t%c%d", ".quad", v);
+    }
+}
 static void a64_cgdefq(int v)       { ngen("%s\t%d", ".quad", v); }   /* 8 bytes */
 static void a64_cgdefc(int c)       { ngen("%s\t'%c'", ".byte", c); }
 static void a64_cggbss(char *s, int z) { ngen(".comm\t%s,%d", s, z); }

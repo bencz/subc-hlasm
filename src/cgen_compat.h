@@ -222,7 +222,7 @@
  */
 #define cgldswtch(n)    (CG->vtable->cgldswtch(n))
 #define cgcalswtch()    (CG->vtable->cgcalswtch())
-#define cgcase(v,l)     (CG->vtable->cgcase(v,l))
+#define cgcase(v,l,t)   (CG->vtable->cgcase(v,l,t))
 
 /*
  * ============================================================================
@@ -281,7 +281,7 @@
 #define cgdefw(v)       (CG->vtable->cgdefw(v))    /* word (native int size) */
 #define cgdefd(v)       (CG->vtable->cgdefd(v))    /* double-word (4 bytes) */
 #define cgdefp(v)       (CG->vtable->cgdefp(v))
-#define cgdefl(v)       (CG->vtable->cgdefl(v))
+#define cgdefl(v,t)     (CG->vtable->cgdefl(v,t))
 #define cgdefc(c)       (CG->vtable->cgdefc(c))
 #define cgdefq(v)       (CG->vtable->cgdefq(v))    /* quad-word (8 bytes) */
 #define cggbss(s,z)     (CG->vtable->cggbss(s,z))

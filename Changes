@@ -1,3 +1,12 @@
+2025-12-23 Fixed AArch64/Darwin text relocation errors:
+           - Switch statement tables now use PC-relative addressing
+           - Global variable access uses adrp+add with @PAGE/@PAGEOFF
+           - Static label addresses use adrp+add for Darwin/Mach-O
+           - Added switch helper function in prelude for Darwin
+           - Modified cgcase() and cgdefl() vtable interface to support
+             relative offsets (added table base parameter)
+           - Added lgen3() and lgen4() helper functions for label generation
+           - darwin-aarch64 target now fully functional with switch statements
 2025-12-23 Added AArch64 (ARM64) architecture support:
            - New targets: linux-aarch64, darwin-aarch64
            - Full AAPCS64 calling convention (args in x0-x7)

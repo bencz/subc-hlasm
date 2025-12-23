@@ -73,6 +73,22 @@ void lgen2(char *s, int v1, int v2) {
 	fputc('\n', Outfile);
 }
 
+void lgen3(char *s, int v1, int v2, int v3) {
+	/* Format: s should be like ".quad %d,%c%d-%c%d" for "value,Lv2-Lv3" */
+	if (NULL == Outfile) return;
+	fputc('\t', Outfile);
+	fprintf(Outfile, s, v1, CG_LABEL_PREFIX, v2, CG_LABEL_PREFIX, v3);
+	fputc('\n', Outfile);
+}
+
+void lgen4(char *s, int v1, int v2) {
+	/* Format: s should be like ".quad %c%d-%c%d" for "Lv1-Lv2" (two labels only) */
+	if (NULL == Outfile) return;
+	fputc('\t', Outfile);
+	fprintf(Outfile, s, CG_LABEL_PREFIX, v1, CG_LABEL_PREFIX, v2);
+	fputc('\n', Outfile);
+}
+
 void sgen(char *s, char *inst, char *s2) {
 	if (NULL == Outfile) return;
 	fputc('\t', Outfile);
@@ -787,8 +803,8 @@ void genswitch(int *vals, int *labs, int nc, int dflt) {
 	genlab(ltbl);
 	cgdefw(nc);
 	for (i = 0; i < nc; i++)
-		cgcase(vals[i], labs[i]);
-	cgdefl(dflt);
+		cgcase(vals[i], labs[i], ltbl);
+	cgdefl(dflt, ltbl);
 }
 
 /* assigments */

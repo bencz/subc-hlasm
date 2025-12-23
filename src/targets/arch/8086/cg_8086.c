@@ -355,7 +355,7 @@ static void m86_cgbrfalse(int n)    { m86_cgbr("jnz", n); }
 static void m86_cgjump(int n)       { lgen("%s\t%c%d", "jmp", n); }
 static void m86_cgldswtch(int n)    { lgen("%s\tsi,offset %c%d", "mov", n); }
 static void m86_cgcalswtch(void)    { gen("jmp\tswitch"); }
-static void m86_cgcase(int v, int l) { lgen2("dw\t%d,%c%d", v, l); }
+static void m86_cgcase(int v, int l, int tbl) { (void)tbl; lgen2("dw\t%d,%c%d", v, l); }
 
 static void m86_cgstorib(void)      { ngen("%s\t[bx],al", "mov", 0); }
 static void m86_cgstoriw(void)      { ngen("%s\t[bx],ax", "mov", 0); }
@@ -390,7 +390,7 @@ static void m86_cgdefh(int v)       { ngen("%s\t%d", "dw", v); }   /* 2 bytes */
 static void m86_cgdefw(int v)       { ngen("%s\t%d", "dw", v); }   /* 2 bytes on 8086 (native int) */
 static void m86_cgdefd(int v)       { ngen("%s\t%d", "dd", v); }   /* 4 bytes (for long) */
 static void m86_cgdefp(int v)       { ngen("%s\t%d", "dw", v); }   /* 2 bytes (near pointer) */
-static void m86_cgdefl(int v)       { lgen("%s\t%c%d", "dw", v); }
+static void m86_cgdefl(int v, int tbl) { (void)tbl; lgen("%s\t%c%d", "dw", v); }
 static void m86_cgdefq(int v)       { ngen("%s\t%d", "dd", v); ngen("%s\t%d", "dd", 0); } /* 8 bytes (2x dd) */
 static void m86_cgdefc(int c)       { ngen("%s\t'%c'", "db", c); }
 

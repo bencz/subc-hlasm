@@ -306,7 +306,7 @@ struct cg_vtable {
     void (*cgjump)(int n);
     void (*cgldswtch)(int n);
     void (*cgcalswtch)(void);
-    void (*cgcase)(int v, int l);
+    void (*cgcase)(int v, int l, int tbl);  /* tbl = table base label for relative offsets */
     
     /* Boolean Operations */
     void (*cgbool)(void);
@@ -448,7 +448,7 @@ struct cg_vtable {
     void (*cgdefw)(int v);      /* Define word (native int size) */
     void (*cgdefd)(int v);      /* Define double-word (4 bytes) - for long on 16-bit */
     void (*cgdefp)(int v);      /* Define pointer */
-    void (*cgdefl)(int v);      /* Define label reference */
+    void (*cgdefl)(int v, int tbl);  /* Define label reference (tbl for relative offset) */
     void (*cgdefc)(int c);      /* Define character */
     void (*cgdefq)(int v);      /* Define quad-word (8 bytes) - for double/long long */
     void (*cggbss)(char *s, int z);
