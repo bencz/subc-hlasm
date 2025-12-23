@@ -120,7 +120,6 @@ typedef struct {
 
 ## 3. Preprocessor Limitations
 
-- No function-like macros (`#define FOO(x)`)
 - No token pasting (`##`) or stringification (`#`)
 - No line continuation with `\`
 - No `#warning`

@@ -50,6 +50,8 @@
 
 #define MAXIFDEF	16
 #define MAXNMAC		32
+#define MAXMACPARAMS	16
+#define MAXMACARGLEN	256
 #define MAXCASE		1024
 #define MAXBREAK	64
 #define MAXLOCINIT	128

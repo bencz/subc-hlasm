@@ -225,6 +225,7 @@ cd tests/preproc_suite
 | `t_define_string.c` | `#define` with string values |
 | `t_undef.c` | `#undef` functionality |
 | `t_macro_redef.c` | Macro redefinition (same value) |
+| `t_macro_func.c` | Function-like macros with parameters |
 
 ### Conditional Compilation
 | Test | Description |

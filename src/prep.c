@@ -596,15 +596,92 @@ static void strip_line_comment(char *buf) {
 	}
 }
 
+/*
+ * Parse function-like macro parameters
+ * Returns number of parameters, -1 on error
+ * params[] will contain parameter names (up to MAXMACPARAMS)
+ * Format stored: "\x01nparams\x01param1\x01param2\x01...\x01body"
+ */
+static int parse_macro_params(char *params[], int maxparams) {
+	int nparams = 0;
+	int c;
+	char name[NAMELEN+1];
+	int i;
+	
+	/* Skip opening '(' - already consumed */
+	c = skip();
+	
+	/* Empty parameter list () */
+	if (c == ')') {
+		return 0;
+	}
+	
+	putback(c);
+	
+	while (1) {
+		/* Get parameter name */
+		Token = scanraw();
+		if (Token != IDENT) {
+			error("identifier expected in macro parameter list", NULL);
+			return -1;
+		}
+		if (nparams >= maxparams) {
+			error("too many macro parameters", NULL);
+			return -1;
+		}
+		/* Allocate and copy parameter name */
+		params[nparams] = malloc(strlen(Text) + 1);
+		if (params[nparams] == NULL) {
+			fatal("out of memory for macro parameter");
+		}
+		strcpy(params[nparams], Text);
+		nparams++;
+		
+		/* Check for comma or closing paren */
+		c = skip();
+		if (c == ')') {
+			break;
+		} else if (c == ',') {
+			continue;
+		} else {
+			error("',' or ')' expected in macro parameter list", NULL);
+			return -1;
+		}
+	}
+	
+	return nparams;
+}
+
 static void defmac(void) {
 	char	name[NAMELEN+1];
 	char	buf[TEXTLEN+1], *p;
-	int	y;
+	char	macbuf[TEXTLEN+1];
+	char	*params[MAXMACPARAMS];
+	int	nparams = 0;
+	int	y, i, c;
+	int	is_funclike = 0;
 
 	Token = scanraw();
 	if (Token != IDENT)
 		error("identifier expected after '#define': %s", Text);
 	copyname(name, Text);
+	
+	/* Check for function-like macro: '(' immediately after name (no space) */
+	c = next();
+	if (c == '(') {
+		is_funclike = 1;
+		nparams = parse_macro_params(params, MAXMACPARAMS);
+		if (nparams < 0) {
+			/* Error already reported, skip rest of line */
+			while (!feof(Infile) && fgetc(Infile) != '\n')
+				;
+			Line++;
+			return;
+		}
+	} else {
+		putback(c);
+	}
+	
 	if ('\n' == Putback)
 		buf[0] = 0;
 	else
@@ -612,8 +689,27 @@ static void defmac(void) {
 	strip_line_comment(buf);
 	for (p = buf; isspace(*p); p++)
 		;
+	
+	if (is_funclike) {
+		/* Build macro text with parameter info:
+		 * Format: \x01 nparams \x01 param1 \x01 param2 \x01 ... \x01 body
+		 */
+		char *mp = macbuf;
+		*mp++ = '\x01';  /* Marker for function-like macro */
+		*mp++ = (char)nparams;
+		for (i = 0; i < nparams; i++) {
+			*mp++ = '\x01';
+			strcpy(mp, params[i]);
+			mp += strlen(params[i]);
+			free(params[i]);  /* Free allocated param names */
+		}
+		*mp++ = '\x01';
+		strcpy(mp, p);  /* Copy body */
+		p = macbuf;
+	}
+	
 	if ((y = findmac(name)) != 0) {
-		if (strcmp(Mtext[y], buf))
+		if (strcmp(Mtext[y], p))
 			error("macro redefinition: %s", name);
 	}
 	else {

@@ -1,3 +1,13 @@
+2025-12-23 Implemented function-like macros (parameterized macros):
+           - #define MACRO(params) body syntax now supported
+           - Up to 16 parameters per macro (MAXMACPARAMS in defs.h)
+           - Argument parsing with proper parenthesis balancing
+           - Parameter substitution in macro body
+           - Works with expressions: #define MAX(a,b) ((a)>(b)?(a):(b))
+           - Added MAXMACPARAMS and MAXMACARGLEN to defs.h
+           - Modified defmac() in prep.c to parse parameters
+           - Added expand_funclike_macro() in scan.c for expansion
+           - Test: t_macro_func.c in tests/preproc_suite/
 2025-12-23 Implemented #if, #elif, and defined() for C89 preprocessor compliance:
            - Full constant expression evaluator in prep.c
            - Supports: integers (decimal, hex, octal), character constants

@@ -406,13 +406,186 @@ static int keyword(char *s) {
 	return 0;
 }
 
+/*
+ * Expand a function-like macro with arguments
+ * mtext format: \x01 nparams \x01 param1 \x01 param2 \x01 ... \x01 body
+ */
+static char *expand_funclike_macro(char *mtext) {
+	static char expanded[TEXTLEN+1];
+	char *args[MAXMACPARAMS];
+	char argbuf[MAXMACPARAMS][MAXMACARGLEN];
+	char *params[MAXMACPARAMS];
+	int nparams, nargs, i, c, paren_depth;
+	char *p, *body, *out;
+	int in_string, in_char;
+	
+	/* Parse macro definition */
+	p = mtext + 1;  /* Skip \x01 marker */
+	nparams = (unsigned char)*p++;
+	
+	/* Extract parameter names */
+	for (i = 0; i < nparams; i++) {
+		if (*p != '\x01') {
+			error("malformed macro definition", NULL);
+			return mtext;
+		}
+		p++;  /* Skip \x01 */
+		params[i] = p;
+		while (*p && *p != '\x01') p++;
+	}
+	if (*p != '\x01') {
+		error("malformed macro definition", NULL);
+		return mtext;
+	}
+	p++;  /* Skip final \x01 before body */
+	body = p;
+	
+	/* Skip whitespace before '(' */
+	c = skip();
+	if (c != '(') {
+		/* Not a function call, don't expand */
+		putback(c);
+		return NULL;  /* Signal: don't expand as function-like */
+	}
+	
+	/* Parse arguments */
+	nargs = 0;
+	paren_depth = 1;
+	
+	/* Handle empty argument list */
+	c = skip();
+	if (c == ')') {
+		paren_depth = 0;
+	} else {
+		putback(c);
+	}
+	
+	while (paren_depth > 0) {
+		/* Collect one argument */
+		char *ap = argbuf[nargs];
+		int len = 0;
+		in_string = 0;
+		in_char = 0;
+		
+		while (1) {
+			c = next();
+			if (c == EOF || c == '\n') {
+				error("unterminated macro argument", NULL);
+				return mtext;
+			}
+			
+			/* Track string/char literals */
+			if (!in_char && c == '"') in_string = !in_string;
+			else if (!in_string && c == '\'') in_char = !in_char;
+			
+			if (!in_string && !in_char) {
+				if (c == '(') {
+					paren_depth++;
+				} else if (c == ')') {
+					paren_depth--;
+					if (paren_depth == 0) break;
+				} else if (c == ',' && paren_depth == 1) {
+					break;
+				}
+			}
+			
+			if (len < MAXMACARGLEN - 1) {
+				ap[len++] = c;
+			}
+		}
+		
+		/* Trim trailing whitespace */
+		while (len > 0 && isspace(ap[len-1])) len--;
+		ap[len] = '\0';
+		
+		/* Trim leading whitespace */
+		args[nargs] = ap;
+		while (isspace(*args[nargs])) args[nargs]++;
+		
+		nargs++;
+		if (nargs > MAXMACPARAMS) {
+			error("too many macro arguments", NULL);
+			return mtext;
+		}
+		
+		if (paren_depth == 0) break;
+	}
+	
+	/* Check argument count */
+	if (nargs != nparams) {
+		error("macro argument count mismatch", NULL);
+		return mtext;
+	}
+	
+	/* Expand body, substituting parameters */
+	out = expanded;
+	p = body;
+	while (*p && out < expanded + TEXTLEN - 1) {
+		/* Check for parameter reference */
+		if (isalpha(*p) || *p == '_') {
+			char ident[NAMELEN+1];
+			char *ip = ident;
+			char *start = p;
+			
+			while ((isalnum(*p) || *p == '_') && ip < ident + NAMELEN) {
+				*ip++ = *p++;
+			}
+			*ip = '\0';
+			
+			/* Check if it's a parameter */
+			for (i = 0; i < nparams; i++) {
+				/* Compare with parameter name (null-terminated by \x01) */
+				char *pn = params[i];
+				char *id = ident;
+				while (*pn && *pn != '\x01' && *id && *pn == *id) {
+					pn++; id++;
+				}
+				if ((*pn == '\0' || *pn == '\x01') && *id == '\0') {
+					/* Found parameter, substitute argument */
+					char *arg = args[i];
+					while (*arg && out < expanded + TEXTLEN - 1) {
+						*out++ = *arg++;
+					}
+					break;
+				}
+			}
+			if (i == nparams) {
+				/* Not a parameter, copy identifier */
+				char *id = ident;
+				while (*id && out < expanded + TEXTLEN - 1) {
+					*out++ = *id++;
+				}
+			}
+		} else {
+			*out++ = *p++;
+		}
+	}
+	*out = '\0';
+	
+	return expanded;
+}
+
 static int macro(char *name) {
 	int	y;
+	char	*mtext, *expanded;
 
 	y = findmac(name);
 	if (!y || Types[y] != TMACRO)
 		return 0;
-	playmac(Mtext[y]);
+	
+	mtext = Mtext[y];
+	
+	/* Check if function-like macro (starts with \x01) */
+	if (mtext && mtext[0] == '\x01') {
+		expanded = expand_funclike_macro(mtext);
+		if (expanded == NULL) {
+			/* No '(' found, don't expand */
+			return 0;
+		}
+		playmac(expanded);
+	} else {
+		playmac(mtext);
+	}
 	return 1;
 }
 
