@@ -7,27 +7,26 @@
 #include "data.h"
 #include "decl.h"
 
+/* Helper: compare symbol names (first char optimization) */
+static int namecmp(char *a, char *b) {
+	return *a == *b && !strcmp(a, b);
+}
+
 int findglob(char *s) {
 	int	i;
 
-	for (i=0; i<Globs; i++) {
-		if (	Types[i] != TMACRO && Stcls[i] != CMEMBER &&
-			*s == *Names[i] && !strcmp(s, Names[i])
-		)
+	for (i=0; i<Globs; i++)
+		if (Types[i] != TMACRO && Stcls[i] != CMEMBER && namecmp(s, Names[i]))
 			return i;
-	}
 	return 0;
 }
 
 int findloc(char *s) {
 	int	i;
 
-	for (i=Locs; i<NSYMBOLS; i++) {
-		if (	Stcls[i] != CMEMBER &&
-			*s == *Names[i] && !strcmp(s, Names[i])
-		)
+	for (i=Locs; i<NSYMBOLS; i++)
+		if (Stcls[i] != CMEMBER && namecmp(s, Names[i]))
 			return i;
-	}
 	return 0;
 }
 
@@ -42,9 +41,7 @@ int findmac(char *s) {
 	int	i;
 
 	for (i=0; i<Globs; i++)
-		if (	TMACRO == Types[i] &&
-			*s == *Names[i] && !strcmp(s, Names[i])
-		)
+		if (TMACRO == Types[i] && namecmp(s, Names[i]))
 			return i;
 	return 0;
 }
@@ -53,25 +50,18 @@ int findstruct(char *s) {
 	int	i;
 
 	for (i=Locs; i<NSYMBOLS; i++)
-		if (	TSTRUCT == Types[i] &&
-			*s == *Names[i] && !strcmp(s, Names[i])
-		)
+		if (TSTRUCT == Types[i] && namecmp(s, Names[i]))
 			return i;
 	for (i=0; i<Globs; i++)
-		if (	TSTRUCT == Types[i] &&
-			*s == *Names[i] && !strcmp(s, Names[i])
-		)
+		if (TSTRUCT == Types[i] && namecmp(s, Names[i]))
 			return i;
 	return 0;
 }
 
 int findmem(int y, char *s) {
 	y++;
-	while (	(y < Globs ||
-		 (y >= Locs && y < NSYMBOLS)) &&
-		CMEMBER ==  Stcls[y]
-	) {
-		if (*s == *Names[y] && !strcmp(s, Names[y]))
+	while ((y < Globs || (y >= Locs && y < NSYMBOLS)) && CMEMBER == Stcls[y]) {
+		if (namecmp(s, Names[y]))
 			return y;
 		y++;
 	}
@@ -135,6 +125,24 @@ char *locname(char *s) {
 	return &Nlist[p];
 }
 
+/* Helper: emit data definition based on object size */
+static void emitdef(int objsz, int val) {
+	if (objsz == CHARSIZE) {
+		gendefb(val);
+		genalign(1);
+	}
+	else if (objsz == SHORTSIZE)
+		gendefh(val);
+	else if (objsz == INTSIZE)
+		gendefw(val);
+	else if (objsz == LONGSIZE && LONGSIZE != INTSIZE)
+		gendefd(val);
+	else if (objsz == DOUBLESIZE)
+		gendefq(val);
+	else
+		gendefp(val);
+}
+
 static void defglob(char *name, int prim, int type, int size, int val,
 			int scls, int init)
 {
@@ -144,49 +152,20 @@ static void defglob(char *name, int prim, int type, int size, int val,
 	gendata();
 	st = scls == CSTATIC;
 	if (CPUBLIC == scls) genpublic(name);
-	if (init && TARRAY == type)
-		return;
+	if (init && TARRAY == type) return;
 	if (TARRAY != type && !(prim & STCMASK)) genname(name);
 
-	/* Handle struct/union types */
 	if (prim & STCMASK) {
-		if (TARRAY == type)
-			genbss(gsym(name), objsize(prim, TARRAY, size), st);
-		else
-			genbss(gsym(name), objsize(prim, TVARIABLE, size), st);
+		genbss(gsym(name), objsize(prim, type == TARRAY ? TARRAY : TVARIABLE, size), st);
 		return;
 	}
 
-	/* Get object size for this type */
 	objsz = objsize(prim, TVARIABLE, 1);
-
-	/* Handle arrays */
 	if (TARRAY == type) {
 		genbss(gsym(name), objsz * size, st);
 		return;
 	}
-
-	/* Handle scalar types based on size - use architecture-specific sizes */
-	if (objsz == CHARSIZE) {
-		gendefb(val);
-		genalign(1);
-	}
-	else if (objsz == SHORTSIZE) {
-		gendefh(val);
-	}
-	else if (objsz == INTSIZE) {
-		gendefw(val);  /* native int size */
-	}
-	else if (objsz == LONGSIZE && LONGSIZE != INTSIZE) {
-		gendefd(val);  /* long when different from int (e.g., 4 bytes on 16-bit) */
-	}
-	else if (objsz == DOUBLESIZE) {
-		gendefq(val);  /* 8 bytes for double */
-	}
-	else {
-		/* Pointer types or unknown - use pointer size */
-		gendefp(val);
-	}
+	emitdef(objsz, val);
 }
 
 int redeclare(char *name, int oldcls, int newcls) {
@@ -261,46 +240,19 @@ static void defloc(int prim, int type, int size, int val, int init) {
 	int	objsz;
 
 	gendata();
-	if (type != TARRAY && !(prim &STCMASK)) genlab(val);
+	if (type != TARRAY && !(prim & STCMASK)) genlab(val);
 
-	/* Handle struct/union types */
 	if (prim & STCMASK) {
-		if (TARRAY == type)
-			genbss(labname(val), objsize(prim, TARRAY, size), 1);
-		else
-			genbss(labname(val), objsize(prim, TVARIABLE, size), 1);
+		genbss(labname(val), objsize(prim, type == TARRAY ? TARRAY : TVARIABLE, size), 1);
 		return;
 	}
 
-	/* Get object size for this type */
 	objsz = objsize(prim, TVARIABLE, 1);
-
-	/* Handle arrays */
 	if (TARRAY == type) {
 		genbss(labname(val), objsz * size, 1);
 		return;
 	}
-
-	/* Handle scalar types based on size - use architecture-specific sizes */
-	if (objsz == CHARSIZE) {
-		gendefb(init);
-		genalign(1);
-	}
-	else if (objsz == SHORTSIZE) {
-		gendefh(init);
-	}
-	else if (objsz == INTSIZE) {
-		gendefw(init);
-	}
-	else if (objsz == LONGSIZE && LONGSIZE != INTSIZE) {
-		gendefd(init);
-	}
-	else if (objsz == DOUBLESIZE) {
-		gendefq(init);
-	}
-	else {
-		gendefp(init);
-	}
+	emitdef(objsz, init);
 }
 
 int addloc(char *name, int prim, int type, int scls, int size, int val,
@@ -326,61 +278,55 @@ void clrlocs(void) {
 	Locs = NSYMBOLS;
 }
 
+/* Helper: check if primitive type is a pointer */
+static int isptr(int prim) {
+	switch (prim) {
+	case INTPTR: case CHARPTR: case VOIDPTR: case FUNPTR:
+	case UCHARPTR: case SCHARPTR: case SHORTPTR: case USHORTPTR:
+	case UINTPTR: case LONGPTR: case ULONGPTR:
+	case FLOATPTR: case DOUBLEPTR:
+	case INTPP: case CHARPP: case VOIDPP:
+	case UCHARPP: case SCHARPP: case SHORTPP: case USHORTPP:
+	case UINTPP: case LONGPP: case ULONGPP:
+	case FLOATPP: case DOUBLEPP:
+		return 1;
+	}
+	return 0;
+}
+
 int objsize(int prim, int type, int size) {
 	int	k = 0, sp;
 
-	sp = prim & STCMASK;
-
-	/* Base types */
-	if (PINT == prim || PUINT == prim)
-		k = INTSIZE;
-	else if (PCHAR == prim || PUCHAR == prim || PSCHAR == prim)
-		k = CHARSIZE;
-	else if (PSHORT == prim || PUSHORT == prim)
-		k = SHORTSIZE;
-	else if (PLONG == prim || PULONG == prim)
-		k = LONGSIZE;
-	else if (PFLOAT == prim)
-		k = FLOATSIZE;
-	else if (PDOUBLE == prim)
-		k = DOUBLESIZE;
-	/* Pointer types */
-	else if (INTPTR == prim || CHARPTR == prim || VOIDPTR == prim)
-		k = PTRSIZE;
-	else if (INTPP == prim || CHARPP == prim || VOIDPP == prim)
-		k = PTRSIZE;
-	else if (UCHARPTR == prim || SCHARPTR == prim)
-		k = PTRSIZE;
-	else if (SHORTPTR == prim || USHORTPTR == prim)
-		k = PTRSIZE;
-	else if (UINTPTR == prim)
-		k = PTRSIZE;
-	else if (LONGPTR == prim || ULONGPTR == prim)
-		k = PTRSIZE;
-	else if (FLOATPTR == prim || DOUBLEPTR == prim)
-		k = PTRSIZE;
-	else if (UCHARPP == prim || SCHARPP == prim)
-		k = PTRSIZE;
-	else if (SHORTPP == prim || USHORTPP == prim)
-		k = PTRSIZE;
-	else if (UINTPP == prim)
-		k = PTRSIZE;
-	else if (LONGPP == prim || ULONGPP == prim)
-		k = PTRSIZE;
-	else if (FLOATPP == prim || DOUBLEPP == prim)
-		k = PTRSIZE;
-	/* Struct/union types */
-	else if (STCPTR == sp || STCPP == sp)
-		k = PTRSIZE;
-	else if (UNIPTR == sp || UNIPP == sp)
-		k = PTRSIZE;
-	else if (PSTRUCT == sp || PUNION == sp)
-		k = Sizes[prim & ~STCMASK];
-	else if (FUNPTR == prim)
-		k = PTRSIZE;
-
 	if (TFUNCTION == type || TCONSTANT == type || TMACRO == type)
 		return -1;
+
+	sp = prim & STCMASK;
+
+	/* Struct/union pointer types */
+	if (STCPTR == sp || STCPP == sp || UNIPTR == sp || UNIPP == sp)
+		k = PTRSIZE;
+	/* Struct/union value types */
+	else if (PSTRUCT == sp || PUNION == sp)
+		k = Sizes[prim & ~STCMASK];
+	/* Pointer types */
+	else if (isptr(prim))
+		k = PTRSIZE;
+	/* Base types */
+	else switch (prim) {
+	case PINT: case PUINT:
+		k = INTSIZE; break;
+	case PCHAR: case PUCHAR: case PSCHAR:
+		k = CHARSIZE; break;
+	case PSHORT: case PUSHORT:
+		k = SHORTSIZE; break;
+	case PLONG: case PULONG:
+		k = LONGSIZE; break;
+	case PFLOAT:
+		k = FLOATSIZE; break;
+	case PDOUBLE:
+		k = DOUBLESIZE; break;
+	}
+
 	if (TARRAY == type)
 		k *= size;
 	return k;

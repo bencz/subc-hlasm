@@ -1,3 +1,9 @@
+2025-12-23 Cleaned up sym.c:
+           - Extracted namecmp() helper for repeated symbol name comparisons
+           - Extracted emitdef() helper for duplicated data emission logic
+           - Extracted isptr() helper for pointer type checking
+           - Simplified objsize() using switch statement for base types
+           - Reduced code duplication in defglob() and defloc()
 2025-12-23 Improved -o flag and removed assembly file override restriction:
            - The -o flag now works with -S to specify custom assembly output filename
            - Removed restriction that prevented overwriting existing .s files

@@ -13,5 +13,3 @@
 
 	- Implement runtime library cross-compilation support
 	  (currently only code generation is cross-platform)
-
-	? clean up sym.c

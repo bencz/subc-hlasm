@@ -92,11 +92,36 @@ Para arquiteturas como HLASM que têm regras específicas para labels
 
 ---
 
-## 6. Resumo das Limitações
+## 6. Cast de Ponteiro para Inteiro
+
+O SubC não suporta cast direto de ponteiro para inteiro em plataformas de 64 bits.
+Isso requer um workaround com macro condicional:
+
+```c
+#ifdef __SUBC__
+ #define PTR_INT_CAST	(int)
+#else
+ #define PTR_INT_CAST	(int) (long)
+#endif
+```
+
+**Problema**: Em compiladores padrão C (gcc, clang), converter um ponteiro de 64 bits
+diretamente para `int` (32 bits) gera warning/erro. A conversão correta é
+`ponteiro → long → int`. Porém, o SubC não aceita essa sintaxe de cast encadeado.
+
+**Localização**: `src/sym.c` na função `galloc()`
+
+**Solução futura**: Implementar suporte a cast encadeado `(tipo1)(tipo2)expr` ou
+adicionar tipo `intptr_t` / `uintptr_t` para conversões ponteiro↔inteiro.
+
+---
+
+## 7. Resumo das Limitações
 
 | Limitação | Severidade | Arquivo |
 |-----------|------------|---------|
 | _va_arg aritmética de ponteiro | Médio | varargs.c |
+| Cast ponteiro→inteiro (64-bit) | Médio | sym.c |
 | `LPREFIX` fixo | Baixo | defs.h |
 | Campos align_* não usados | Baixo | cgtarget.h |
 | Máximo 2 níveis de indireção | Baixo | decl.c |
