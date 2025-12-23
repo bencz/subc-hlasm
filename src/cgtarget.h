@@ -550,6 +550,25 @@ struct cg_arch {
      * to a static buffer containing the transformed name.
      */
     char *(*symbol_transform)(char *name);
+    
+    /*
+     * Compiler Limits - Architecture-Specific
+     * 
+     * These limits can vary by architecture due to memory constraints
+     * (e.g., 8086 has limited memory) or naming conventions (e.g., HLASM
+     * limits identifiers to 8 characters).
+     * 
+     * If a value is 0, the compiler uses the default from defs.h.
+     */
+    int  namelen;           /* Max identifier length (default: 32, HLASM: 8) */
+    int  max_case;          /* Max cases in switch (default: 1024) */
+    int  max_break;         /* Max nested loops/switches (default: 64) */
+    int  max_locinit;       /* Max local initializers (default: 128) */
+    int  max_fnargs;        /* Max function arguments (default: 127) */
+    int  nsymbols;          /* Max symbols in table (default: 1024) */
+    int  poolsize;          /* Name pool size (default: 16384) */
+    int  nodepoolsz;        /* AST node pool size (default: 4096) */
+    char label_prefix;      /* Label prefix character (default: 'L') */
 };
 
 /*
@@ -635,6 +654,17 @@ extern struct cg_target *CG;
 
 /* Symbol transformation accessor macro */
 #define CG_SYMBOL_TRANSFORM   (CG->arch->symbol_transform)
+
+/* Compiler limits accessor macros - use arch value if set, else default */
+#define CG_NAMELEN      (CG->arch->namelen ? CG->arch->namelen : 32)
+#define CG_MAX_CASE     (CG->arch->max_case ? CG->arch->max_case : 1024)
+#define CG_MAX_BREAK    (CG->arch->max_break ? CG->arch->max_break : 64)
+#define CG_MAX_LOCINIT  (CG->arch->max_locinit ? CG->arch->max_locinit : 128)
+#define CG_MAX_FNARGS   (CG->arch->max_fnargs ? CG->arch->max_fnargs : 127)
+#define CG_NSYMBOLS     (CG->arch->nsymbols ? CG->arch->nsymbols : 1024)
+#define CG_POOLSIZE     (CG->arch->poolsize ? CG->arch->poolsize : 16384)
+#define CG_NODEPOOLSZ   (CG->arch->nodepoolsz ? CG->arch->nodepoolsz : 4096)
+#define CG_LABEL_PREFIX (CG->arch->label_prefix ? CG->arch->label_prefix : 'L')
 
 /* OS property accessor macros */
 #define CG_OS_TYPE      (CG->os->os_type)

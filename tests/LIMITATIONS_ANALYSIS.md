@@ -6,29 +6,9 @@ Este documento lista as limitações ainda existentes no compilador SubC.
 
 ---
 
-## 1. Constantes de Limite em `defs.h`
+## 1. Implementação de va_args
 
-```c
-#define TEXTLEN     512      // Tamanho máximo de texto/token
-#define NAMELEN     32       // Tamanho máximo de identificadores
-#define MAXFILES    32       // Máximo de arquivos de entrada
-#define MAXINCDIRS  16       // Máximo de diretórios de include
-#define MAXIFDEF    16       // Profundidade máxima de #ifdef aninhados
-#define MAXNMAC     32       // Máximo de macros em expansão simultânea
-#define MAXCASE     1024     // Máximo de cases em um switch
-#define MAXBREAK    64       // Profundidade máxima de loops/switches aninhados
-#define MAXLOCINIT  128      // Máximo de inicializadores locais
-#define MAXFNARGS   127      // Máximo de argumentos por função
-#define NSYMBOLS    1024     // Máximo de símbolos na tabela
-#define POOLSIZE    16384    // Tamanho do pool de nomes
-#define NODEPOOLSZ  4096     // Tamanho do pool de nós AST
-```
-
----
-
-## 2. Implementação de va_args
-
-### 2.1 Problema: Aritmética de ponteiro incorreta
+### 1.1 Problema: Aritmética de ponteiro incorreta
 
 ```c
 void *_va_arg(void **ap) {
@@ -38,38 +18,38 @@ void *_va_arg(void **ap) {
 
 O código incrementa o valor apontado por `*ap`, não o ponteiro `ap` em si.
 
-### 2.2 Problema: Tamanho de argumento fixo
+### 1.2 Problema: Tamanho de argumento fixo
 
 - Assume que todos os argumentos têm tamanho `sizeof(void*)`
 - Não funciona para tipos menores (char, short) que são promovidos
 
-### 2.3 Problema: Alinhamento
+### 1.3 Problema: Alinhamento
 
 - Não considera alinhamento de stack
 - x86-64 requer alinhamento de 16 bytes para a stack
 
 ---
 
-## 3. Limitações de Linguagem
+## 2. Limitações de Linguagem
 
-### 3.1 Máximo de 2 Níveis de Indireção
+### 2.1 Máximo de 2 Níveis de Indireção
 
 ```c
 // Válido: int *, int **
 // Inválido: int ***
 ```
 
-### 3.2 Arrays Apenas 1D
+### 2.2 Arrays Apenas 1D
 
 Não suporta `int a[10][20]`
 
-### 3.3 Sem goto
+### 2.3 Sem goto
 
 O keyword `goto` não é reconhecido.
 
 ---
 
-## 4. Campos de Arquitetura Não Utilizados
+## 3. Campos de Arquitetura Não Utilizados
 
 | Campo | Definido em | Status |
 |-------|-------------|--------|
@@ -79,20 +59,7 @@ O keyword `goto` não é reconhecido.
 
 ---
 
-## 5. Label Prefix Hardcoded
-
-O prefixo de labels (`LPREFIX = 'L'`) é hardcoded em `defs.h`:
-
-```c
-#define LPREFIX     'L'
-```
-
-Para arquiteturas como HLASM que têm regras específicas para labels
-(máximo 8 caracteres), seria necessário um callback `label_transform`.
-
----
-
-## 6. Struct/Union por Valor
+## 4. Struct/Union por Valor
 
 O SubC não suporta passagem de struct/union por valor em parâmetros de função
 nem retorno de struct/union por valor.
@@ -116,7 +83,7 @@ void get_origin(struct point *result); /* OK */
 
 ---
 
-## 7. Cast de Ponteiro para Inteiro
+## 5. Cast de Ponteiro para Inteiro
 
 O SubC não suporta cast direto de ponteiro para inteiro em plataformas de 64 bits.
 Isso requer um workaround com macro condicional:
@@ -140,12 +107,12 @@ adicionar tipo `intptr_t` / `uintptr_t` para conversões ponteiro↔inteiro.
 
 ---
 
-## 8. Bootstrap (Auto-compilação)
+## 6. Bootstrap (Auto-compilação)
 
 O SubC atualmente **não consegue se auto-compilar** devido a refatorações no código
 que introduziram features não suportadas pelo próprio SubC:
 
-### 8.1 Ponteiros de Função Tipados
+### 6.1 Ponteiros de Função Tipados
 
 O `cgtarget.h` usa vtables com ponteiros de função tipados:
 
@@ -160,7 +127,7 @@ struct cg_vtable {
 
 O SubC original só suporta `int (*)()` para ponteiros de função.
 
-### 8.2 Arquivos Necessários
+### 6.2 Arquivos Necessários
 
 O Makefile original compilava arquivos mais simples:
 - `cg386.c` (code generator único)
@@ -170,7 +137,7 @@ A arquitetura atual usa:
 - `cgtarget.c` + `targets/arch/*/cg_*.c`
 - Vtables para seleção de target em runtime
 
-### 8.3 Solução Futura
+### 6.3 Solução Futura
 
 Para restaurar o bootstrap, seria necessário:
 
@@ -180,7 +147,7 @@ Para restaurar o bootstrap, seria necessário:
 
 ---
 
-## 9. Resumo das Limitações
+## 7. Resumo das Limitações
 
 | Limitação | Severidade | Arquivo |
 |-----------|------------|---------|
@@ -188,7 +155,6 @@ Para restaurar o bootstrap, seria necessário:
 | _va_arg aritmética de ponteiro | Médio | varargs.c |
 | Struct/union por valor | Médio | decl.c |
 | Cast ponteiro→inteiro (64-bit) | Médio | sym.c |
-| `LPREFIX` fixo | Baixo | defs.h |
 | Campos align_* não usados | Baixo | cgtarget.h |
 | Máximo 2 níveis de indireção | Baixo | decl.c |
 | Arrays apenas 1D | Baixo | decl.c |

@@ -52,7 +52,22 @@
 		    ASM_GAS,         /* asm_syntax */
 		    CC_CDECL,        /* call_conv */
 		    ...
+		    /* Compiler limits - 0 means use defaults */
+		    0,               /* namelen (default: 32, HLASM: 8) */
+		    0,               /* max_case (default: 1024) */
+		    0,               /* max_break (default: 64) */
+		    0,               /* max_locinit (default: 128) */
+		    0,               /* max_fnargs (default: 127) */
+		    0,               /* nsymbols (default: 1024) */
+		    0,               /* poolsize (default: 16384) */
+		    0,               /* nodepoolsz (default: 4096) */
+		    0                /* label_prefix (default: 'L') */
 		};
+
+	Note: Compiler limits can be customized per architecture.
+	For memory-constrained systems (8086), use smaller values.
+	For architectures with naming restrictions (HLASM: 8 chars),
+	set namelen accordingly.
 
 	Note: Type sizes are architecture-specific. For example:
 	  - 8086: int=2, long=4

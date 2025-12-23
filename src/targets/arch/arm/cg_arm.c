@@ -1070,7 +1070,17 @@ struct cg_arch cg_arch_armv6 = {
     0,                  /* local_offset_base - adjusted by cgfnentry */
     -1,                 /* local_offset_dir (negative: -4, -8, -12...) */
     4,                  /* num_arg_regs (r0, r1, r2, r3) */
-    NULL                /* symbol_transform (use default) */
+    NULL,               /* symbol_transform (use default) */
+    /* Compiler limits - 0 means use defaults */
+    0,                  /* namelen (default: 32) */
+    0,                  /* max_case (default: 1024) */
+    0,                  /* max_break (default: 64) */
+    0,                  /* max_locinit (default: 128) */
+    0,                  /* max_fnargs (default: 127) */
+    0,                  /* nsymbols (default: 1024) */
+    0,                  /* poolsize (default: 16384) */
+    0,                  /* nodepoolsz (default: 4096) */
+    0                   /* label_prefix (default: 'L') */
 };
 
 /*

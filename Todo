@@ -1,8 +1,6 @@
 
 	TODO:
 
-	- Fix the bugs in BUGS.
-
 	- fgetpos()/fsetpos() should support longer seek.
 
 	- Add more target architectures:

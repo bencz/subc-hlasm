@@ -1041,7 +1041,17 @@ struct cg_arch cg_arch_8086 = {
     0,                  /* local_offset_base */
     -1,                 /* local_offset_dir (negative: -2, -4, -6...) */
     0,                  /* num_arg_regs (cdecl: all args on stack) */
-    NULL                /* symbol_transform (use default) */
+    NULL,               /* symbol_transform (use default) */
+    /* Compiler limits - reduced for 16-bit memory constraints */
+    31,                 /* namelen (TASM limit) */
+    256,                /* max_case (reduced from 1024) */
+    32,                 /* max_break (reduced from 64) */
+    64,                 /* max_locinit (reduced from 128) */
+    0,                  /* max_fnargs (default: 127) */
+    512,                /* nsymbols (reduced from 1024) */
+    8192,               /* poolsize (reduced from 16384) */
+    2048,               /* nodepoolsz (reduced from 4096) */
+    0                   /* label_prefix (default: 'L') */
 };
 
 /* 8086 with x87 coprocessor (8087/80287) */
@@ -1075,7 +1085,17 @@ struct cg_arch cg_arch_8086_x87 = {
     0,                  /* local_offset_base */
     -1,                 /* local_offset_dir (negative: -2, -4, -6...) */
     0,                  /* num_arg_regs (cdecl: all args on stack) */
-    NULL                /* symbol_transform (use default) */
+    NULL,               /* symbol_transform (use default) */
+    /* Compiler limits - reduced for 16-bit memory constraints */
+    31,                 /* namelen (TASM limit) */
+    256,                /* max_case (reduced from 1024) */
+    32,                 /* max_break (reduced from 64) */
+    64,                 /* max_locinit (reduced from 128) */
+    0,                  /* max_fnargs (default: 127) */
+    512,                /* nsymbols (reduced from 1024) */
+    8192,               /* poolsize (reduced from 16384) */
+    2048,               /* nodepoolsz (reduced from 4096) */
+    0                   /* label_prefix (default: 'L') */
 };
 
 /*

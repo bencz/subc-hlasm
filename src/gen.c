@@ -62,14 +62,14 @@ void ngen2(char *s, char *inst, int n, int a) {
 void lgen(char *s, char *inst, int n) {
 	if (NULL == Outfile) return;
 	fputc('\t', Outfile);
-	fprintf(Outfile, s, inst, LPREFIX, n);
+	fprintf(Outfile, s, inst, CG_LABEL_PREFIX, n);
 	fputc('\n', Outfile);
 }
 
 void lgen2(char *s, int v1, int v2) {
 	if (NULL == Outfile) return;
 	fputc('\t', Outfile);
-	fprintf(Outfile, s, v1, LPREFIX, v2);
+	fprintf(Outfile, s, v1, CG_LABEL_PREFIX, v2);
 	fputc('\n', Outfile);
 }
 
@@ -89,13 +89,13 @@ void sgen2(char *s, char *inst, int v, char *s2) {
 
 void genlab(int id) {
 	if (NULL == Outfile) return;
-	fprintf(Outfile, "%c%d:\n", LPREFIX, id);
+	fprintf(Outfile, "%c%d:\n", CG_LABEL_PREFIX, id);
 }
 
 char *labname(int id) {
 	static char	name[100];
 
-	sprintf(name, "%c%d", LPREFIX, id);
+	sprintf(name, "%c%d", CG_LABEL_PREFIX, id);
 	return name;
 }
 

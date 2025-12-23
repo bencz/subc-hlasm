@@ -722,7 +722,17 @@ struct cg_arch cg_arch_i386 = {
     0,                  /* local_offset_base */
     -1,                 /* local_offset_dir (negative: -4, -8, -12...) */
     0,                  /* num_arg_regs (cdecl: all args on stack) */
-    NULL                /* symbol_transform (use default) */
+    NULL,               /* symbol_transform (use default) */
+    /* Compiler limits - 0 means use defaults */
+    0,                  /* namelen (default: 32) */
+    0,                  /* max_case (default: 1024) */
+    0,                  /* max_break (default: 64) */
+    0,                  /* max_locinit (default: 128) */
+    0,                  /* max_fnargs (default: 127) */
+    0,                  /* nsymbols (default: 1024) */
+    0,                  /* poolsize (default: 16384) */
+    0,                  /* nodepoolsz (default: 4096) */
+    0                   /* label_prefix (default: 'L') */
 };
 
 /* Windows i386: same as i386 but with underscore prefix */
@@ -756,7 +766,17 @@ struct cg_arch cg_arch_i386_windows = {
     0,                  /* local_offset_base */
     -1,                 /* local_offset_dir (negative: -4, -8, -12...) */
     0,                  /* num_arg_regs (cdecl: all args on stack) */
-    i386_windows_symbol_transform  /* symbol_transform (underscore prefix) */
+    i386_windows_symbol_transform,  /* symbol_transform (underscore prefix) */
+    /* Compiler limits - 0 means use defaults */
+    0,                  /* namelen (default: 32) */
+    0,                  /* max_case (default: 1024) */
+    0,                  /* max_break (default: 64) */
+    0,                  /* max_locinit (default: 128) */
+    0,                  /* max_fnargs (default: 127) */
+    0,                  /* nsymbols (default: 1024) */
+    0,                  /* poolsize (default: 16384) */
+    0,                  /* nodepoolsz (default: 4096) */
+    0                   /* label_prefix (default: 'L') */
 };
 
 /*
