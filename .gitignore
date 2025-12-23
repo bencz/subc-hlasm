@@ -32,8 +32,9 @@ systest
 stdio.ok
 test.s
 
-tests/*.asm
+tests/*.s
 tests/c89_suite/output
+tests/preproc_suite/output
 
 # Archive
 subc-b2022.zip

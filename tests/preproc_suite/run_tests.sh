@@ -16,10 +16,9 @@
 #   ./run_tests.sh -T target    Test with specific target
 #
 
-set -e
-
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SCC="${SCRIPT_DIR}/../../src/scc0"
+INCLUDE_DIR="${SCRIPT_DIR}/../../runtime/include"
 OUTPUT_DIR="${SCRIPT_DIR}/output"
 
 # Colors for output
@@ -85,10 +84,10 @@ run_test() {
     fi
     
     # Compile to assembly (preprocessor runs during compilation)
-    if $SCC $TARGET_FLAG -S -o "$asm_file" "$test_file" 2>"${OUTPUT_DIR}/${test_name}.err"; then
+    if $SCC $TARGET_FLAG -I "$INCLUDE_DIR" -S -o "$asm_file" "$test_file" 2>"${OUTPUT_DIR}/${test_name}.err"; then
         # Check if test expects specific output in assembly
         if grep -q "EXPECT_ASM:" "$test_file"; then
-            local expected=$(grep "EXPECT_ASM:" "$test_file" | sed 's/.*EXPECT_ASM://' | tr -d ' ')
+            local expected=$(grep "EXPECT_ASM:" "$test_file" | sed 's/.*EXPECT_ASM://' | sed 's/\*\///' | tr -d ' ')
             if grep -q "$expected" "$asm_file"; then
                 echo -e "${GREEN}PASS${NC}: $test_name"
                 ((PASSED++))
