@@ -1,3 +1,9 @@
+2025-12-23 Fixed variadic function calls on Darwin/AArch64:
+           - Darwin AArch64 ABI requires variadic arguments on stack, not registers
+           - Added cgpusharg_vararg to vtable for architecture-specific vararg handling
+           - Modified tree.c emitargs_abi_ex() to detect variadic functions via Sizes[]
+           - printf() and other variadic functions now work correctly on Apple Silicon
+           - Other architectures use fallback (NULL) for backward compatibility
 2025-12-23 Fixed AArch64/Darwin text relocation errors:
            - Switch statement tables now use PC-relative addressing
            - Global variable access uses adrp+add with @PAGE/@PAGEOFF

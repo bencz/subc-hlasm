@@ -1347,6 +1347,7 @@ struct cg_vtable cg_vtable_8086 = {
     
     /* ABI-Compliant Calling Convention */
     m86_cgpusharg,
+    NULL,  /* cgpusharg_vararg - use default (8086 cdecl uses stack) */
     m86_cgcallprep,
     m86_cgcallend,
     m86_cgfnentry,
@@ -1600,6 +1601,7 @@ struct cg_vtable cg_vtable_8086_x87 = {
     
     /* ABI-Compliant Calling Convention */
     m86_cgpusharg,
+    NULL,  /* cgpusharg_vararg - use default (8086 cdecl uses stack) */
     m86_cgcallprep,
     m86_cgcallend,
     m86_cgfnentry,

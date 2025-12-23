@@ -14,3 +14,10 @@
 	     - t_state_machine.c (enum with function pointer arrays)
 	     Workaround: None. These patterns should be avoided until fixed.
 
+	BUG: Functions with many parameters (32+) on AArch64
+	     Functions with more than 8 parameters may produce incorrect
+	     results on AArch64. Stack-passed parameter offsets may be
+	     calculated incorrectly.
+	     Workaround: Limit functions to 8 or fewer parameters, or use
+	     structs to pass multiple values.
+

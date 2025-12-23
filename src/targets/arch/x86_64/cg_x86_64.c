@@ -1117,6 +1117,7 @@ struct cg_vtable cg_vtable_x86_64 = {
     
     /* ABI-Compliant Calling Convention */
     x64_cgpusharg,
+    NULL,  /* cgpusharg_vararg - use default (x86-64 varargs use registers) */
     x64_cgcallprep,
     x64_cgcallend,
     x64_cgfnentry,

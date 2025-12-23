@@ -32,7 +32,7 @@ systest
 stdio.ok
 test.s
 
-tests/*.s
+tests/*.asm
 tests/c89_suite/output
 
 # Archive

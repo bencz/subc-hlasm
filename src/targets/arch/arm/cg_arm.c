@@ -1336,6 +1336,7 @@ struct cg_vtable cg_vtable_armv6 = {
     
     /* ABI-Compliant Calling Convention */
     arm_cgpusharg,
+    NULL,  /* cgpusharg_vararg - use default (ARM varargs use registers) */
     arm_cgcallprep,
     arm_cgcallend,
     arm_cgfnentry,

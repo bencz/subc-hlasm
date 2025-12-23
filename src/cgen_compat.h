@@ -255,7 +255,16 @@
  * ABI-Compliant Calling Convention Support
  * ============================================================================
  */
-#define cgpusharg(n)    (CG->vtable->cgpusharg(n))
+/* Helper to access pusharg function pointer directly */
+#define _cg_pusharg_fn  (CG->vtable->cgpusharg)
+#define cgpusharg(n)    (_cg_pusharg_fn(n))
+/* For variadic args - falls back to regular pusharg if not defined */
+#define cgpusharg_va(n) do { \
+    if (CG->vtable->cgpusharg_vararg) \
+        CG->vtable->cgpusharg_vararg(n); \
+    else \
+        _cg_pusharg_fn(n); \
+} while(0)
 #define cgcallprep(n)   (CG->vtable->cgcallprep(n))
 #define cgcallend(n)    (CG->vtable->cgcallend(n))
 #define cgfnentry(n)    (CG->vtable->cgfnentry(n))

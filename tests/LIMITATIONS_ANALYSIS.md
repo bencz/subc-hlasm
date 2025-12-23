@@ -1,6 +1,6 @@
 # SubC Compiler - Limitations Analysis
 
-## Version: 2025-12-23
+## Version: 2025-12-23 (Updated)
 
 This document lists the limitations and known issues in the SubC compiler,
 discovered through the C89 conformance test suite (`tests/c89_suite/`).
@@ -23,6 +23,17 @@ constructs. This requires killing the process. Affected patterns include:
 
 **Severity**: Critical - compiler must be killed
 **Status**: Unresolved
+
+---
+
+## 1.2 Functions with Many Parameters (32+)
+
+Functions with more than 8 parameters (stack-passed parameters) may produce
+incorrect results on AArch64. The stack parameter offset calculation needs
+review.
+
+**Severity**: Medium - affects only functions with many parameters
+**Status**: Under investigation
 
 ---
 
@@ -159,7 +170,26 @@ From `tests/c89_suite/` with 49 tests:
 
 ---
 
-## 7. Priority for Fixes
+## 7. Recently Fixed Issues
+
+### 7.1 Variadic Functions on Darwin/AArch64 (FIXED 2025-12-23)
+
+**Problem**: `printf()` and other variadic functions produced garbage output on
+Darwin/AArch64 (Apple Silicon).
+
+**Cause**: Darwin AArch64 ABI requires variadic arguments to be passed on the
+stack, not in registers. SubC was passing all arguments in registers (x0-x7).
+
+**Solution**: Added `cgpusharg_vararg` to the vtable. On Darwin/AArch64, variadic
+arguments are now pushed to the stack. Other architectures use the default
+behavior (registers where applicable).
+
+**Files changed**: `cgtarget.h`, `cgen_compat.h`, `tree.c`, `cg_aarch64.c`,
+and NULL entries added to other architecture vtables.
+
+---
+
+## 8. Priority for Fixes
 
 | Issue | Severity | Priority |
 |-------|----------|----------|

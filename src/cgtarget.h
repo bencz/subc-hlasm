@@ -406,6 +406,7 @@ struct cg_vtable {
      *   - For register ABIs: saves register args to stack for access
      */
     void (*cgpusharg)(int argnum);
+    void (*cgpusharg_vararg)(int argnum);  /* For variadic args - may differ on some ABIs */
     void (*cgcallprep)(int nargs);
     void (*cgcallend)(int nargs);
     void (*cgfnentry)(int nparams);

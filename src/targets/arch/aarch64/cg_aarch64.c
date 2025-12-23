@@ -1138,6 +1138,21 @@ static void a64_cgpusharg(int argnum) {
     }
 }
 
+/*
+ * cgpusharg_vararg - Push variadic argument
+ * On Darwin/AArch64, variadic arguments MUST go on the stack, not in registers.
+ * On Linux/AArch64, variadic arguments can use registers like normal args.
+ */
+static void a64_cgpusharg_vararg(int argnum) {
+    if (OS_TYPE == OS_DARWIN) {
+        /* Darwin: variadic args always go on stack */
+        gen("str\tx0,[sp,#-16]!");
+    } else {
+        /* Linux/other: variadic args use normal calling convention */
+        a64_cgpusharg(argnum);
+    }
+}
+
 /* cgcallprep - Prepare for function call (align stack if needed) */
 static void a64_cgcallprep(int nargs) {
     int stack_args;
@@ -1612,6 +1627,7 @@ struct cg_vtable cg_vtable_aarch64 = {
     
     /* ABI-Compliant Calling Convention */
     a64_cgpusharg,
+    a64_cgpusharg_vararg,
     a64_cgcallprep,
     a64_cgcallend,
     a64_cgfnentry,

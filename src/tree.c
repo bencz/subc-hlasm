@@ -218,16 +218,34 @@ static int countargs(node *a) {
  * Arguments are processed right-to-left, but we need to know
  * the argument number for register-based ABIs.
  *
+ * For variadic functions, arguments beyond the fixed parameters
+ * may need special handling (e.g., Darwin/AArch64 requires varargs on stack).
+ *
+ * Parameters:
+ *   a: argument list (GLUE chain)
+ *   argnum: current argument number (0-based, counting down)
+ *   fixed_args: number of fixed (non-variadic) arguments, or -1 if not variadic
+ *
  * We use clear(0) before each argument to prevent spill() from
  * pushing the previous argument value again.
  */
-static void emitargs_abi(node *a, int argnum) {
+static void emitargs_abi_ex(node *a, int argnum, int fixed_args) {
 	if (NULL == a) return;
 	clear(0);
 	emittree1(a->right);
 	commit();
-	cgpusharg(argnum);
-	emitargs_abi(a->left, argnum - 1);
+	/* Use vararg push for arguments beyond the fixed parameters */
+	if (fixed_args >= 0 && argnum >= fixed_args) {
+		cgpusharg_va(argnum);
+	} else {
+		cgpusharg(argnum);
+	}
+	emitargs_abi_ex(a->left, argnum - 1, fixed_args);
+}
+
+/* Wrapper for non-variadic calls (backward compatibility) */
+static void emitargs_abi(node *a, int argnum) {
+	emitargs_abi_ex(a, argnum, -1);
 }
 
 void emitargs(node *a) {
@@ -444,10 +462,22 @@ static void emittree1(node *a) {
 			}
 			break;
 	case OP_CALL:	{
+			int fn = a->args[0];
 			int nargs = a->args[1];
+			int fn_nparams = Sizes[fn];
+			int fixed_args;
+			
+			/* Check if function is variadic (negative Sizes means variadic) */
+			if (fn_nparams < 0) {
+				/* Variadic: fixed_args = -fn_nparams - 1 */
+				fixed_args = -fn_nparams - 1;
+			} else {
+				fixed_args = -1;  /* Not variadic */
+			}
+			
 			cgcallprep(nargs);
-			emitargs_abi(a->left, nargs - 1);
-			gencall(a->args[0]);
+			emitargs_abi_ex(a->left, nargs - 1, fixed_args);
+			gencall(fn);
 			cgcallend(nargs);
 			}
 			break;
