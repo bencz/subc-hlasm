@@ -173,11 +173,33 @@ static void a64_cglocladdr(int n, int aux) {
     }
 }
 
+/*
+ * Load static/label address.
+ * - Linux ELF: can use simple adr instruction
+ * - Darwin Mach-O: requires literal pool since adr doesn't work across sections
+ */
 static void a64_cgstataddr(int n, int aux) {
-    if (aux)
-        lgen("%s\tx1,%c%d", "adr", n);
-    else
-        lgen("%s\tx0,%c%d", "adr", n);
+    if (OS_TYPE == OS_DARWIN) {
+        /* Darwin: use literal pool approach */
+        int l, skip;
+        
+        l = label();
+        if (aux)
+            lgen("%s\tx1,%c%d", "ldr", l);
+        else
+            lgen("%s\tx0,%c%d", "ldr", l);
+        skip = label();
+        lgen("%s\t%c%d", "b", skip);
+        genlab(l);
+        lgen("%s\t%c%d", ".quad", n);
+        genlab(skip);
+    } else {
+        /* Linux/other: use adr instruction */
+        if (aux)
+            lgen("%s\tx1,%c%d", "adr", n);
+        else
+            lgen("%s\tx0,%c%d", "adr", n);
+    }
 }
 
 /*

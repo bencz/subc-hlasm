@@ -380,6 +380,8 @@
  * ============================================================================
  */
 #define OS              (CG->os->os_name)
+#define OS_TYPE         (CG->os->os_type)
+#define OBJ_FORMAT      (CG->os->obj_format)
 #define AOUTNAME        (CG->os->aout_name)
 #define LDCMD           (CG->os->ld_cmd)
 #define ASCMD           (CG->os->asm_cmd)
