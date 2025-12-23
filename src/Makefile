@@ -31,9 +31,13 @@ CG_ARCH=	targets/arch/i386/cg_i386.c \
 # Target management and OS configs
 CG_SRC=		cgtarget.c targets/os/cg_os_configs.c $(CG_ARCH)
 
+# Preprocessor sources (modular)
+PREP_SRC=	prep/pp_expr.c prep/pp_macro.c prep/pp_cond.c \
+		prep/pp_include.c prep/pp_main.c
+
 # Main compiler sources
 SRC=		decl.c error.c expr.c gen.c main.c misc.c \
-		opt.c prep.c scan.c stmt.c sym.c tree.c $(CG_SRC)
+		opt.c scan.c stmt.c sym.c tree.c $(PREP_SRC) $(CG_SRC)
 
 # Header files
 HDRS=		cgtarget.h cgen_compat.h cgen.h data.h decl.h defs.h prec.h \

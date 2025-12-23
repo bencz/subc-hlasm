@@ -24,8 +24,19 @@ int next(void) {
 			return *Macp[Mp-1]++;
 		}
 	}
+again:
 	c = fgetc(Infile);
 	if ('\n' == c) Line++;
+	/* Handle line continuation (backslash-newline) */
+	if (c == '\\') {
+		int c2 = fgetc(Infile);
+		if (c2 == '\n') {
+			Line++;
+			goto again;  /* Skip backslash-newline, get next char */
+		}
+		/* Not a continuation, put back the second char */
+		ungetc(c2, Infile);
+	}
 	return c;
 }
 
@@ -517,15 +528,73 @@ static char *expand_funclike_macro(char *mtext) {
 		return mtext;
 	}
 	
-	/* Expand body, substituting parameters */
+	/* Expand body, substituting parameters with # and ## support */
 	out = expanded;
 	p = body;
 	while (*p && out < expanded + TEXTLEN - 1) {
+		/* Skip whitespace but remember if we had any */
+		while (*p && isspace(*p)) p++;
+		if (!*p) break;
+		
+		/* Check for stringification operator (#) */
+		if (*p == '#' && p[1] != '#') {
+			p++;  /* Skip # */
+			while (*p && isspace(*p)) p++;  /* Skip whitespace after # */
+			
+			if (isalpha(*p) || *p == '_') {
+				char ident[NAMELEN+1];
+				char *ip = ident;
+				while ((isalnum(*p) || *p == '_') && ip < ident + NAMELEN) {
+					*ip++ = *p++;
+				}
+				*ip = '\0';
+				
+				/* Find parameter and stringify its argument */
+				for (i = 0; i < nparams; i++) {
+					char *pn = params[i];
+					char *id = ident;
+					while (*pn && *pn != '\x01' && *id && *pn == *id) {
+						pn++; id++;
+					}
+					if ((*pn == '\0' || *pn == '\x01') && *id == '\0') {
+						/* Found parameter, stringify argument */
+						char *arg = args[i];
+						*out++ = '"';
+						while (*arg && out < expanded + TEXTLEN - 2) {
+							/* Escape quotes and backslashes in string */
+							if (*arg == '"' || *arg == '\\') {
+								*out++ = '\\';
+							}
+							*out++ = *arg++;
+						}
+						*out++ = '"';
+						break;
+					}
+				}
+				if (i == nparams) {
+					/* Not a parameter, error */
+					error("'#' not followed by macro parameter", NULL);
+				}
+			} else {
+				error("'#' not followed by macro parameter", NULL);
+			}
+			continue;
+		}
+		
+		/* Check for token pasting operator (##) */
+		if (*p == '#' && p[1] == '#') {
+			p += 2;  /* Skip ## */
+			/* Remove trailing whitespace from output */
+			while (out > expanded && isspace(out[-1])) out--;
+			/* Skip leading whitespace after ## */
+			while (*p && isspace(*p)) p++;
+			continue;  /* Continue to paste next token */
+		}
+		
 		/* Check for parameter reference */
 		if (isalpha(*p) || *p == '_') {
 			char ident[NAMELEN+1];
 			char *ip = ident;
-			char *start = p;
 			
 			while ((isalnum(*p) || *p == '_') && ip < ident + NAMELEN) {
 				*ip++ = *p++;

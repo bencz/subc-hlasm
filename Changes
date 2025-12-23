@@ -1,3 +1,22 @@
+2025-12-23 Implemented stringification (#), token pasting (##), line continuation:
+           - Stringification operator (#) in function-like macros
+           - Token pasting operator (##) for identifier concatenation
+           - Line continuation with backslash-newline in macro definitions
+           - Modified expand_funclike_macro() in scan.c for # and ##
+           - Modified getln() in pp_main.c for line continuation
+           - Added __STDC__ predefined macro (C89 compliance)
+           - Tests: t_stringify.c, t_token_paste.c, t_line_cont.c
+           - 24 preprocessor tests passing
+2025-12-23 Refactored preprocessor into modular structure (src/prep/):
+           - prep.h: Main header with all declarations
+           - pp_expr.c: Expression evaluator for #if/#elif (~500 lines)
+           - pp_macro.c: #define/#undef handling (~160 lines)
+           - pp_cond.c: Conditional compilation (#if/#ifdef/etc) (~110 lines)
+           - pp_include.c: #include processing (~80 lines)
+           - pp_main.c: Main entry points (preproc, playmac, etc) (~90 lines)
+           - Removed monolithic prep.c (~984 lines)
+           - Updated Makefile with PREP_SRC variable
+           - All 21 preprocessor tests passing
 2025-12-23 Implemented function-like macros (parameterized macros):
            - #define MACRO(params) body syntax now supported
            - Up to 16 parameters per macro (MAXMACPARAMS in defs.h)

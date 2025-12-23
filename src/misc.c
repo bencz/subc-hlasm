@@ -108,6 +108,10 @@ void init(void) {
 	/* Always define __SUBC__ */
 	addglob("__SUBC__", 0, TMACRO, 0, 0, 0, globname("1"), 0);
 	
+	/* C89/C90 standard compliance macros */
+	define_str_macro("__STDC__", "1");
+	/* Note: __STDC_VERSION__ is C95+, not C89, so we don't define it */
+	
 	/* Register OS-specific predefined macros */
 	if (CG && CG->os && CG->os->predef_macros)
 		register_predef_macros(CG->os->predef_macros);

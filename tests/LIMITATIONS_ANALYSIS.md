@@ -2,9 +2,12 @@
 
 ## Version: 2025-12-23
 
-This document describes the **intentional design limitations** of the SubC
-compiler. These are not bugs - they are deliberate simplifications that make
-SubC a small, fast, and self-compiling C compiler.
+**IMPORTANT**: This document contains ONLY the current limitations of SubC.
+Do NOT add resolved features here. When a limitation is fixed, REMOVE it from
+this file. For changelog of resolved issues, see the `Changes` file.
+
+These are **intentional design limitations** - deliberate simplifications that
+make SubC a small, fast, and self-compiling C compiler.
 
 For bugs, see the `BUGS` file. For test results, run `tests/c89_suite/run_tests.sh`.
 
@@ -120,20 +123,42 @@ typedef struct {
 
 ## 3. Preprocessor Limitations
 
-- No token pasting (`##`) or stringification (`#`)
-- No line continuation with `\`
 - No `#warning`
 
 ---
 
-## 4. Bootstrap Limitations
+## 4. Type Qualifier Limitations
 
-### 4.1 System Headers
+### `const` Keyword
+
+SubC does not support the `const` type qualifier. Code like:
+
+```c
+const char *str = "hello";
+const int value = 42;
+```
+
+Will produce errors. Use without `const`:
+
+```c
+char *str = "hello";
+int value = 42;
+```
+
+### `volatile` Keyword
+
+The `volatile` keyword is recognized but ignored by SubC.
+
+---
+
+## 5. Bootstrap Limitations
+
+### 5.1 System Headers
 
 SubC cannot compile files that include system headers directly.
 For self-compilation, use SubC's own headers in `runtime/include/`.
 
-### 4.2 Runtime Library
+### 5.2 Runtime Library
 
 The SubC runtime library (`runtime/lib/`) must be compiled separately
 for each target platform. Currently only DOS has a complete runtime.

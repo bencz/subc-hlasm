@@ -31,18 +31,21 @@ NC='\033[0m' # No Color
 VERBOSE=0
 SPECIFIC_TEST=""
 TARGET=""
+TIMEOUT_SECONDS=10
 
 # Parse arguments
-while getopts "vs:T:h" opt; do
+while getopts "vs:T:t:h" opt; do
     case $opt in
         v) VERBOSE=1 ;;
         s) SPECIFIC_TEST="$OPTARG" ;;
         T) TARGET="$OPTARG" ;;
+        t) TIMEOUT_SECONDS="$OPTARG" ;;
         h)
-            echo "Usage: $0 [-v] [-s test_name] [-T target]"
+            echo "Usage: $0 [-v] [-s test_name] [-T target] [-t timeout]"
             echo "  -v          Verbose mode"
             echo "  -s name     Run specific test (without .c extension)"
             echo "  -T target   Use specific target (e.g., linux-x86-64)"
+            echo "  -t secs     Timeout in seconds (default: 10)"
             exit 0
             ;;
         *)
@@ -73,6 +76,64 @@ PASSED=0
 FAILED=0
 SKIPPED=0
 
+# Portable timeout function using Perl (works on macOS, Linux, BSD)
+# Usage: run_with_timeout <seconds> <command> [args...]
+# Returns: 0 on success, 124 on timeout, other on command failure
+run_with_timeout() {
+    local timeout_secs="$1"
+    shift
+    
+    # Try gtimeout first (GNU coreutils on macOS via brew)
+    if command -v gtimeout >/dev/null 2>&1; then
+        gtimeout "$timeout_secs" "$@"
+        return $?
+    fi
+    
+    # Try timeout (Linux, some BSDs)
+    if command -v timeout >/dev/null 2>&1; then
+        timeout "$timeout_secs" "$@"
+        return $?
+    fi
+    
+    # Fallback to Perl (most portable)
+    perl -e '
+        use strict;
+        use warnings;
+        
+        my $timeout = shift @ARGV;
+        my @cmd = @ARGV;
+        
+        my $pid = fork();
+        if (!defined $pid) {
+            die "fork failed: $!";
+        }
+        
+        if ($pid == 0) {
+            # Child process
+            exec(@cmd) or die "exec failed: $!";
+        }
+        
+        # Parent process
+        eval {
+            local $SIG{ALRM} = sub { die "timeout\n" };
+            alarm($timeout);
+            waitpid($pid, 0);
+            alarm(0);
+        };
+        
+        if ($@ && $@ eq "timeout\n") {
+            kill("TERM", $pid);
+            sleep(1);
+            kill("KILL", $pid);
+            waitpid($pid, 0);
+            exit(124);
+        }
+        
+        exit($? >> 8);
+    ' "$timeout_secs" "$@"
+    return $?
+}
+
 # Run a single test
 run_test() {
     local test_file="$1"
@@ -83,8 +144,8 @@ run_test() {
         echo -n "Testing $test_name... "
     fi
     
-    # Compile to assembly (preprocessor runs during compilation)
-    if $SCC $TARGET_FLAG -I "$INCLUDE_DIR" -S -o "$asm_file" "$test_file" 2>"${OUTPUT_DIR}/${test_name}.err"; then
+    # Compile to assembly with timeout (preprocessor runs during compilation)
+    if run_with_timeout "$TIMEOUT_SECONDS" $SCC $TARGET_FLAG -I "$INCLUDE_DIR" -S -o "$asm_file" "$test_file" 2>"${OUTPUT_DIR}/${test_name}.err"; then
         # Check if test expects specific output in assembly
         if grep -q "EXPECT_ASM:" "$test_file"; then
             local expected=$(grep "EXPECT_ASM:" "$test_file" | sed 's/.*EXPECT_ASM://' | sed 's/\*\///' | tr -d ' ')
@@ -106,7 +167,12 @@ run_test() {
             echo -e "${GREEN}PASS${NC}: $test_name (expected failure)"
             ((PASSED++))
         else
-            echo -e "${RED}FAIL${NC}: $test_name (compilation failed)"
+            # Check if it was a timeout
+            if [ $? -eq 124 ]; then
+                echo -e "${RED}FAIL${NC}: $test_name (TIMEOUT after ${TIMEOUT_SECONDS}s)"
+            else
+                echo -e "${RED}FAIL${NC}: $test_name (compilation failed)"
+            fi
             if [ $VERBOSE -eq 1 ]; then
                 cat "${OUTPUT_DIR}/${test_name}.err"
             fi
