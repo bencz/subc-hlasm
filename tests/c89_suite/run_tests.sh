@@ -11,10 +11,12 @@
 #   -v            Verbose output
 #   -C            Compare mode: compare SubC vs native compiler output
 #   -s <test>     Run single test only
+#   -T <secs>     Timeout in seconds (default: 10)
 #   -h            Show help
 #
 
-set -e
+# Don't exit on error - we want to continue testing even if some tests fail
+set +e
 
 # Colors for output
 RED='\033[0;31m'
@@ -39,6 +41,7 @@ KEEP_FILES=0
 VERBOSE=0
 COMPARE_MODE=0
 SINGLE_TEST=""
+TIMEOUT_SECONDS=10
 
 # Counters
 TOTAL=0
@@ -80,6 +83,7 @@ usage() {
     echo "  -v            Verbose output"
     echo "  -C            Compare mode: compare SubC output vs native compiler"
     echo "  -s <test>     Run single test (e.g., -s t_arithmetic)"
+    echo "  -T <secs>     Timeout in seconds for SubC compilation (default: 30)"
     echo "  -h            Show this help"
     echo ""
     echo "Examples:"
@@ -118,6 +122,68 @@ log_verbose() {
     if [ $VERBOSE -eq 1 ]; then
         echo -e "${BLUE}[DEBUG]${NC} $1"
     fi
+}
+
+log_timeout() {
+    echo -e "${RED}[TIMEOUT]${NC} $1"
+}
+
+# Portable timeout function using Perl (works on macOS, Linux, BSD)
+# Usage: run_with_timeout <seconds> <command> [args...]
+# Returns: 0 on success, 124 on timeout, other on command failure
+run_with_timeout() {
+    local timeout_secs="$1"
+    shift
+    
+    # Try gtimeout first (GNU coreutils on macOS via brew)
+    if command -v gtimeout >/dev/null 2>&1; then
+        gtimeout "$timeout_secs" "$@"
+        return $?
+    fi
+    
+    # Try timeout (Linux, some BSDs)
+    if command -v timeout >/dev/null 2>&1; then
+        timeout "$timeout_secs" "$@"
+        return $?
+    fi
+    
+    # Fallback to Perl (most portable)
+    perl -e '
+        use strict;
+        use warnings;
+        
+        my $timeout = shift @ARGV;
+        my @cmd = @ARGV;
+        
+        my $pid = fork();
+        if (!defined $pid) {
+            die "fork failed: $!";
+        }
+        
+        if ($pid == 0) {
+            # Child process
+            exec(@cmd) or die "exec failed: $!";
+        }
+        
+        # Parent process
+        eval {
+            local $SIG{ALRM} = sub { die "timeout\n" };
+            alarm($timeout);
+            waitpid($pid, 0);
+            alarm(0);
+        };
+        
+        if ($@ && $@ eq "timeout\n") {
+            kill("TERM", $pid);
+            sleep(1);
+            kill("KILL", $pid);
+            waitpid($pid, 0);
+            exit(124);
+        }
+        
+        exit($? >> 8);
+    ' "$timeout_secs" "$@"
+    return $?
 }
 
 # Detect target based on OS and architecture
@@ -160,7 +226,7 @@ detect_target() {
 }
 
 # Parse command line arguments
-while getopts "t:ckvCs:h" opt; do
+while getopts "t:ckvCs:T:h" opt; do
     case $opt in
         t) TARGET="$OPTARG" ;;
         c) COMPILE_ONLY=1 ;;
@@ -168,6 +234,7 @@ while getopts "t:ckvCs:h" opt; do
         v) VERBOSE=1 ;;
         C) COMPARE_MODE=1 ;;
         s) SINGLE_TEST="$OPTARG" ;;
+        T) TIMEOUT_SECONDS="$OPTARG" ;;
         h) usage ;;
         *) usage ;;
     esac
@@ -212,6 +279,7 @@ echo "Native Compiler: $NATIVE_CC"
 echo "Include dir: $INCLUDE_DIR"
 echo "Target: $TARGET"
 echo "Output dir: $OUTPUT_DIR"
+echo "Timeout: ${TIMEOUT_SECONDS}s"
 if [ $COMPARE_MODE -eq 1 ]; then
     echo -e "Mode: ${CYAN}Compare (SubC vs $NATIVE_CC)${NC}"
 fi
@@ -219,19 +287,27 @@ echo ""
 echo -e "${BOLD}----------------------------------------${NC}"
 echo ""
 
-# Function to compile with SubC
+# Function to compile with SubC (with timeout protection)
 compile_subc() {
     local src="$1"
     local name=$(basename "$src" .c)
     local asm="$OUTPUT_DIR/subc/${name}.s"
     
-    log_verbose "SubC compiling: $src -> $asm"
+    log_verbose "SubC compiling: $src -> $asm (timeout: ${TIMEOUT_SECONDS}s)"
     
-    if "$SCC" -T "$TARGET" -I "$INCLUDE_DIR" -S -o "$asm" "$src" 2>&1; then
+    local output
+    output=$(run_with_timeout "$TIMEOUT_SECONDS" "$SCC" -T "$TARGET" -I "$INCLUDE_DIR" -S -o "$asm" "$src" 2>&1)
+    local status=$?
+    
+    if [ $status -eq 124 ]; then
+        echo "TIMEOUT: compilation exceeded ${TIMEOUT_SECONDS} seconds"
+        return 124
+    elif [ $status -eq 0 ]; then
         echo "$asm"
         return 0
     else
-        return 1
+        echo "$output"
+        return $status
     fi
 }
 
@@ -268,7 +344,12 @@ run_compare_test() {
     subc_output=$(compile_subc "$src" 2>&1)
     local subc_status=$?
     
-    if [ $subc_status -ne 0 ]; then
+    if [ $subc_status -eq 124 ]; then
+        log_timeout "SubC compilation timed out"
+        FAILED=$((FAILED + 1))
+        FAILED_TESTS+=("$name (timeout)")
+        return 1
+    elif [ $subc_status -ne 0 ]; then
         log_fail "SubC compilation failed"
         if [ $VERBOSE -eq 1 ]; then
             echo "SubC error: $subc_output"
@@ -323,7 +404,12 @@ run_test() {
     compile_output=$(compile_subc "$src" 2>&1)
     local compile_status=$?
     
-    if [ $compile_status -ne 0 ]; then
+    if [ $compile_status -eq 124 ]; then
+        log_timeout "Compilation timed out (${TIMEOUT_SECONDS}s)"
+        FAILED=$((FAILED + 1))
+        FAILED_TESTS+=("$name (timeout)")
+        return 1
+    elif [ $compile_status -ne 0 ]; then
         log_fail "Compilation failed"
         if [ $VERBOSE -eq 1 ]; then
             echo "$compile_output"

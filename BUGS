@@ -5,5 +5,12 @@
 
 	Thanks to all submitters!
 
-	No unresolved bugs at this time.
+	BUG: Compiler enters infinite loop on certain valid C89 code
+	     The compiler hangs indefinitely (requires kill) when compiling
+	     certain valid C89 constructs. Affected test cases:
+	     - t_array_complex.c (complex array operations)
+	     - t_const_expr.c (constant expressions)
+	     - t_global.c (global variable initialization)
+	     - t_state_machine.c (enum with function pointer arrays)
+	     Workaround: None. These patterns should be avoided until fixed.
 
