@@ -1,3 +1,12 @@
+2025-12-23 Implemented char* pointer initialization with string literals (C89):
+           - char *str = "hello"; now works correctly
+           - const char *str = "hello"; also supported
+           - String literal is placed in data section with label
+           - Pointer is initialized with reference to label
+           - Added genstrlit() and gendeflabel() in gen.c
+           - Modified declarator() in decl.c to accept STRLIT for CHARPTR
+           - Modified defglob() in sym.c to emit label reference
+           - Works on all targets: i386, x86-64, AArch64, ARM, 8086
 2025-12-23 Implemented __FILE__, __LINE__, __DATE__, __TIME__ predefined macros:
            - Added special_macro() function in scan.c
            - __FILE__ returns current source filename as string

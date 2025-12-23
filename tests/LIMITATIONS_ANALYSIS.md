@@ -131,18 +131,12 @@ typedef struct {
 
 ### `const` Keyword
 
-SubC does not support the `const` type qualifier. Code like:
+The `const` keyword is recognized but **not enforced** by SubC.
+You can declare `const` variables, but the compiler won't prevent modifications.
 
 ```c
-const char *str = "hello";
-const int value = 42;
-```
-
-Will produce errors. Use without `const`:
-
-```c
-char *str = "hello";
-int value = 42;
+const char *str = "hello";  /* OK - compiles */
+const int value = 42;       /* OK - compiles */
 ```
 
 ### `volatile` Keyword

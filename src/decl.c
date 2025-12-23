@@ -502,11 +502,22 @@ static int declarator(int pmtr, int scls, char *name, int *pprim, int *psize,
 		if (CTYPE == scls)
 			error(unsupp, NULL);
 		Token = scan();
-		*pval = constexpr();
-		if (PCHAR == *pprim)
-			*pval &= 0xff;
-		if (*pval && !inttype(*pprim))
-			error("non-zero pointer initialization", NULL);
+		/*
+		 * C89: char *str = "hello"; is valid
+		 * For CHARPTR, accept string literal initialization.
+		 * Store negative label value to distinguish from integer constants.
+		 */
+		if (STRLIT == Token && CHARPTR == *pprim) {
+			*pval = -genstrlit(Text, Value);
+			Token = scan();
+		}
+		else {
+			*pval = constexpr();
+			if (PCHAR == *pprim)
+				*pval &= 0xff;
+			if (*pval && !inttype(*pprim))
+				error("non-zero pointer initialization", NULL);
+		}
 		*pinit = 1;
 	}
 	else if (!pmtr && LPAREN == Token) {

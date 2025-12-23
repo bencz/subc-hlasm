@@ -160,6 +160,15 @@ static void defglob(char *name, int prim, int type, int size, int val,
 		genbss(gsym(name), objsz * size, st);
 		return;
 	}
+	/*
+	 * C89: char *str = "hello";
+	 * Negative val indicates a string literal label.
+	 * Emit pointer to the label instead of integer value.
+	 */
+	if (val < 0 && CHARPTR == prim) {
+		gendeflabel(-val);
+		return;
+	}
 	emitdef(objsz, val);
 }
 

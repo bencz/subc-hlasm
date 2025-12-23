@@ -60,6 +60,8 @@ void	gendefh(int v);
 void	gendefp(int v);
 void	gendefq(int v);
 void	gendefs(char *s, int len);
+int	genstrlit(char *s, int len);
+void	gendeflabel(int lab);
 void	gendefw(int v);
 void	gendiv(int swap);
 void	genentry(void);

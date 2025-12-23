@@ -662,6 +662,33 @@ void gendefs(char *s, int len) {
 	}
 }
 
+/*
+ * Generate a string literal in the data section and return its label.
+ * Used for initializing char* pointers with string literals.
+ * C89: char *str = "hello";
+ */
+int genstrlit(char *s, int len) {
+	int	lab;
+
+	gendata();
+	lab = label();
+	genlab(lab);
+	gendefs(s, len);
+	gendefb(0);
+	genalign(len - 1);
+	return lab;
+}
+
+/*
+ * Generate a pointer to a label in the data section.
+ * Used for initializing char* pointers with string literals.
+ * C89: char *str = "hello";
+ */
+void gendeflabel(int lab) {
+	gendata();
+	cgdefl(lab, 0);
+}
+
 void gendefh(int v) {
 	gendata();
 	cgdefh(v);
