@@ -1,3 +1,19 @@
+2025-12-23 Completed floating-point integration in expr.c, gen.c, tree.c:
+           - Added FP operators to ops.h: OP_FLIT, OP_DLIT, OP_FADD/SUB/MUL/DIV,
+             OP_DADD/SUB/MUL/DIV, OP_FNEG, OP_DNEG, OP_FEQ/NE/LT/GT/LE/GE,
+             OP_DEQ/NE/LT/GT/LE/GE, OP_ITOF/ITOD/FTOI/DTOI/FTOD/DTOF
+           - expr.c: Added FLOATLIT parsing in primary(), FP type support in
+             typematch(), cast(), unary +/-, mkop() generates FP operators
+           - gen.c: Added FP support in genstore(), genrval(), binopchk()
+           - tree.c: Added FP operator emission (arithmetic, comparisons)
+           - scan.c: Fixed 0.0 parsing (was incorrectly treated as octal)
+           - defs.h: Increased NAMELEN from 16 to 32
+           - Created comprehensive FP test suite: tests/fptest.c
+           - All architectures generate correct FP code:
+             * i386: x87 FPU (flds, fstps, faddp, fsubp, fmulp, fdivp)
+             * x86-64: SSE2 (movss/sd, addss/sd, subss/sd, mulss/sd, divss/sd)
+             * ARM: VFP (vldr, vstr, vadd.f32/f64, vsub, vmul, vdiv)
+             * 8086: Software emulation (__fpadd, __fpsub, etc.) or x87
 2025-12-23 Implemented floating-point code generation for all architectures:
            - i386: Full x87 FPU support (fld, fst, fadd, fsub, fmul, fdiv, etc.)
            - x86-64: Full SSE2 support (movss/sd, addss/sd, comiss/sd, etc.)

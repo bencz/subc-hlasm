@@ -45,7 +45,7 @@
 #define DOUBLESIZE	CG_DOUBLESIZE
 
 #define TEXTLEN		512
-#define NAMELEN		16
+#define NAMELEN		32
 
 #define MAXFILES	32
 #define MAXINCDIRS	16

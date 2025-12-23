@@ -1,31 +1,8 @@
 # SubC Compiler - Limitações Pendentes
 
-## Versão: 2025-12-23 (atualizado)
+## Versão: 2025-12-23
 
 Este documento lista as limitações ainda existentes no compilador SubC.
-
----
-
-## 0. Status do Suporte a Ponto Flutuante
-
-**IMPLEMENTADO** (2025-12-23)
-
-A infraestrutura de código para ponto flutuante foi completamente implementada:
-
-| Componente | Status |
-|------------|--------|
-| `cg_fpu_type` enum | ✅ Implementado |
-| `fpu_type` em `cg_arch` | ✅ Implementado |
-| 46 funções FP na vtable | ✅ Definidas |
-| 8086 x87 (8087) | ✅ Implementado |
-| 8086 emulação IEEE 754 | ✅ Implementado (float e double) |
-| i386 x87 | ✅ Implementado |
-| x86-64 SSE2 | ✅ Implementado |
-| ARM VFP | ✅ Implementado |
-| Integração em expr.c/gen.c | ⏳ Pendente |
-
-**Próximos passos:**
-1. Integrar chamadas FP em `expr.c` e `gen.c` usando `IS_FLOATTYPE()`
 
 ---
 
@@ -33,7 +10,7 @@ A infraestrutura de código para ponto flutuante foi completamente implementada:
 
 ```c
 #define TEXTLEN     512      // Tamanho máximo de texto/token
-#define NAMELEN     16       // Tamanho máximo de identificadores
+#define NAMELEN     32       // Tamanho máximo de identificadores
 #define MAXFILES    32       // Máximo de arquivos de entrada
 #define MAXINCDIRS  16       // Máximo de diretórios de include
 #define MAXIFDEF    16       // Profundidade máxima de #ifdef aninhados
@@ -73,46 +50,26 @@ O código incrementa o valor apontado por `*ap`, não o ponteiro `ap` em si.
 
 ---
 
-## 3. Aritmética de Ponto Flutuante
+## 3. Limitações de Linguagem
 
-**RESOLVIDO** - Ver seção 0 acima.
-
-Os tipos `float` e `double` são parseados e armazenados corretamente.
-A infraestrutura de code generation foi completamente implementada (vtable com 46 funções).
-
-**Implementado:**
-- 8086: Suporte completo a x87 (8087/80287)
-- 8086: Emulação IEEE 754 em software (float e double)
-- i386: Suporte completo a x87 FPU
-- x86-64: Suporte completo a SSE2
-- ARM: Suporte completo a VFP
-- Targets: `dos-8086` (emulação), `dos-8086-x87` (hardware), todos os outros
-
-**Pendente:**
-- Integração no parser (expr.c/gen.c)
-
----
-
-## 4. Limitações de Linguagem
-
-### 4.1 Máximo de 2 Níveis de Indireção
+### 3.1 Máximo de 2 Níveis de Indireção
 
 ```c
 // Válido: int *, int **
 // Inválido: int ***
 ```
 
-### 4.2 Arrays Apenas 1D
+### 3.2 Arrays Apenas 1D
 
 Não suporta `int a[10][20]`
 
-### 4.3 Sem goto
+### 3.3 Sem goto
 
 O keyword `goto` não é reconhecido.
 
 ---
 
-## 5. Campos de Arquitetura Não Utilizados
+## 4. Campos de Arquitetura Não Utilizados
 
 | Campo | Definido em | Status |
 |-------|-------------|--------|
@@ -122,7 +79,7 @@ O keyword `goto` não é reconhecido.
 
 ---
 
-## 6. Label Prefix Hardcoded
+## 5. Label Prefix Hardcoded
 
 O prefixo de labels (`LPREFIX = 'L'`) é hardcoded em `defs.h`:
 
@@ -135,16 +92,13 @@ Para arquiteturas como HLASM que têm regras específicas para labels
 
 ---
 
-## 7. Resumo das Limitações Pendentes
+## 6. Resumo das Limitações
 
-| Limitação | Severidade | Arquivo | Status |
-|-----------|------------|---------|--------|
-| Integração FP em expr.c/gen.c | Médio | expr.c, gen.c | Pendente |
-| FP para i386/x86-64/ARM | Médio | cg_*.c | ✅ Resolvido |
-| Emulação double 8086 | Médio | fpemu.c | ✅ Resolvido |
-| _va_arg aritmética de ponteiro | Médio | varargs.c | Bug |
-| `LPREFIX` fixo | Baixo | defs.h | - |
-| Campos align_* não usados | Baixo | cgtarget.h | - |
-| Máximo 2 níveis de indireção | Baixo | decl.c | Design |
-| Arrays apenas 1D | Baixo | decl.c | Design |
-| Sem goto | Baixo | - | Design |
+| Limitação | Severidade | Arquivo |
+|-----------|------------|---------|
+| _va_arg aritmética de ponteiro | Médio | varargs.c |
+| `LPREFIX` fixo | Baixo | defs.h |
+| Campos align_* não usados | Baixo | cgtarget.h |
+| Máximo 2 níveis de indireção | Baixo | decl.c |
+| Arrays apenas 1D | Baixo | decl.c |
+| Sem goto | Baixo | - |

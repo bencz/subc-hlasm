@@ -624,16 +624,18 @@ static void x64_cgfxch(void) {
 }
 
 /* Define float constant in data section */
-static void x64_cgdeffloat(int lab, unsigned int bits) {
-    genlab(lab);
-    ngen("%s\t%u", ".long", bits);
+static void x64_cgdeffloat(double v) {
+    union { float f; unsigned int i; } u;
+    u.f = (float)v;
+    ngen("%s\t%u", ".long", u.i);
 }
 
 /* Define double constant in data section */
-static void x64_cgdefdouble(int lab, unsigned int hi, unsigned int lo) {
-    genlab(lab);
-    ngen("%s\t%u", ".long", lo);
-    ngen("%s\t%u", ".long", hi);
+static void x64_cgdefdouble(double v) {
+    union { double d; unsigned int i[2]; } u;
+    u.d = v;
+    ngen("%s\t%u", ".long", u.i[0]);
+    ngen("%s\t%u", ".long", u.i[1]);
 }
 
 /*

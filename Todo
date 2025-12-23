@@ -14,7 +14,4 @@
 	- Implement runtime library cross-compilation support
 	  (currently only code generation is cross-platform)
 
-	- Integrate floating-point code generation into expr.c/gen.c
-	  (vtable functions implemented for all architectures)
-
 	? clean up sym.c

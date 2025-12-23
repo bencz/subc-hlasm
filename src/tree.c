@@ -245,6 +245,8 @@ static void emittree1(node *a) {
 	case OP_IDENT:	/* ignore */ break;
 	case OP_ADDR:	genaddr(a->args[0]); break;
 	case OP_LIT:	genlit(a->args[0]); break;
+	case OP_FLIT:	cgflits(a->args[0]); break;  /* Load float literal */
+	case OP_DLIT:	cgflitd(a->args[0]); break;  /* Load double literal */
 	case OP_PREINC:	/* fallthru */
 	case OP_PREDEC:	/* fallthru */
 	case OP_POSTINC:/* fallthru */
@@ -285,6 +287,14 @@ static void emittree1(node *a) {
 			case OP_NOT:	gennot(); break;
 			case OP_SCALE:	genscale(); break;
 			}
+			break;
+	case OP_FNEG:	emittree1(a->left);
+			commit();
+			cgfnegs();
+			break;
+	case OP_DNEG:	emittree1(a->left);
+			commit();
+			cgfnegd();
 			break;
 	case OP_BRFALSE:/* fallthru */
 	case OP_BRTRUE:	emittree1(a->left);
@@ -351,7 +361,86 @@ static void emittree1(node *a) {
 			case OP_ADD:	genadd(PINT, PINT, 1); break;
 			case OP_PLUS:	genadd(a->args[0], a->args[1], 1);
 					break;
-			case OP_SUB:	gensub(a->args[0], a->args[1], 1);						break;
+			case OP_SUB:	gensub(a->args[0], a->args[1], 1);
+					break;
+			}
+			break;
+	/* Floating-point arithmetic operations */
+	case OP_FADD:	emittree1(a->left);
+			emittree1(a->right);
+			commit();
+			cgfadds();
+			break;
+	case OP_FSUB:	emittree1(a->left);
+			emittree1(a->right);
+			commit();
+			cgfsubs();
+			break;
+	case OP_FMUL:	emittree1(a->left);
+			emittree1(a->right);
+			commit();
+			cgfmuls();
+			break;
+	case OP_FDIV:	emittree1(a->left);
+			emittree1(a->right);
+			commit();
+			cgfdivs();
+			break;
+	case OP_DADD:	emittree1(a->left);
+			emittree1(a->right);
+			commit();
+			cgfaddd();
+			break;
+	case OP_DSUB:	emittree1(a->left);
+			emittree1(a->right);
+			commit();
+			cgfsubd();
+			break;
+	case OP_DMUL:	emittree1(a->left);
+			emittree1(a->right);
+			commit();
+			cgfmuld();
+			break;
+	case OP_DDIV:	emittree1(a->left);
+			emittree1(a->right);
+			commit();
+			cgfdivd();
+			break;
+	/* Floating-point comparisons */
+	case OP_FEQ:	/* fallthru */
+	case OP_FNE:	/* fallthru */
+	case OP_FLT:	/* fallthru */
+	case OP_FGT:	/* fallthru */
+	case OP_FLE:	/* fallthru */
+	case OP_FGE:	emittree1(a->left);
+			emittree1(a->right);
+			commit();
+			cgfcmps();
+			switch(a->op) {
+			case OP_FEQ:	queue_cmp(equal); break;
+			case OP_FNE:	queue_cmp(not_equal); break;
+			case OP_FLT:	queue_cmp(less); break;
+			case OP_FGT:	queue_cmp(greater); break;
+			case OP_FLE:	queue_cmp(less_equal); break;
+			case OP_FGE:	queue_cmp(greater_equal); break;
+			}
+			break;
+	case OP_DEQ:	/* fallthru */
+	case OP_DNE:	/* fallthru */
+	case OP_DLT:	/* fallthru */
+	case OP_DGT:	/* fallthru */
+	case OP_DLE:	/* fallthru */
+	case OP_DGE:	emittree1(a->left);
+			emittree1(a->right);
+			commit();
+			cgfcmpd();
+			switch(a->op) {
+			case OP_DEQ:	queue_cmp(equal); break;
+			case OP_DNE:	queue_cmp(not_equal); break;
+			case OP_DLT:	queue_cmp(less); break;
+			case OP_DGT:	queue_cmp(greater); break;
+			case OP_DLE:	queue_cmp(less_equal); break;
+			case OP_DGE:	queue_cmp(greater_equal); break;
 			}
 			break;
 	case OP_CALL:	{

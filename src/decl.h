@@ -54,6 +54,8 @@ void	gencmp(char *inst);
 void	gendata(void);
 void	gendefb(int v);
 void	gendefd(int v);
+void	gendeffloat(double v);
+void	gendefdouble(double v);
 void	gendefh(int v);
 void	gendefp(int v);
 void	gendefq(int v);

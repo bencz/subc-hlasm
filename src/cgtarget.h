@@ -452,8 +452,8 @@ struct cg_vtable {
     void (*cgfxch)(void);           /* Exchange ST0 and ST1 */
     
     /* Define floating-point constants in data section */
-    void (*cgdeffloat)(int lab, unsigned int bits);   /* Define 32-bit float */
-    void (*cgdefdouble)(int lab, unsigned int hi, unsigned int lo); /* Define 64-bit double */
+    void (*cgdeffloat)(double v);   /* Define 32-bit float from double value */
+    void (*cgdefdouble)(double v);  /* Define 64-bit double */
 };
 
 /*

@@ -101,10 +101,19 @@ static int scannumber(int c, int *ival) {
 	radix = 10;
 	if ('0' == c) {
 		Text[i++] = '0';
-		if ((c = next()) == 'x' || c == 'X') {
+		c = next();
+		if (c == 'x' || c == 'X') {
 			radix = 16;
 			Text[i++] = c;
 			c = next();
+		}
+		else if (c == '.') {
+			/* 0.xxx - decimal float, keep radix=10 */
+			radix = 10;
+		}
+		else if (c == 'e' || c == 'E') {
+			/* 0e... - decimal float with exponent */
+			radix = 10;
 		}
 		else {
 			radix = 8;

@@ -340,6 +340,12 @@ static void binopchk(int op, int p1, int p2) {
 		op = MINUS;
 	if (inttype(p1) && inttype(p2))
 		return;
+	/* Allow floating-point arithmetic */
+	if (floattype(p1) && floattype(p2))
+		return;
+	/* Allow mixed int/float arithmetic (will be converted) */
+	if ((inttype(p1) && floattype(p2)) || (floattype(p1) && inttype(p2)))
+		return;
 	else if (comptype(p1) || comptype(p2))
 		/* fail */;
 	else if (PVOID == p1 || PVOID == p2)
@@ -660,6 +666,16 @@ void gendefq(int v) {
 	cgdefq(v);
 }
 
+void gendeffloat(double v) {
+	gendata();
+	cgdeffloat(v);
+}
+
+void gendefdouble(double v) {
+	gendata();
+	cgdefdouble(v);
+}
+
 /* increment ops */
 
 static void genincptr(int *lv, int inc, int pre) {
@@ -778,30 +794,66 @@ void genswitch(int *vals, int *labs, int nc, int dflt) {
 /* assigments */
 
 void genstore(int *lv) {
+	int	p;
+
 	if (NULL == lv) return;
 	gentext();
+	p = lv[LVPRIM];
+
+	/* Handle floating-point stores */
+	if (floattype(p)) {
+		if (!lv[LVSYM]) {
+			/* Store through pointer - not yet implemented */
+			cgpopptr();
+			if (PFLOAT == p)
+				cgfstores(0);  /* indirect store */
+			else
+				cgfstored(0);
+		}
+		else if (CAUTO == Stcls[lv[LVSYM]]) {
+			if (PFLOAT == p)
+				cgfstores(Vals[lv[LVSYM]]);
+			else
+				cgfstored(Vals[lv[LVSYM]]);
+		}
+		else if (CLSTATC == Stcls[lv[LVSYM]]) {
+			if (PFLOAT == p)
+				cgfstores(Vals[lv[LVSYM]]);
+			else
+				cgfstored(Vals[lv[LVSYM]]);
+		}
+		else {
+			if (PFLOAT == p)
+				cgfstoregs(gsym(Names[lv[LVSYM]]));
+			else
+				cgfstoregsd(gsym(Names[lv[LVSYM]]));
+		}
+		return;
+	}
+
+	/* Integer stores */
 	if (!lv[LVSYM]) {
 		cgpopptr();
-		if (PCHAR == lv[LVPRIM])
+		if (PCHAR == p)
 			cgstorib();
 		else
 			cgstoriw();
 
 	}
 	else if (CAUTO == Stcls[lv[LVSYM]]) {
-		if (PCHAR == lv[LVPRIM])
+		if (PCHAR == p)
 			cgstorlb(Vals[lv[LVSYM]]);
 		else
 			cgstorlw(Vals[lv[LVSYM]]);
 	}
 	else if (CLSTATC == Stcls[lv[LVSYM]]) {
-		if (PCHAR == lv[LVPRIM])
+		if (PCHAR == p)
 			cgstorsb(Vals[lv[LVSYM]]);
 		else
 			cgstorsw(Vals[lv[LVSYM]]);
 	}
 	else {
-		if (PCHAR == lv[LVPRIM])
+		if (PCHAR == p)
 			cgstorgb(gsym(Names[lv[LVSYM]]));
 		else
 			cgstorgw(gsym(Names[lv[LVSYM]]));
@@ -811,25 +863,61 @@ void genstore(int *lv) {
 /* genrval computation */
 
 void genrval(int *lv) {
+	int	p;
+
 	if (NULL == lv) return;
 	gentext();
+	p = lv[LVPRIM];
+
+	/* Handle floating-point loads */
+	if (floattype(p)) {
+		commit();
+		if (!lv[LVSYM]) {
+			/* Load through pointer - indirect */
+			if (PFLOAT == p)
+				cgfloads(0);  /* indirect load */
+			else
+				cgfloadd(0);
+		}
+		else if (CAUTO == Stcls[lv[LVSYM]]) {
+			if (PFLOAT == p)
+				cgfloads(Vals[lv[LVSYM]]);
+			else
+				cgfloadd(Vals[lv[LVSYM]]);
+		}
+		else if (CLSTATC == Stcls[lv[LVSYM]]) {
+			if (PFLOAT == p)
+				cgfloads(Vals[lv[LVSYM]]);
+			else
+				cgfloadd(Vals[lv[LVSYM]]);
+		}
+		else {
+			if (PFLOAT == p)
+				cgfloadgs(gsym(Names[lv[LVSYM]]));
+			else
+				cgfloadgd(gsym(Names[lv[LVSYM]]));
+		}
+		return;
+	}
+
+	/* Integer loads */
 	if (!lv[LVSYM]) {
-		genind(lv[LVPRIM]);
+		genind(p);
 	}
 	else if (CAUTO == Stcls[lv[LVSYM]]) {
-		if (PCHAR == lv[LVPRIM])
+		if (PCHAR == p)
 			queue(auto_byte, Vals[lv[LVSYM]], NULL);
 		else
 			queue(auto_word, Vals[lv[LVSYM]], NULL);
 	}
 	else if (CLSTATC == Stcls[lv[LVSYM]]) {
-		if (PCHAR == lv[LVPRIM])
+		if (PCHAR == p)
 			queue(static_byte, Vals[lv[LVSYM]], NULL);
 		else
 			queue(static_word, Vals[lv[LVSYM]], NULL);
 	}
 	else {
-		if (PCHAR == lv[LVPRIM])
+		if (PCHAR == p)
 			queue(globl_byte, 0, Names[lv[LVSYM]]);
 		else
 			queue(globl_word, 0, Names[lv[LVSYM]]);

@@ -89,6 +89,25 @@ static node *primary(int *lv) {
 		Token = scan();
 		lv[LVPRIM] = PINT;
 		return n;
+	case FLOATLIT:
+		/* Store float/double literal in data segment */
+		gendata();
+		lab = label();
+		genlab(lab);
+		/* Determine if float or double based on suffix in Text */
+		if (Text[strlen(Text)-1] == 'f' || Text[strlen(Text)-1] == 'F') {
+			/* Float literal */
+			gendeffloat(Fvalue);
+			n = mkleaf(OP_FLIT, lab);
+			lv[LVPRIM] = PFLOAT;
+		} else {
+			/* Double literal (default) */
+			gendefdouble(Fvalue);
+			n = mkleaf(OP_DLIT, lab);
+			lv[LVPRIM] = PDOUBLE;
+		}
+		Token = scan();
+		return n;
 	case STRLIT:
 		gendata();
 		lab = label();
@@ -119,8 +138,11 @@ static node *primary(int *lv) {
 int typematch(int p1, int p2) {
 	if (p1 == p2) return 1;
 	if (inttype(p1) && inttype(p2)) return 1;
-	if (!inttype(p1) && VOIDPTR == p2) return 1;
-	if (VOIDPTR == p1 && !inttype(p2)) return 1;
+	if (floattype(p1) && floattype(p2)) return 1;
+	/* Allow int <-> float conversions */
+	if ((inttype(p1) && floattype(p2)) || (floattype(p1) && inttype(p2))) return 1;
+	if (!inttype(p1) && !floattype(p1) && VOIDPTR == p2) return 1;
+	if (VOIDPTR == p1 && !inttype(p2) && !floattype(p2)) return 1;
 	return 0;
 }
 
@@ -488,7 +510,7 @@ static node *prefix(int *lv) {
 		Token = scan();
 		n = cast(lv);
 		n = rvalue(n, lv); /* XXX really? */
-		if (!inttype(lv[LVPRIM]))
+		if (!inttype(lv[LVPRIM]) && !floattype(lv[LVPRIM]))
 			error("bad operand to unary '+'", NULL);
 		lv[LVADDR] = 0;
 		return n;
@@ -496,9 +518,14 @@ static node *prefix(int *lv) {
 		Token = scan();
 		n = cast(lv);
 		n = rvalue(n, lv);
-		if (!inttype(lv[LVPRIM]))
+		if (!inttype(lv[LVPRIM]) && !floattype(lv[LVPRIM]))
 			error("bad operand to unary '-'", NULL);
-		n = mkunop(OP_NEG, n);
+		if (floattype(lv[LVPRIM])) {
+			n = mkunop1(lv[LVPRIM] == PFLOAT ? OP_FNEG : OP_DNEG,
+				lv[LVPRIM], n);
+		} else {
+			n = mkunop(OP_NEG, n);
+		}
 		lv[LVADDR] = 0;
 		return n;
 	case TILDE:
@@ -561,7 +588,10 @@ static node *cast(int *lv) {
 	if (LPAREN == Token) {
 		Token = scan();
 		if (	INT == Token || CHAR == Token || VOID == Token ||
-			STRUCT == Token || UNION == Token
+			STRUCT == Token || UNION == Token ||
+			FLOAT == Token || DOUBLE == Token ||
+			SHORT == Token || LONG == Token ||
+			SIGNED == Token || UNSIGNED == Token
 		) {
 			t = primtype(Token, NULL);
 			Token = scan();
@@ -622,6 +652,54 @@ int binop(int tok) {
 }
 
 node *mkop(int op, int p1, int p2, node *l, node *r) {
+	int	fp_op;
+	int	is_double;
+
+	/* Check if either operand is floating-point */
+	if (floattype(p1) || floattype(p2)) {
+		/* Determine if we need double or float operations */
+		is_double = (p1 == PDOUBLE || p2 == PDOUBLE);
+
+		/* Map token to FP operator */
+		switch (op) {
+		case PLUS:
+		case MINUS:
+			fp_op = is_double ? 
+				(op == PLUS ? OP_DADD : OP_DSUB) :
+				(op == PLUS ? OP_FADD : OP_FSUB);
+			return mkbinop1(fp_op, is_double ? PDOUBLE : PFLOAT, l, r);
+		case STAR:
+			fp_op = is_double ? OP_DMUL : OP_FMUL;
+			return mkbinop1(fp_op, is_double ? PDOUBLE : PFLOAT, l, r);
+		case SLASH:
+			fp_op = is_double ? OP_DDIV : OP_FDIV;
+			return mkbinop1(fp_op, is_double ? PDOUBLE : PFLOAT, l, r);
+		case EQUAL:
+			fp_op = is_double ? OP_DEQ : OP_FEQ;
+			return mkbinop1(fp_op, is_double ? PDOUBLE : PFLOAT, l, r);
+		case NOTEQ:
+			fp_op = is_double ? OP_DNE : OP_FNE;
+			return mkbinop1(fp_op, is_double ? PDOUBLE : PFLOAT, l, r);
+		case LESS:
+			fp_op = is_double ? OP_DLT : OP_FLT;
+			return mkbinop1(fp_op, is_double ? PDOUBLE : PFLOAT, l, r);
+		case GREATER:
+			fp_op = is_double ? OP_DGT : OP_FGT;
+			return mkbinop1(fp_op, is_double ? PDOUBLE : PFLOAT, l, r);
+		case LTEQ:
+			fp_op = is_double ? OP_DLE : OP_FLE;
+			return mkbinop1(fp_op, is_double ? PDOUBLE : PFLOAT, l, r);
+		case GTEQ:
+			fp_op = is_double ? OP_DGE : OP_FGE;
+			return mkbinop1(fp_op, is_double ? PDOUBLE : PFLOAT, l, r);
+		default:
+			/* MOD, shifts, bitwise ops not valid for FP */
+			error("invalid operator for floating-point", NULL);
+			return mkbinop(binop(op), l, r);
+		}
+	}
+
+	/* Integer operations */
 	if (PLUS == op || MINUS == op) {
 		return mkbinop2(binop(op), p1, p2, l, r);
 	}

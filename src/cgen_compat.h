@@ -347,8 +347,8 @@
 #define cgfxch()        (CG->vtable->cgfxch ? CG->vtable->cgfxch() : (void)0)
 
 /* Define floating-point constants */
-#define cgdeffloat(lab,bits)     (CG->vtable->cgdeffloat ? CG->vtable->cgdeffloat(lab,bits) : (void)0)
-#define cgdefdouble(lab,hi,lo)   (CG->vtable->cgdefdouble ? CG->vtable->cgdefdouble(lab,hi,lo) : (void)0)
+#define cgdeffloat(v)     (CG->vtable->cgdeffloat ? CG->vtable->cgdeffloat(v) : (void)0)
+#define cgdefdouble(v)    (CG->vtable->cgdefdouble ? CG->vtable->cgdefdouble(v) : (void)0)
 
 /*
  * ============================================================================

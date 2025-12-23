@@ -698,16 +698,18 @@ static void m86_cgfxch_x87(void) {
 }
 
 /* Define float constant in data section */
-static void m86_cgdeffloat_x87(int lab, unsigned int bits) {
-    genlab(lab);
-    ngen("%s\t%u", "dd", bits);
+static void m86_cgdeffloat_x87(double v) {
+    union { float f; unsigned int i; } u;
+    u.f = (float)v;
+    ngen("%s\t%u", "dd", u.i);
 }
 
 /* Define double constant in data section */
-static void m86_cgdefdouble_x87(int lab, unsigned int hi, unsigned int lo) {
-    genlab(lab);
-    ngen("%s\t%u", "dd", lo);    /* Low 32 bits first (little-endian) */
-    ngen("%s\t%u", "dd", hi);    /* High 32 bits */
+static void m86_cgdefdouble_x87(double v) {
+    union { double d; unsigned int i[2]; } u;
+    u.d = v;
+    ngen("%s\t%u", "dd", u.i[0]);    /* Low 32 bits first (little-endian) */
+    ngen("%s\t%u", "dd", u.i[1]);    /* High 32 bits */
 }
 
 /*
@@ -955,16 +957,18 @@ static void m86_cgfxch_emu(void) {
 }
 
 /* Define float constant (same for both x87 and emulated) */
-static void m86_cgdeffloat_emu(int lab, unsigned int bits) {
-    genlab(lab);
-    ngen("%s\t%u", "dd", bits);
+static void m86_cgdeffloat_emu(double v) {
+    union { float f; unsigned int i; } u;
+    u.f = (float)v;
+    ngen("%s\t%u", "dd", u.i);
 }
 
 /* Define double constant */
-static void m86_cgdefdouble_emu(int lab, unsigned int hi, unsigned int lo) {
-    genlab(lab);
-    ngen("%s\t%u", "dd", lo);
-    ngen("%s\t%u", "dd", hi);
+static void m86_cgdefdouble_emu(double v) {
+    union { double d; unsigned int i[2]; } u;
+    u.d = v;
+    ngen("%s\t%u", "dd", u.i[0]);
+    ngen("%s\t%u", "dd", u.i[1]);
 }
 
 /*
