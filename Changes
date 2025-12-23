@@ -1,3 +1,8 @@
+2025-12-23 Increased compiler limits for better compatibility:
+           - MAXFNARGS: 32 → 127 (max function parameters)
+           - MAXCASE: 256 → 1024 (max cases in switch)
+           - MAXBREAK: 16 → 64 (max nested loops/switches)
+           - MAXLOCINIT: 32 → 128 (max local initializers)
 2025-12-23 Added symbol_transform callback to cg_arch structure for custom symbol
            name transformation. This allows architectures like HLASM to implement
            their own symbol naming conventions (uppercase, 8-char limit, etc.).

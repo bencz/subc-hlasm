@@ -44,10 +44,10 @@
 
 #define MAXIFDEF	16
 #define MAXNMAC		32
-#define MAXCASE		256
-#define MAXBREAK	16
-#define MAXLOCINIT	32
-#define MAXFNARGS	32
+#define MAXCASE		1024
+#define MAXBREAK	64
+#define MAXLOCINIT	128
+#define MAXFNARGS	127
 
 /* assert(NSYMBOLS < PSTRUCT) */
 #define NSYMBOLS	1024

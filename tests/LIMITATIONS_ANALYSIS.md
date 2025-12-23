@@ -1,6 +1,6 @@
 # SubC Compiler - Análise Detalhada de Limitações
 
-## Versão: 2025-12-23 (ABI-compliant calling conventions)
+## Versão: 2025-12-23 (ABI-compliant calling conventions + increased limits)
 
 Este documento analisa em profundidade as limitações do compilador SubC,
 especialmente relacionadas a parâmetros de função, va_args e convenções de chamada.
@@ -11,6 +11,7 @@ especialmente relacionadas a parâmetros de função, va_args e convenções de 
 - **Passagem de argumentos via registradores** conforme ABI padrão
 - **Prólogo de função** salva registradores de argumentos na stack para acesso uniforme
 - **Offsets de parâmetros** calculados corretamente para ABIs com registradores
+- **Limites aumentados**: MAXFNARGS 32→127, MAXCASE 256→1024, MAXBREAK 16→64, MAXLOCINIT 32→128
 
 ---
 
@@ -23,10 +24,10 @@ especialmente relacionadas a parâmetros de função, va_args e convenções de 
 #define MAXINCDIRS  16       // Máximo de diretórios de include
 #define MAXIFDEF    16       // Profundidade máxima de #ifdef aninhados
 #define MAXNMAC     32       // Máximo de macros em expansão simultânea
-#define MAXCASE     256      // Máximo de cases em um switch
-#define MAXBREAK    16       // Profundidade máxima de loops/switches aninhados
-#define MAXLOCINIT  32       // Máximo de inicializadores locais
-#define MAXFNARGS   32       // Máximo de argumentos por função
+#define MAXCASE     1024     // Máximo de cases em um switch (era 256)
+#define MAXBREAK    64       // Profundidade máxima de loops/switches aninhados (era 16)
+#define MAXLOCINIT  128      // Máximo de inicializadores locais (era 32)
+#define MAXFNARGS   127      // Máximo de argumentos por função (era 32)
 #define NSYMBOLS    1024     // Máximo de símbolos na tabela
 #define POOLSIZE    16384    // Tamanho do pool de nomes
 #define NODEPOOLSZ  4096     // Tamanho do pool de nós AST (em ints)
@@ -34,7 +35,7 @@ especialmente relacionadas a parâmetros de função, va_args e convenções de 
 
 ---
 
-## 2. Limitação de Parâmetros de Função (MAXFNARGS = 32)
+## 2. ~~Limitação de Parâmetros de Função (MAXFNARGS = 32)~~ ✅ CORRIGIDO (127)
 
 ### 2.1 Onde é Aplicada
 
@@ -299,10 +300,10 @@ Não suporta `int a[10][20]`
 | ~~Convenção de chamada x86-64~~ | ~~CRÍTICO~~ | ✅ CORRIGIDO |
 | ~~Convenção de chamada ARM~~ | ~~CRÍTICO~~ | ✅ CORRIGIDO |
 | ~~Stack direction hardcoded~~ | ~~CRÍTICO~~ | ✅ CORRIGIDO |
-| MAXFNARGS = 32 | Médio | Pendente |
+| ~~MAXFNARGS = 32~~ | ~~Médio~~ | ✅ CORRIGIDO (127) |
 | _va_arg aritmética de ponteiro | Médio | Pendente |
-| MAXCASE = 256 | Baixo | Pendente |
-| MAXBREAK = 16 | Baixo | Pendente |
+| ~~MAXCASE = 256~~ | ~~Baixo~~ | ✅ CORRIGIDO (1024) |
+| ~~MAXBREAK = 16~~ | ~~Baixo~~ | ✅ CORRIGIDO (64) |
 
 ---
 
