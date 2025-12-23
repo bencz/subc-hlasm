@@ -405,6 +405,570 @@ static void m86_cgalign(void)       { /* unused */ }
 
 /*
  * ============================================================================
+ * 8086 x87 Floating-Point Operations (8087/80287 coprocessor)
+ * ============================================================================
+ *
+ * The x87 FPU uses a stack-based architecture with 8 registers (ST0-ST7).
+ * ST0 is the top of stack. Operations typically work on ST0 and ST1.
+ *
+ * IEEE 754 format:
+ *   float (32-bit):  1 sign + 8 exponent + 23 mantissa
+ *   double (64-bit): 1 sign + 11 exponent + 52 mantissa
+ */
+
+/* Load float from local variable to ST0 */
+static void m86_cgfloads_x87(int n) {
+    ngen("%s\tdword ptr [bp%+d]", "fld", n);
+}
+
+/* Load double from local variable to ST0 */
+static void m86_cgfloadd_x87(int n) {
+    ngen("%s\tqword ptr [bp%+d]", "fld", n);
+}
+
+/* Load float from global symbol to ST0 */
+static void m86_cgfloadgs_x87(char *s) {
+    sgen("%s\tdword ptr %s", "fld", s);
+}
+
+/* Load double from global symbol to ST0 */
+static void m86_cgfloadgd_x87(char *s) {
+    sgen("%s\tqword ptr %s", "fld", s);
+}
+
+/* Store ST0 to local float variable */
+static void m86_cgfstores_x87(int n) {
+    ngen("%s\tdword ptr [bp%+d]", "fstp", n);
+}
+
+/* Store ST0 to local double variable */
+static void m86_cgfstored_x87(int n) {
+    ngen("%s\tqword ptr [bp%+d]", "fstp", n);
+}
+
+/* Store ST0 to global float symbol */
+static void m86_cgfstoregs_x87(char *s) {
+    sgen("%s\tdword ptr %s", "fstp", s);
+}
+
+/* Store ST0 to global double symbol */
+static void m86_cgfstoregsd_x87(char *s) {
+    sgen("%s\tqword ptr %s", "fstp", s);
+}
+
+/* Load float literal from label */
+static void m86_cgflits_x87(int lab) {
+    lgen("%s\tdword ptr %c%d", "fld", lab);
+}
+
+/* Load double literal from label */
+static void m86_cgflitd_x87(int lab) {
+    lgen("%s\tqword ptr %c%d", "fld", lab);
+}
+
+/* Float addition: ST0 = ST1 + ST0, pop ST1 */
+static void m86_cgfadds_x87(void) {
+    gen("faddp\tst(1),st");
+}
+
+/* Double addition (same as float on x87) */
+static void m86_cgfaddd_x87(void) {
+    gen("faddp\tst(1),st");
+}
+
+/* Float subtraction: ST0 = ST1 - ST0, pop ST1 */
+static void m86_cgfsubs_x87(void) {
+    gen("fsubrp\tst(1),st");  /* reverse subtract: ST1 - ST0 */
+}
+
+/* Double subtraction */
+static void m86_cgfsubd_x87(void) {
+    gen("fsubrp\tst(1),st");
+}
+
+/* Float multiplication: ST0 = ST1 * ST0, pop ST1 */
+static void m86_cgfmuls_x87(void) {
+    gen("fmulp\tst(1),st");
+}
+
+/* Double multiplication */
+static void m86_cgfmuld_x87(void) {
+    gen("fmulp\tst(1),st");
+}
+
+/* Float division: ST0 = ST1 / ST0, pop ST1 */
+static void m86_cgfdivs_x87(void) {
+    gen("fdivrp\tst(1),st");  /* reverse divide: ST1 / ST0 */
+}
+
+/* Double division */
+static void m86_cgfdivd_x87(void) {
+    gen("fdivrp\tst(1),st");
+}
+
+/* Float negation: ST0 = -ST0 */
+static void m86_cgfnegs_x87(void) {
+    gen("fchs");
+}
+
+/* Double negation */
+static void m86_cgfnegd_x87(void) {
+    gen("fchs");
+}
+
+/* Compare floats and set CPU flags (requires FNSTSW/SAHF) */
+static void m86_cgfcmps_x87(void) {
+    gen("fcompp");           /* Compare ST0 with ST1, pop both */
+    gen("fnstsw\tax");       /* Store FPU status word to AX */
+    gen("sahf");             /* Store AH into CPU flags */
+}
+
+/* Compare doubles */
+static void m86_cgfcmpd_x87(void) {
+    gen("fcompp");
+    gen("fnstsw\tax");
+    gen("sahf");
+}
+
+/* Float == comparison, result in AX (0 or 1) */
+static void m86_cgfeqs_x87(void) {
+    int lab = label();
+    m86_cgfcmps_x87();
+    gen("xor\tax,ax");
+    lgen("%s\t%c%d", "jne", lab);
+    gen("inc\tax");
+    genlab(lab);
+}
+
+static void m86_cgfeqd_x87(void) {
+    int lab = label();
+    m86_cgfcmpd_x87();
+    gen("xor\tax,ax");
+    lgen("%s\t%c%d", "jne", lab);
+    gen("inc\tax");
+    genlab(lab);
+}
+
+/* Float != comparison */
+static void m86_cgfnes_x87(void) {
+    int lab = label();
+    m86_cgfcmps_x87();
+    gen("xor\tax,ax");
+    lgen("%s\t%c%d", "je", lab);
+    gen("inc\tax");
+    genlab(lab);
+}
+
+static void m86_cgfned_x87(void) {
+    int lab = label();
+    m86_cgfcmpd_x87();
+    gen("xor\tax,ax");
+    lgen("%s\t%c%d", "je", lab);
+    gen("inc\tax");
+    genlab(lab);
+}
+
+/* Float < comparison */
+static void m86_cgflts_x87(void) {
+    int lab = label();
+    m86_cgfcmps_x87();
+    gen("xor\tax,ax");
+    lgen("%s\t%c%d", "jae", lab);  /* not below = not less than */
+    gen("inc\tax");
+    genlab(lab);
+}
+
+static void m86_cgfltd_x87(void) {
+    int lab = label();
+    m86_cgfcmpd_x87();
+    gen("xor\tax,ax");
+    lgen("%s\t%c%d", "jae", lab);
+    gen("inc\tax");
+    genlab(lab);
+}
+
+/* Float > comparison */
+static void m86_cgfgts_x87(void) {
+    int lab = label();
+    m86_cgfcmps_x87();
+    gen("xor\tax,ax");
+    lgen("%s\t%c%d", "jbe", lab);  /* not above = not greater than */
+    gen("inc\tax");
+    genlab(lab);
+}
+
+static void m86_cgfgtd_x87(void) {
+    int lab = label();
+    m86_cgfcmpd_x87();
+    gen("xor\tax,ax");
+    lgen("%s\t%c%d", "jbe", lab);
+    gen("inc\tax");
+    genlab(lab);
+}
+
+/* Float <= comparison */
+static void m86_cgfles_x87(void) {
+    int lab = label();
+    m86_cgfcmps_x87();
+    gen("xor\tax,ax");
+    lgen("%s\t%c%d", "ja", lab);   /* above = greater than */
+    gen("inc\tax");
+    genlab(lab);
+}
+
+static void m86_cgfled_x87(void) {
+    int lab = label();
+    m86_cgfcmpd_x87();
+    gen("xor\tax,ax");
+    lgen("%s\t%c%d", "ja", lab);
+    gen("inc\tax");
+    genlab(lab);
+}
+
+/* Float >= comparison */
+static void m86_cgfges_x87(void) {
+    int lab = label();
+    m86_cgfcmps_x87();
+    gen("xor\tax,ax");
+    lgen("%s\t%c%d", "jb", lab);   /* below = less than */
+    gen("inc\tax");
+    genlab(lab);
+}
+
+static void m86_cgfged_x87(void) {
+    int lab = label();
+    m86_cgfcmpd_x87();
+    gen("xor\tax,ax");
+    lgen("%s\t%c%d", "jb", lab);
+    gen("inc\tax");
+    genlab(lab);
+}
+
+/* Convert integer (in AX) to float in ST0 */
+static void m86_cgitofs_x87(void) {
+    gen("push\tax");         /* Push integer to stack */
+    gen("fild\tword ptr [sp]"); /* Load integer to FPU */
+    gen("add\tsp,2");        /* Clean up stack */
+}
+
+/* Convert integer to double in ST0 */
+static void m86_cgitofd_x87(void) {
+    gen("push\tax");
+    gen("fild\tword ptr [sp]");
+    gen("add\tsp,2");
+}
+
+/* Convert float in ST0 to integer in AX */
+static void m86_cgftois_x87(void) {
+    gen("sub\tsp,2");        /* Make room on stack */
+    gen("fistp\tword ptr [sp]"); /* Store integer, pop FPU */
+    gen("pop\tax");          /* Get result in AX */
+}
+
+/* Convert double in ST0 to integer in AX */
+static void m86_cgftoid_x87(void) {
+    gen("sub\tsp,2");
+    gen("fistp\tword ptr [sp]");
+    gen("pop\tax");
+}
+
+/* Convert float to double (no-op on x87, both are 80-bit internally) */
+static void m86_cgstod_x87(void) {
+    /* No operation needed - x87 uses 80-bit extended precision internally */
+}
+
+/* Convert double to float (no-op on x87) */
+static void m86_cgdtos_x87(void) {
+    /* No operation needed */
+}
+
+/* Push FP value (duplicate ST0) */
+static void m86_cgfpush_x87(void) {
+    gen("fld\tst(0)");       /* Duplicate ST0 */
+}
+
+/* Pop FP stack (discard ST0) */
+static void m86_cgfpop_x87(void) {
+    gen("fstp\tst(0)");      /* Pop and discard */
+}
+
+/* Exchange ST0 and ST1 */
+static void m86_cgfxch_x87(void) {
+    gen("fxch\tst(1)");
+}
+
+/* Define float constant in data section */
+static void m86_cgdeffloat_x87(int lab, unsigned int bits) {
+    genlab(lab);
+    ngen("%s\t%u", "dd", bits);
+}
+
+/* Define double constant in data section */
+static void m86_cgdefdouble_x87(int lab, unsigned int hi, unsigned int lo) {
+    genlab(lab);
+    ngen("%s\t%u", "dd", lo);    /* Low 32 bits first (little-endian) */
+    ngen("%s\t%u", "dd", hi);    /* High 32 bits */
+}
+
+/*
+ * ============================================================================
+ * 8086 Software Floating-Point Emulation
+ * ============================================================================
+ *
+ * For systems without an 8087 coprocessor, we generate calls to runtime
+ * library functions that implement IEEE 754 arithmetic in software.
+ *
+ * Calling convention for FP emulation:
+ *   - Float (32-bit): passed in DX:AX (high:low)
+ *   - Double (64-bit): passed on stack (8 bytes)
+ *   - Return value: same as arguments
+ */
+
+/* Load float from local variable to DX:AX */
+static void m86_cgfloads_emu(int n) {
+    ngen("%s\tax,[bp%+d]", "mov", n);
+    ngen("%s\tdx,[bp%+d]", "mov", n+2);
+}
+
+/* Load double from local - push 8 bytes to stack for operations */
+static void m86_cgfloadd_emu(int n) {
+    /* For emulation, we keep doubles on the CPU stack */
+    ngen("%s\tax,[bp%+d]", "mov", n+6);
+    gen("push\tax");
+    ngen("%s\tax,[bp%+d]", "mov", n+4);
+    gen("push\tax");
+    ngen("%s\tax,[bp%+d]", "mov", n+2);
+    gen("push\tax");
+    ngen("%s\tax,[bp%+d]", "mov", n);
+    gen("push\tax");
+}
+
+/* Load float from global symbol */
+static void m86_cgfloadgs_emu(char *s) {
+    sgen("%s\tax,%s", "mov", s);
+    sgen("%s\tdx,%s+2", "mov", s);
+}
+
+/* Load double from global symbol */
+static void m86_cgfloadgd_emu(char *s) {
+    sgen("%s\tax,%s+6", "mov", s);
+    gen("push\tax");
+    sgen("%s\tax,%s+4", "mov", s);
+    gen("push\tax");
+    sgen("%s\tax,%s+2", "mov", s);
+    gen("push\tax");
+    sgen("%s\tax,%s", "mov", s);
+    gen("push\tax");
+}
+
+/* Store DX:AX to local float variable */
+static void m86_cgfstores_emu(int n) {
+    ngen("%s\t[bp%+d],ax", "mov", n);
+    ngen("%s\t[bp%+d],dx", "mov", n+2);
+}
+
+/* Store double from stack to local variable */
+static void m86_cgfstored_emu(int n) {
+    gen("pop\tax");
+    ngen("%s\t[bp%+d],ax", "mov", n);
+    gen("pop\tax");
+    ngen("%s\t[bp%+d],ax", "mov", n+2);
+    gen("pop\tax");
+    ngen("%s\t[bp%+d],ax", "mov", n+4);
+    gen("pop\tax");
+    ngen("%s\t[bp%+d],ax", "mov", n+6);
+}
+
+/* Store float to global symbol */
+static void m86_cgfstoregs_emu(char *s) {
+    sgen("%s\t%s,ax", "mov", s);
+    sgen("%s\t%s+2,dx", "mov", s);
+}
+
+/* Store double to global symbol */
+static void m86_cgfstoregsd_emu(char *s) {
+    gen("pop\tax");
+    sgen("%s\t%s,ax", "mov", s);
+    gen("pop\tax");
+    sgen("%s\t%s+2,ax", "mov", s);
+    gen("pop\tax");
+    sgen("%s\t%s+4,ax", "mov", s);
+    gen("pop\tax");
+    sgen("%s\t%s+6,ax", "mov", s);
+}
+
+/* Load float literal */
+static void m86_cgflits_emu(int lab) {
+    lgen("%s\tax,%c%d", "mov", lab);
+    lgen("%s\tdx,%c%d+2", "mov", lab);
+}
+
+/* Load double literal */
+static void m86_cgflitd_emu(int lab) {
+    lgen("%s\tax,%c%d+6", "mov", lab);
+    gen("push\tax");
+    lgen("%s\tax,%c%d+4", "mov", lab);
+    gen("push\tax");
+    lgen("%s\tax,%c%d+2", "mov", lab);
+    gen("push\tax");
+    lgen("%s\tax,%c%d", "mov", lab);
+    gen("push\tax");
+}
+
+/* Float addition via library call */
+static void m86_cgfadds_emu(void) {
+    gen("call\t__fpadd");    /* Args in DX:AX and CX:BX, result in DX:AX */
+}
+
+static void m86_cgfaddd_emu(void) {
+    gen("call\t__dpadd");    /* Args on stack, result on stack */
+}
+
+static void m86_cgfsubs_emu(void) {
+    gen("call\t__fpsub");
+}
+
+static void m86_cgfsubd_emu(void) {
+    gen("call\t__dpsub");
+}
+
+static void m86_cgfmuls_emu(void) {
+    gen("call\t__fpmul");
+}
+
+static void m86_cgfmuld_emu(void) {
+    gen("call\t__dpmul");
+}
+
+static void m86_cgfdivs_emu(void) {
+    gen("call\t__fpdiv");
+}
+
+static void m86_cgfdivd_emu(void) {
+    gen("call\t__dpdiv");
+}
+
+static void m86_cgfnegs_emu(void) {
+    gen("call\t__fpneg");
+}
+
+static void m86_cgfnegd_emu(void) {
+    gen("call\t__dpneg");
+}
+
+static void m86_cgfcmps_emu(void) {
+    gen("call\t__fpcmp");    /* Result in flags */
+}
+
+static void m86_cgfcmpd_emu(void) {
+    gen("call\t__dpcmp");
+}
+
+static void m86_cgfeqs_emu(void) {
+    gen("call\t__fpeq");     /* Result 0 or 1 in AX */
+}
+
+static void m86_cgfeqd_emu(void) {
+    gen("call\t__dpeq");
+}
+
+static void m86_cgfnes_emu(void) {
+    gen("call\t__fpne");
+}
+
+static void m86_cgfned_emu(void) {
+    gen("call\t__dpne");
+}
+
+static void m86_cgflts_emu(void) {
+    gen("call\t__fplt");
+}
+
+static void m86_cgfltd_emu(void) {
+    gen("call\t__dplt");
+}
+
+static void m86_cgfgts_emu(void) {
+    gen("call\t__fpgt");
+}
+
+static void m86_cgfgtd_emu(void) {
+    gen("call\t__dpgt");
+}
+
+static void m86_cgfles_emu(void) {
+    gen("call\t__fple");
+}
+
+static void m86_cgfled_emu(void) {
+    gen("call\t__dple");
+}
+
+static void m86_cgfges_emu(void) {
+    gen("call\t__fpge");
+}
+
+static void m86_cgfged_emu(void) {
+    gen("call\t__dpge");
+}
+
+static void m86_cgitofs_emu(void) {
+    gen("call\t__itof");     /* AX -> DX:AX */
+}
+
+static void m86_cgitofd_emu(void) {
+    gen("call\t__itod");     /* AX -> 8 bytes on stack */
+}
+
+static void m86_cgftois_emu(void) {
+    gen("call\t__ftoi");     /* DX:AX -> AX */
+}
+
+static void m86_cgftoid_emu(void) {
+    gen("call\t__dtoi");     /* 8 bytes on stack -> AX */
+}
+
+static void m86_cgstod_emu(void) {
+    gen("call\t__stod");     /* DX:AX -> 8 bytes on stack */
+}
+
+static void m86_cgdtos_emu(void) {
+    gen("call\t__dtos");     /* 8 bytes on stack -> DX:AX */
+}
+
+/* Push float (DX:AX) to stack */
+static void m86_cgfpush_emu(void) {
+    gen("push\tdx");
+    gen("push\tax");
+}
+
+/* Pop float from stack to DX:AX */
+static void m86_cgfpop_emu(void) {
+    gen("pop\tax");
+    gen("pop\tdx");
+}
+
+/* Exchange - for emulation, swap DX:AX with CX:BX */
+static void m86_cgfxch_emu(void) {
+    gen("xchg\tax,bx");
+    gen("xchg\tdx,cx");
+}
+
+/* Define float constant (same for both x87 and emulated) */
+static void m86_cgdeffloat_emu(int lab, unsigned int bits) {
+    genlab(lab);
+    ngen("%s\t%u", "dd", bits);
+}
+
+/* Define double constant */
+static void m86_cgdefdouble_emu(int lab, unsigned int hi, unsigned int lo) {
+    genlab(lab);
+    ngen("%s\t%u", "dd", lo);
+    ngen("%s\t%u", "dd", hi);
+}
+
+/*
+ * ============================================================================
  * 8086 cdecl Calling Convention Support
  * ============================================================================
  *
@@ -442,6 +1006,7 @@ static void m86_cgfnentry(int nparams) {
  * 8086 Architecture Description
  * ============================================================================
  */
+/* 8086 with software FP emulation (no coprocessor required) */
 struct cg_arch cg_arch_8086 = {
     "8086",             /* name */
     16,                 /* bits */
@@ -450,14 +1015,49 @@ struct cg_arch cg_arch_8086 = {
     2,                  /* int_size */
     4,                  /* long_size (32-bit on 16-bit arch) */
     2,                  /* ptr_size */
-    4,                  /* float_size (if supported) */
-    8,                  /* double_size (if supported) */
+    4,                  /* float_size */
+    8,                  /* double_size */
     2,                  /* bpw */
     ENDIAN_LITTLE,      /* endian */
     STACK_DOWN,         /* stack_dir */
     ASM_TASM,           /* asm_syntax */
     CC_CDECL,           /* call_conv */
-    FLOAT_NONE,         /* float_format */
+    FLOAT_IEEE754,      /* float_format - IEEE 754 via emulation */
+    FPU_EMULATED,       /* fpu_type - software emulation */
+    2,                  /* align_stack */
+    2,                  /* align_data */
+    2,                  /* align_func */
+    1,                  /* has_mul */
+    1,                  /* has_div */
+    1,                  /* has_mod */
+    1,                  /* has_byte_ops */
+    0,                  /* needs_alignment */
+    4,                  /* param_offset_base (return addr + saved bp) */
+    1,                  /* param_offset_dir (positive: 4, 6, 8...) */
+    0,                  /* local_offset_base */
+    -1,                 /* local_offset_dir (negative: -2, -4, -6...) */
+    0,                  /* num_arg_regs (cdecl: all args on stack) */
+    NULL                /* symbol_transform (use default) */
+};
+
+/* 8086 with x87 coprocessor (8087/80287) */
+struct cg_arch cg_arch_8086_x87 = {
+    "8086-x87",         /* name */
+    16,                 /* bits */
+    1,                  /* char_size */
+    2,                  /* short_size */
+    2,                  /* int_size */
+    4,                  /* long_size (32-bit on 16-bit arch) */
+    2,                  /* ptr_size */
+    4,                  /* float_size */
+    8,                  /* double_size */
+    2,                  /* bpw */
+    ENDIAN_LITTLE,      /* endian */
+    STACK_DOWN,         /* stack_dir */
+    ASM_TASM,           /* asm_syntax */
+    CC_CDECL,           /* call_conv */
+    FLOAT_IEEE754,      /* float_format - IEEE 754 native */
+    FPU_X87,            /* fpu_type - x87 coprocessor */
     2,                  /* align_stack */
     2,                  /* align_data */
     2,                  /* align_func */
@@ -675,7 +1275,301 @@ struct cg_vtable cg_vtable_8086 = {
     m86_cglbss,
     
     /* Alignment */
-    m86_cgalign
+    m86_cgalign,
+    
+    /* Floating-Point Operations - Software Emulation */
+    m86_cgfloads_emu,
+    m86_cgfloadd_emu,
+    m86_cgfloadgs_emu,
+    m86_cgfloadgd_emu,
+    m86_cgfstores_emu,
+    m86_cgfstored_emu,
+    m86_cgfstoregs_emu,
+    m86_cgfstoregsd_emu,
+    m86_cgflits_emu,
+    m86_cgflitd_emu,
+    m86_cgfadds_emu,
+    m86_cgfaddd_emu,
+    m86_cgfsubs_emu,
+    m86_cgfsubd_emu,
+    m86_cgfmuls_emu,
+    m86_cgfmuld_emu,
+    m86_cgfdivs_emu,
+    m86_cgfdivd_emu,
+    m86_cgfnegs_emu,
+    m86_cgfnegd_emu,
+    m86_cgfcmps_emu,
+    m86_cgfcmpd_emu,
+    m86_cgfeqs_emu,
+    m86_cgfeqd_emu,
+    m86_cgfnes_emu,
+    m86_cgfned_emu,
+    m86_cgflts_emu,
+    m86_cgfltd_emu,
+    m86_cgfgts_emu,
+    m86_cgfgtd_emu,
+    m86_cgfles_emu,
+    m86_cgfled_emu,
+    m86_cgfges_emu,
+    m86_cgfged_emu,
+    m86_cgitofs_emu,
+    m86_cgitofd_emu,
+    m86_cgftois_emu,
+    m86_cgftoid_emu,
+    m86_cgstod_emu,
+    m86_cgdtos_emu,
+    m86_cgfpush_emu,
+    m86_cgfpop_emu,
+    m86_cgfxch_emu,
+    m86_cgdeffloat_emu,
+    m86_cgdefdouble_emu
+};
+
+/* Vtable for 8086 with x87 coprocessor */
+struct cg_vtable cg_vtable_8086_x87 = {
+    /* Section Control */
+    m86_cgdata,
+    m86_cgtext,
+    m86_cgprelude,
+    m86_cgpostlude,
+    m86_cgpublic,
+    
+    /* Synthesizer Support */
+    m86_cgsynth,
+    m86_cgload2,
+    
+    /* Literal and Clear */
+    m86_cglit,
+    m86_cgclear,
+    m86_cgclear2,
+    
+    /* Load Operations - Global */
+    m86_cgldgb,
+    m86_cgldgw,
+    
+    /* Load Operations - Local */
+    m86_cgldlb,
+    m86_cgldlw,
+    
+    /* Load Operations - Static */
+    m86_cgldsb,
+    m86_cgldsw,
+    
+    /* Load Address Operations */
+    m86_cgldla,
+    m86_cgldsa,
+    m86_cgldga,
+    
+    /* Indirect Load Operations */
+    m86_cgindb,
+    m86_cgindw,
+    
+    /* Load Label */
+    m86_cgldlab,
+    
+    /* Stack Operations */
+    m86_cgpush,
+    m86_cgpushlit,
+    m86_cgpop2,
+    m86_cgswap,
+    m86_cgpopptr,
+    
+    /* Arithmetic Operations */
+    m86_cgand,
+    m86_cgior,
+    m86_cgxor,
+    m86_cgadd,
+    m86_cgsub,
+    m86_cgmul,
+    m86_cgdiv,
+    m86_cgmod,
+    m86_cgshl,
+    m86_cgshr,
+    
+    /* Unary Operations */
+    m86_cgneg,
+    m86_cgnot,
+    m86_cglognot,
+    
+    /* Scaling Operations */
+    m86_cgscale,
+    m86_cgscale2,
+    m86_cgunscale,
+    m86_cgscaleby,
+    m86_cgscale2by,
+    m86_cgunscaleby,
+    
+    /* Comparison Operations */
+    m86_cgeq,
+    m86_cgne,
+    m86_cglt,
+    m86_cggt,
+    m86_cgle,
+    m86_cgge,
+    m86_cgult,
+    m86_cgugt,
+    m86_cgule,
+    m86_cguge,
+    
+    /* Conditional Branch Operations */
+    m86_cgbreq,
+    m86_cgbrne,
+    m86_cgbrlt,
+    m86_cgbrgt,
+    m86_cgbrle,
+    m86_cgbrge,
+    m86_cgbrult,
+    m86_cgbrugt,
+    m86_cgbrule,
+    m86_cgbruge,
+    
+    /* Branch Operations */
+    m86_cgbrtrue,
+    m86_cgbrfalse,
+    m86_cgjump,
+    m86_cgldswtch,
+    m86_cgcalswtch,
+    m86_cgcase,
+    
+    /* Boolean Operations */
+    m86_cgbool,
+    
+    /* Increment/Decrement via Pointer */
+    m86_cgldinc,
+    m86_cginc1pi,
+    m86_cgdec1pi,
+    m86_cginc2pi,
+    m86_cgdec2pi,
+    
+    /* Increment/Decrement Pointer - Local/Static/Global */
+    m86_cgincpl,
+    m86_cgdecpl,
+    m86_cgincps,
+    m86_cgdecps,
+    m86_cgincpg,
+    m86_cgdecpg,
+    
+    /* Increment/Decrement Indirect Word */
+    m86_cginc1iw,
+    m86_cgdec1iw,
+    m86_cginc2iw,
+    m86_cgdec2iw,
+    
+    /* Increment/Decrement Local Word */
+    m86_cginclw,
+    m86_cgdeclw,
+    
+    /* Increment/Decrement Static Word */
+    m86_cgincsw,
+    m86_cgdecsw,
+    
+    /* Increment/Decrement Global Word */
+    m86_cgincgw,
+    m86_cgdecgw,
+    
+    /* Increment/Decrement Indirect Byte */
+    m86_cginc1ib,
+    m86_cgdec1ib,
+    m86_cginc2ib,
+    m86_cgdec2ib,
+    
+    /* Increment/Decrement Local Byte */
+    m86_cginclb,
+    m86_cgdeclb,
+    
+    /* Increment/Decrement Static Byte */
+    m86_cgincsb,
+    m86_cgdecsb,
+    
+    /* Increment/Decrement Global Byte */
+    m86_cgincgb,
+    m86_cgdecgb,
+    
+    /* Store Operations */
+    m86_cgstorib,
+    m86_cgstoriw,
+    m86_cgstorlb,
+    m86_cgstorlw,
+    m86_cgstorsb,
+    m86_cgstorsw,
+    m86_cgstorgb,
+    m86_cgstorgw,
+    
+    /* Function Operations */
+    m86_cginitlw,
+    m86_cgcall,
+    m86_cgcalr,
+    m86_cgstack,
+    m86_cgentry,
+    m86_cgexit,
+    
+    /* ABI-Compliant Calling Convention */
+    m86_cgpusharg,
+    m86_cgcallprep,
+    m86_cgcallend,
+    m86_cgfnentry,
+    
+    /* Data Definition */
+    m86_cgdefb,
+    m86_cgdefh,
+    m86_cgdefw,
+    m86_cgdefd,
+    m86_cgdefp,
+    m86_cgdefl,
+    m86_cgdefc,
+    m86_cgdefq,
+    m86_cggbss,
+    m86_cglbss,
+    
+    /* Alignment */
+    m86_cgalign,
+    
+    /* Floating-Point Operations - x87 Coprocessor */
+    m86_cgfloads_x87,
+    m86_cgfloadd_x87,
+    m86_cgfloadgs_x87,
+    m86_cgfloadgd_x87,
+    m86_cgfstores_x87,
+    m86_cgfstored_x87,
+    m86_cgfstoregs_x87,
+    m86_cgfstoregsd_x87,
+    m86_cgflits_x87,
+    m86_cgflitd_x87,
+    m86_cgfadds_x87,
+    m86_cgfaddd_x87,
+    m86_cgfsubs_x87,
+    m86_cgfsubd_x87,
+    m86_cgfmuls_x87,
+    m86_cgfmuld_x87,
+    m86_cgfdivs_x87,
+    m86_cgfdivd_x87,
+    m86_cgfnegs_x87,
+    m86_cgfnegd_x87,
+    m86_cgfcmps_x87,
+    m86_cgfcmpd_x87,
+    m86_cgfeqs_x87,
+    m86_cgfeqd_x87,
+    m86_cgfnes_x87,
+    m86_cgfned_x87,
+    m86_cgflts_x87,
+    m86_cgfltd_x87,
+    m86_cgfgts_x87,
+    m86_cgfgtd_x87,
+    m86_cgfles_x87,
+    m86_cgfled_x87,
+    m86_cgfges_x87,
+    m86_cgfged_x87,
+    m86_cgitofs_x87,
+    m86_cgitofd_x87,
+    m86_cgftois_x87,
+    m86_cgftoid_x87,
+    m86_cgstod_x87,
+    m86_cgdtos_x87,
+    m86_cgfpush_x87,
+    m86_cgfpop_x87,
+    m86_cgfxch_x87,
+    m86_cgdeffloat_x87,
+    m86_cgdefdouble_x87
 };
 
 /*
@@ -690,12 +1584,24 @@ extern struct cg_os_config cg_os_dos;
  * Target Definitions for 8086
  * ============================================================================
  */
+/* DOS 8086 with software FP emulation (default) */
 struct cg_target cg_target_dos_8086 = {
     "dos-8086",
-    "DOS 8086 (OMF, TASM syntax)",
+    "DOS 8086 (OMF, TASM syntax, FP emulation)",
     &cg_arch_8086,
     &cg_os_dos,
     &cg_vtable_8086,
+    NULL,
+    NULL
+};
+
+/* DOS 8086 with x87 coprocessor support */
+struct cg_target cg_target_dos_8086_x87 = {
+    "dos-8086-x87",
+    "DOS 8086 with 8087 coprocessor (OMF, TASM syntax)",
+    &cg_arch_8086_x87,
+    &cg_os_dos,
+    &cg_vtable_8086_x87,
     NULL,
     NULL
 };

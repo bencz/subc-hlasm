@@ -98,6 +98,24 @@ enum cg_float_format {
     FLOAT_VAX             /* VAX floating-point format */
 };
 
+/*
+ * Floating Point Unit Type
+ *
+ * Specifies how floating-point operations are implemented:
+ * - FPU_NONE: No FP support (error on FP operations)
+ * - FPU_X87: x87 FPU coprocessor (8086/80287, i386/80387, etc.)
+ * - FPU_SSE: SSE/SSE2 instructions (modern x86/x86-64)
+ * - FPU_VFP: ARM VFP/NEON
+ * - FPU_EMULATED: Software emulation via runtime library calls
+ */
+enum cg_fpu_type {
+    FPU_NONE = 0,         /* No FP support */
+    FPU_X87,              /* x87 coprocessor (FILD, FADD, FSTP, etc.) */
+    FPU_SSE,              /* SSE/SSE2 (ADDSD, MULSD, etc.) */
+    FPU_VFP,              /* ARM VFP/NEON */
+    FPU_EMULATED          /* Software emulation via function calls */
+};
+
 /* Target Operating System */
 enum cg_os_type {
     OS_NONE = 0,
@@ -352,6 +370,90 @@ struct cg_vtable {
     
     /* Alignment */
     void (*cgalign)(void);
+    
+    /*
+     * ========================================================================
+     * Floating-Point Operations
+     * ========================================================================
+     *
+     * These functions implement floating-point arithmetic. The implementation
+     * depends on the target's fpu_type:
+     *   - FPU_X87: Use x87 FPU instructions (fld, fadd, fstp, etc.)
+     *   - FPU_SSE: Use SSE/SSE2 instructions (movsd, addsd, etc.)
+     *   - FPU_VFP: Use ARM VFP instructions
+     *   - FPU_EMULATED: Generate calls to runtime library functions
+     *
+     * For x87, the FPU uses a stack-based model:
+     *   - cgfpush: Push value from memory/integer reg to FPU stack (ST0)
+     *   - cgfpop: Pop ST0 to memory
+     *   - Operations work on ST0 and ST1, result in ST0
+     *
+     * For SSE/emulated, values are in general-purpose registers or memory.
+     *
+     * Float vs Double:
+     *   - Functions ending in 'f' operate on float (32-bit)
+     *   - Functions ending in 'd' operate on double (64-bit)
+     *   - Some architectures may use the same implementation for both
+     */
+    
+    /* Load/Store floating-point values */
+    void (*cgfloads)(int n);        /* Load float from stack offset to FP reg */
+    void (*cgfloadd)(int n);        /* Load double from stack offset to FP reg */
+    void (*cgfloadgs)(char *s);     /* Load float from global symbol */
+    void (*cgfloadgd)(char *s);     /* Load double from global symbol */
+    void (*cgfstores)(int n);       /* Store float to stack offset */
+    void (*cgfstored)(int n);       /* Store double to stack offset */
+    void (*cgfstoregs)(char *s);    /* Store float to global symbol */
+    void (*cgfstoregsd)(char *s);   /* Store double to global symbol */
+    
+    /* Floating-point literals */
+    void (*cgflits)(int lab);       /* Load float literal (label reference) */
+    void (*cgflitd)(int lab);       /* Load double literal (label reference) */
+    
+    /* Floating-point arithmetic */
+    void (*cgfadds)(void);          /* float addition: ST0 = ST1 + ST0 */
+    void (*cgfaddd)(void);          /* double addition */
+    void (*cgfsubs)(void);          /* float subtraction: ST0 = ST1 - ST0 */
+    void (*cgfsubd)(void);          /* double subtraction */
+    void (*cgfmuls)(void);          /* float multiplication */
+    void (*cgfmuld)(void);          /* double multiplication */
+    void (*cgfdivs)(void);          /* float division: ST0 = ST1 / ST0 */
+    void (*cgfdivd)(void);          /* double division */
+    void (*cgfnegs)(void);          /* float negation: ST0 = -ST0 */
+    void (*cgfnegd)(void);          /* double negation */
+    
+    /* Floating-point comparisons (result in integer register) */
+    void (*cgfcmps)(void);          /* Compare floats, set flags */
+    void (*cgfcmpd)(void);          /* Compare doubles, set flags */
+    void (*cgfeqs)(void);           /* float == : result 0 or 1 in acc */
+    void (*cgfeqd)(void);           /* double == */
+    void (*cgfnes)(void);           /* float != */
+    void (*cgfned)(void);           /* double != */
+    void (*cgflts)(void);           /* float < */
+    void (*cgfltd)(void);           /* double < */
+    void (*cgfgts)(void);           /* float > */
+    void (*cgfgtd)(void);           /* double > */
+    void (*cgfles)(void);           /* float <= */
+    void (*cgfled)(void);           /* double <= */
+    void (*cgfges)(void);           /* float >= */
+    void (*cgfged)(void);           /* double >= */
+    
+    /* Type conversions */
+    void (*cgitofs)(void);          /* int to float: convert acc to FP */
+    void (*cgitofd)(void);          /* int to double */
+    void (*cgftois)(void);          /* float to int: convert FP to acc */
+    void (*cgftoid)(void);          /* double to int */
+    void (*cgstod)(void);           /* float to double (promote) */
+    void (*cgdtos)(void);           /* double to float (demote) */
+    
+    /* Floating-point stack operations (for x87) */
+    void (*cgfpush)(void);          /* Push FP value to FP stack */
+    void (*cgfpop)(void);           /* Pop FP stack */
+    void (*cgfxch)(void);           /* Exchange ST0 and ST1 */
+    
+    /* Define floating-point constants in data section */
+    void (*cgdeffloat)(int lab, unsigned int bits);   /* Define 32-bit float */
+    void (*cgdefdouble)(int lab, unsigned int hi, unsigned int lo); /* Define 64-bit double */
 };
 
 /*
@@ -382,6 +484,7 @@ struct cg_arch {
     int  asm_syntax;        /* enum cg_asm_syntax */
     int  call_conv;         /* enum cg_call_conv */
     int  float_format;      /* enum cg_float_format */
+    int  fpu_type;          /* enum cg_fpu_type */
     
     /* Alignment requirements */
     int  align_stack;
@@ -522,6 +625,7 @@ extern struct cg_target *CG;
 #define CG_STACK_DIR    (CG->arch->stack_dir)
 #define CG_ASM_SYNTAX   (CG->arch->asm_syntax)
 #define CG_CALL_CONV    (CG->arch->call_conv)
+#define CG_FPU_TYPE     (CG->arch->fpu_type)
 
 /* Stack frame layout accessor macros */
 #define CG_PARAM_OFFSET_BASE  (CG->arch->param_offset_base)

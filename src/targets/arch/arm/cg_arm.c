@@ -776,6 +776,7 @@ struct cg_arch cg_arch_armv6 = {
     ASM_ARM,            /* asm_syntax */
     CC_AAPCS,           /* call_conv */
     FLOAT_IEEE754,      /* float_format */
+    FPU_VFP,            /* fpu_type - VFP (if available) or emulated */
     8,                  /* align_stack */
     4,                  /* align_data */
     4,                  /* align_func */
@@ -993,7 +994,23 @@ struct cg_vtable cg_vtable_armv6 = {
     arm_cglbss,
     
     /* Alignment */
-    arm_cgalign
+    arm_cgalign,
+    
+    /* Floating-Point Operations - TODO: implement VFP for ARM */
+    NULL, NULL, NULL, NULL,  /* cgfloads, cgfloadd, cgfloadgs, cgfloadgd */
+    NULL, NULL, NULL, NULL,  /* cgfstores, cgfstored, cgfstoregs, cgfstoregsd */
+    NULL, NULL,              /* cgflits, cgflitd */
+    NULL, NULL, NULL, NULL,  /* cgfadds, cgfaddd, cgfsubs, cgfsubd */
+    NULL, NULL, NULL, NULL,  /* cgfmuls, cgfmuld, cgfdivs, cgfdivd */
+    NULL, NULL,              /* cgfnegs, cgfnegd */
+    NULL, NULL,              /* cgfcmps, cgfcmpd */
+    NULL, NULL, NULL, NULL,  /* cgfeqs, cgfeqd, cgfnes, cgfned */
+    NULL, NULL, NULL, NULL,  /* cgflts, cgfltd, cgfgts, cgfgtd */
+    NULL, NULL, NULL, NULL,  /* cgfles, cgfled, cgfges, cgfged */
+    NULL, NULL, NULL, NULL,  /* cgitofs, cgitofd, cgftois, cgftoid */
+    NULL, NULL,              /* cgstod, cgdtos */
+    NULL, NULL, NULL,        /* cgfpush, cgfpop, cgfxch */
+    NULL, NULL               /* cgdeffloat, cgdefdouble */
 };
 
 /*

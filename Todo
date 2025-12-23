@@ -14,7 +14,13 @@
 	- Implement runtime library cross-compilation support
 	  (currently only code generation is cross-platform)
 
-	- Implement floating-point arithmetic operations in code generators
-	  (float/double types are parsed but arithmetic not yet implemented)
+	- Integrate floating-point code generation into expr.c/gen.c
+	  (vtable functions implemented for 8086, stubs for other archs)
+
+	- Implement FP code generation for i386 (x87), x86-64 (SSE), ARM (VFP)
+	  (8086 has full x87 and emulation support)
+
+	- Complete double (64-bit) emulation in runtime/dos-8086/fpemu.c
+	  (float operations work, double operations are stubs)
 
 	? clean up sym.c

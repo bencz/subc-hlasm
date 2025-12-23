@@ -2,29 +2,36 @@
 	SUBC BUILD STATUS
 
 
-	=== Cross-Compilation Support (2025-12-22) ===
+	=== Cross-Compilation Build System (2025-12-23) ===
 
-	As of version 2025-12-22, SubC supports cross-compilation from
-	a single binary. Use -L to list targets and -T to select one.
+	SubC now uses a simplified build system for cross-compilation.
+	No configure script needed - just run 'make'.
 
-	macOS/arm64 (Apple Silicon), clang 15.0, SubC 20251222
-		bootstrap	passed (cc -I. -o scc0 ...)
-		-L flag		works (lists 11 targets)
+	Build:
+		make            Build the cross-compiler
+		make help       Show available make targets
+		./src/scc0 -L   List available compilation targets
+		./src/scc0 -T <target> -S file.c   Compile for target
+
+	macOS/arm64 (Apple Silicon), clang 15.0, SubC 20251223
+		bootstrap	passed (make)
+		-L flag		works (lists 12 targets)
 		-T flag		works (tested all targets)
 		cross-compile	passed (generates correct asm for all targets)
 
-	Tested cross-compilation targets:
-		linux-386	generates correct i386 assembly
-		linux-x86-64	generates correct x86-64 assembly
-		freebsd-386	generates correct i386 assembly
-		freebsd-x86-64	generates correct x86-64 assembly
-		freebsd-armv6	generates correct ARMv6 assembly
-		netbsd-386	generates correct i386 assembly
-		netbsd-x86-64	generates correct x86-64 assembly
-		openbsd-386	generates correct i386 assembly
-		darwin-x86-64	generates correct x86-64 assembly
-		windows-386	generates correct i386 assembly
-		dos-8086	generates correct 8086/TASM assembly
+	Available cross-compilation targets (12):
+		linux-386	Linux i386 (ELF, GAS syntax)
+		linux-x86-64	Linux x86-64 (ELF, GAS syntax)
+		freebsd-386	FreeBSD i386 (ELF, GAS syntax)
+		freebsd-x86-64	FreeBSD x86-64 (ELF, GAS syntax)
+		freebsd-armv6	FreeBSD ARMv6 (ELF, GAS syntax)
+		netbsd-386	NetBSD i386 (ELF, GAS syntax)
+		netbsd-x86-64	NetBSD x86-64 (ELF, GAS syntax)
+		openbsd-386	OpenBSD i386 (ELF, GAS syntax)
+		darwin-x86-64	Darwin/macOS x86-64 (Mach-O, GAS syntax)
+		windows-386	Windows i386 (PE, GAS syntax)
+		dos-8086	DOS 8086 (OMF, TASM, FP emulation)
+		dos-8086-x87	DOS 8086 with 8087 coprocessor
 
 
 	=== Historical Build Status ===

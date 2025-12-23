@@ -482,6 +482,7 @@ struct cg_arch cg_arch_x86_64 = {
     ASM_GAS,            /* asm_syntax */
     CC_SYSV_AMD64,      /* call_conv */
     FLOAT_IEEE754,      /* float_format */
+    FPU_SSE,            /* fpu_type - SSE/SSE2 (standard on x86-64) */
     16,                 /* align_stack */
     8,                  /* align_data */
     16,                 /* align_func */
@@ -515,6 +516,7 @@ struct cg_arch cg_arch_x86_64_darwin = {
     ASM_GAS,            /* asm_syntax */
     CC_SYSV_AMD64,      /* call_conv */
     FLOAT_IEEE754,      /* float_format */
+    FPU_SSE,            /* fpu_type - SSE/SSE2 */
     16,                 /* align_stack */
     8,                  /* align_data */
     16,                 /* align_func */
@@ -732,7 +734,23 @@ struct cg_vtable cg_vtable_x86_64 = {
     x64_cglbss,
     
     /* Alignment */
-    x64_cgalign
+    x64_cgalign,
+    
+    /* Floating-Point Operations - TODO: implement SSE FP for x86-64 */
+    NULL, NULL, NULL, NULL,  /* cgfloads, cgfloadd, cgfloadgs, cgfloadgd */
+    NULL, NULL, NULL, NULL,  /* cgfstores, cgfstored, cgfstoregs, cgfstoregsd */
+    NULL, NULL,              /* cgflits, cgflitd */
+    NULL, NULL, NULL, NULL,  /* cgfadds, cgfaddd, cgfsubs, cgfsubd */
+    NULL, NULL, NULL, NULL,  /* cgfmuls, cgfmuld, cgfdivs, cgfdivd */
+    NULL, NULL,              /* cgfnegs, cgfnegd */
+    NULL, NULL,              /* cgfcmps, cgfcmpd */
+    NULL, NULL, NULL, NULL,  /* cgfeqs, cgfeqd, cgfnes, cgfned */
+    NULL, NULL, NULL, NULL,  /* cgflts, cgfltd, cgfgts, cgfgtd */
+    NULL, NULL, NULL, NULL,  /* cgfles, cgfled, cgfges, cgfged */
+    NULL, NULL, NULL, NULL,  /* cgitofs, cgitofd, cgftois, cgftoid */
+    NULL, NULL,              /* cgstod, cgdtos */
+    NULL, NULL, NULL,        /* cgfpush, cgfpop, cgfxch */
+    NULL, NULL               /* cgdeffloat, cgdefdouble */
 };
 
 /*

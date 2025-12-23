@@ -1,8 +1,33 @@
 # SubC Compiler - Limitações Pendentes
 
-## Versão: 2025-12-23
+## Versão: 2025-12-23 (atualizado)
 
 Este documento lista as limitações ainda existentes no compilador SubC.
+
+---
+
+## 0. Status do Suporte a Ponto Flutuante
+
+**PARCIALMENTE IMPLEMENTADO** (2025-12-23)
+
+A infraestrutura de código para ponto flutuante foi adicionada:
+
+| Componente | Status |
+|------------|--------|
+| `cg_fpu_type` enum | ✅ Implementado |
+| `fpu_type` em `cg_arch` | ✅ Implementado |
+| 46 funções FP na vtable | ✅ Definidas |
+| 8086 x87 (8087) | ✅ Implementado |
+| 8086 emulação IEEE 754 | ✅ Implementado (float), stubs (double) |
+| i386 x87 | ⏳ Stubs (NULL) |
+| x86-64 SSE | ⏳ Stubs (NULL) |
+| ARM VFP | ⏳ Stubs (NULL) |
+| Integração em expr.c/gen.c | ⏳ Pendente |
+
+**Próximos passos:**
+1. Integrar chamadas FP em `expr.c` e `gen.c` usando `IS_FLOATTYPE()`
+2. Implementar funções FP para i386, x86-64, ARM
+3. Completar emulação de double para 8086
 
 ---
 
@@ -52,9 +77,19 @@ O código incrementa o valor apontado por `*ap`, não o ponteiro `ap` em si.
 
 ## 3. Aritmética de Ponto Flutuante
 
-Os tipos `float` e `double` são parseados e armazenados corretamente, mas
-**operações aritméticas de ponto flutuante não estão implementadas** nos
-code generators.
+**PARCIALMENTE RESOLVIDO** - Ver seção 0 acima.
+
+Os tipos `float` e `double` são parseados e armazenados corretamente.
+A infraestrutura de code generation foi implementada (vtable com 46 funções).
+
+**Implementado:**
+- 8086: Suporte completo a x87 (8087/80287)
+- 8086: Emulação IEEE 754 em software (float funcional, double stubs)
+- Targets: `dos-8086` (emulação) e `dos-8086-x87` (hardware)
+
+**Pendente:**
+- Integração no parser (expr.c/gen.c)
+- Implementação para i386, x86-64, ARM
 
 ---
 
@@ -102,12 +137,13 @@ Para arquiteturas como HLASM que têm regras específicas para labels
 
 ## 7. Resumo das Limitações Pendentes
 
-| Limitação | Severidade | Arquivo |
-|-----------|------------|---------|
-| Aritmética float/double | Médio | code generators |
-| _va_arg aritmética de ponteiro | Médio | varargs.c |
-| `LPREFIX` fixo | Baixo | defs.h |
-| Campos align_* não usados | Baixo | cgtarget.h |
-| Máximo 2 níveis de indireção | Baixo | decl.c |
-| Arrays apenas 1D | Baixo | decl.c |
-| Sem goto | Baixo | - |
+| Limitação | Severidade | Arquivo | Status |
+|-----------|------------|---------|--------|
+| Integração FP em expr.c/gen.c | Médio | expr.c, gen.c | Pendente |
+| FP para i386/x86-64/ARM | Médio | cg_*.c | Stubs |
+| _va_arg aritmética de ponteiro | Médio | varargs.c | Bug |
+| `LPREFIX` fixo | Baixo | defs.h | - |
+| Campos align_* não usados | Baixo | cgtarget.h | - |
+| Máximo 2 níveis de indireção | Baixo | decl.c | Design |
+| Arrays apenas 1D | Baixo | decl.c | Design |
+| Sem goto | Baixo | - | Design |

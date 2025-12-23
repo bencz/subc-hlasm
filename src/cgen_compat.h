@@ -287,6 +287,71 @@
 
 /*
  * ============================================================================
+ * Floating-Point Operations
+ * ============================================================================
+ */
+
+/* Load/Store floating-point values */
+#define cgfloads(n)     (CG->vtable->cgfloads ? CG->vtable->cgfloads(n) : (void)0)
+#define cgfloadd(n)     (CG->vtable->cgfloadd ? CG->vtable->cgfloadd(n) : (void)0)
+#define cgfloadgs(s)    (CG->vtable->cgfloadgs ? CG->vtable->cgfloadgs(s) : (void)0)
+#define cgfloadgd(s)    (CG->vtable->cgfloadgd ? CG->vtable->cgfloadgd(s) : (void)0)
+#define cgfstores(n)    (CG->vtable->cgfstores ? CG->vtable->cgfstores(n) : (void)0)
+#define cgfstored(n)    (CG->vtable->cgfstored ? CG->vtable->cgfstored(n) : (void)0)
+#define cgfstoregs(s)   (CG->vtable->cgfstoregs ? CG->vtable->cgfstoregs(s) : (void)0)
+#define cgfstoregsd(s)  (CG->vtable->cgfstoregsd ? CG->vtable->cgfstoregsd(s) : (void)0)
+
+/* Floating-point literals */
+#define cgflits(lab)    (CG->vtable->cgflits ? CG->vtable->cgflits(lab) : (void)0)
+#define cgflitd(lab)    (CG->vtable->cgflitd ? CG->vtable->cgflitd(lab) : (void)0)
+
+/* Floating-point arithmetic */
+#define cgfadds()       (CG->vtable->cgfadds ? CG->vtable->cgfadds() : (void)0)
+#define cgfaddd()       (CG->vtable->cgfaddd ? CG->vtable->cgfaddd() : (void)0)
+#define cgfsubs()       (CG->vtable->cgfsubs ? CG->vtable->cgfsubs() : (void)0)
+#define cgfsubd()       (CG->vtable->cgfsubd ? CG->vtable->cgfsubd() : (void)0)
+#define cgfmuls()       (CG->vtable->cgfmuls ? CG->vtable->cgfmuls() : (void)0)
+#define cgfmuld()       (CG->vtable->cgfmuld ? CG->vtable->cgfmuld() : (void)0)
+#define cgfdivs()       (CG->vtable->cgfdivs ? CG->vtable->cgfdivs() : (void)0)
+#define cgfdivd()       (CG->vtable->cgfdivd ? CG->vtable->cgfdivd() : (void)0)
+#define cgfnegs()       (CG->vtable->cgfnegs ? CG->vtable->cgfnegs() : (void)0)
+#define cgfnegd()       (CG->vtable->cgfnegd ? CG->vtable->cgfnegd() : (void)0)
+
+/* Floating-point comparisons */
+#define cgfcmps()       (CG->vtable->cgfcmps ? CG->vtable->cgfcmps() : (void)0)
+#define cgfcmpd()       (CG->vtable->cgfcmpd ? CG->vtable->cgfcmpd() : (void)0)
+#define cgfeqs()        (CG->vtable->cgfeqs ? CG->vtable->cgfeqs() : (void)0)
+#define cgfeqd()        (CG->vtable->cgfeqd ? CG->vtable->cgfeqd() : (void)0)
+#define cgfnes()        (CG->vtable->cgfnes ? CG->vtable->cgfnes() : (void)0)
+#define cgfned()        (CG->vtable->cgfned ? CG->vtable->cgfned() : (void)0)
+#define cgflts()        (CG->vtable->cgflts ? CG->vtable->cgflts() : (void)0)
+#define cgfltd()        (CG->vtable->cgfltd ? CG->vtable->cgfltd() : (void)0)
+#define cgfgts()        (CG->vtable->cgfgts ? CG->vtable->cgfgts() : (void)0)
+#define cgfgtd()        (CG->vtable->cgfgtd ? CG->vtable->cgfgtd() : (void)0)
+#define cgfles()        (CG->vtable->cgfles ? CG->vtable->cgfles() : (void)0)
+#define cgfled()        (CG->vtable->cgfled ? CG->vtable->cgfled() : (void)0)
+#define cgfges()        (CG->vtable->cgfges ? CG->vtable->cgfges() : (void)0)
+#define cgfged()        (CG->vtable->cgfged ? CG->vtable->cgfged() : (void)0)
+
+/* Type conversions */
+#define cgitofs()       (CG->vtable->cgitofs ? CG->vtable->cgitofs() : (void)0)
+#define cgitofd()       (CG->vtable->cgitofd ? CG->vtable->cgitofd() : (void)0)
+#define cgftois()       (CG->vtable->cgftois ? CG->vtable->cgftois() : (void)0)
+#define cgftoid()       (CG->vtable->cgftoid ? CG->vtable->cgftoid() : (void)0)
+#define cgstod()        (CG->vtable->cgstod ? CG->vtable->cgstod() : (void)0)
+#define cgdtos()        (CG->vtable->cgdtos ? CG->vtable->cgdtos() : (void)0)
+
+/* Floating-point stack operations */
+#define cgfpush()       (CG->vtable->cgfpush ? CG->vtable->cgfpush() : (void)0)
+#define cgfpop()        (CG->vtable->cgfpop ? CG->vtable->cgfpop() : (void)0)
+#define cgfxch()        (CG->vtable->cgfxch ? CG->vtable->cgfxch() : (void)0)
+
+/* Define floating-point constants */
+#define cgdeffloat(lab,bits)     (CG->vtable->cgdeffloat ? CG->vtable->cgdeffloat(lab,bits) : (void)0)
+#define cgdefdouble(lab,hi,lo)   (CG->vtable->cgdefdouble ? CG->vtable->cgdefdouble(lab,hi,lo) : (void)0)
+
+/*
+ * ============================================================================
  * Architecture Property Access
  * ============================================================================
  */

@@ -1,3 +1,28 @@
+2025-12-23 Simplified build system for cross-compilation:
+           - Removed configure script (no longer needed)
+           - Updated Makefile for direct cross-compiler build
+           - Just run 'make' to build, 'make help' for options
+           - No symlinks needed - all targets compiled into single binary
+2025-12-23 Added floating-point arithmetic support to code generators:
+           - New enum cg_fpu_type: FPU_NONE, FPU_X87, FPU_SSE, FPU_VFP, FPU_EMULATED
+           - Added fpu_type field to cg_arch structure
+           - Added CG_FPU_TYPE macro for runtime FPU type checking
+           - Extended cg_vtable with 46 floating-point operation functions:
+             * Load/Store: cgfloads, cgfloadd, cgfloadgs, cgfloadgd, cgfstores, etc.
+             * Literals: cgflits, cgflitd
+             * Arithmetic: cgfadds/d, cgfsubs/d, cgfmuls/d, cgfdivs/d, cgfnegs/d
+             * Comparisons: cgfcmps/d, cgfeqs/d, cgfnes/d, cgflts/d, cgfgts/d, etc.
+             * Conversions: cgitofs/d, cgftois/d, cgstod, cgdtos
+             * Stack ops: cgfpush, cgfpop, cgfxch
+             * Constants: cgdeffloat, cgdefdouble
+           - 8086: Full x87 coprocessor support (8087/80287 instructions)
+           - 8086: Software IEEE 754 emulation for systems without FPU
+           - New target: dos-8086-x87 (uses 8087 coprocessor)
+           - Updated dos-8086 target to use FP emulation by default
+           - Created runtime/dos-8086/fpemu.c with IEEE 754 emulation library
+           - i386: FPU_X87 (integrated FPU since 486)
+           - x86-64: FPU_SSE (SSE2 standard on all x86-64)
+           - ARM: FPU_VFP (VFP when available)
 2025-12-23 Added full C89 type support:
            - New primitive types: short, long, unsigned variants, float, double
            - New keywords: SHORT, LONG, UNSIGNED, SIGNED, FLOAT, DOUBLE, CONST

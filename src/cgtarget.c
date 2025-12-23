@@ -38,6 +38,7 @@ extern struct cg_target cg_target_darwin_x86_64;
 
 /* 8086 targets */
 extern struct cg_target cg_target_dos_8086;
+extern struct cg_target cg_target_dos_8086_x87;
 
 /* ARM targets */
 extern struct cg_target cg_target_freebsd_armv6;
@@ -59,6 +60,7 @@ static struct cg_target *targets[] = {
     &cg_target_darwin_x86_64,
     /* 8086 */
     &cg_target_dos_8086,
+    &cg_target_dos_8086_x87,
     /* ARM */
     &cg_target_freebsd_armv6,
     NULL

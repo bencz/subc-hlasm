@@ -398,6 +398,7 @@ struct cg_arch cg_arch_i386 = {
     ASM_GAS,            /* asm_syntax */
     CC_CDECL,           /* call_conv */
     FLOAT_IEEE754,      /* float_format */
+    FPU_X87,            /* fpu_type - x87 FPU (integrated since 486) */
     4,                  /* align_stack */
     4,                  /* align_data */
     4,                  /* align_func */
@@ -431,6 +432,7 @@ struct cg_arch cg_arch_i386_windows = {
     ASM_GAS,            /* asm_syntax */
     CC_CDECL,           /* call_conv */
     FLOAT_IEEE754,      /* float_format */
+    FPU_X87,            /* fpu_type - x87 FPU */
     4,                  /* align_stack */
     4,                  /* align_data */
     4,                  /* align_func */
@@ -648,7 +650,23 @@ struct cg_vtable cg_vtable_i386 = {
     i386_cglbss,
     
     /* Alignment */
-    i386_cgalign
+    i386_cgalign,
+    
+    /* Floating-Point Operations - TODO: implement x87 FP for i386 */
+    NULL, NULL, NULL, NULL,  /* cgfloads, cgfloadd, cgfloadgs, cgfloadgd */
+    NULL, NULL, NULL, NULL,  /* cgfstores, cgfstored, cgfstoregs, cgfstoregsd */
+    NULL, NULL,              /* cgflits, cgflitd */
+    NULL, NULL, NULL, NULL,  /* cgfadds, cgfaddd, cgfsubs, cgfsubd */
+    NULL, NULL, NULL, NULL,  /* cgfmuls, cgfmuld, cgfdivs, cgfdivd */
+    NULL, NULL,              /* cgfnegs, cgfnegd */
+    NULL, NULL,              /* cgfcmps, cgfcmpd */
+    NULL, NULL, NULL, NULL,  /* cgfeqs, cgfeqd, cgfnes, cgfned */
+    NULL, NULL, NULL, NULL,  /* cgflts, cgfltd, cgfgts, cgfgtd */
+    NULL, NULL, NULL, NULL,  /* cgfles, cgfled, cgfges, cgfged */
+    NULL, NULL, NULL, NULL,  /* cgitofs, cgitofd, cgftois, cgftoid */
+    NULL, NULL,              /* cgstod, cgdtos */
+    NULL, NULL, NULL,        /* cgfpush, cgfpop, cgfxch */
+    NULL, NULL               /* cgdeffloat, cgdefdouble */
 };
 
 /*
