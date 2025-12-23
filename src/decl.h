@@ -94,6 +94,7 @@ void	genshl(int swap);
 void	genshr(int swap);
 void	genstack(int n);
 void	genstore(int *lv);
+void	gentrunc(int size);
 int	gensub(int p1, int p2, int swap);
 void	genswitch(int *vals, int *labs, int nc, int dflt);
 void	gentext(void);

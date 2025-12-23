@@ -44,8 +44,30 @@ static char *itoa(char *p, int n, int base, char *sgnch) {
 }
 
 /*
- * Convert integer N to unsigned hexa-decimal
+ * Convert integer N to unsigned hexa-decimal or octal
  * string representation. Write string to P.
+ * P must point to the *end* of the buffer
+ * initially; the output is written backwards!
+ * BASE is 8 or 16 (negative for uppercase hex).
+ */
+static char *utoa(char *p, unsigned int n, int base) {
+	int	a = 'a';
+	unsigned int b;
+
+	if (base < 0) base = -base, a = 'A';
+	b = (unsigned int) base;
+	*--p = 0;
+	do {
+		*--p = (n % b) + '0';
+		if (n % b > 9) *p += a-10-'0';
+		n = n / b;
+	} while (n);
+	return p;
+}
+
+/*
+ * Convert integer N to unsigned hexa-decimal
+ * string representation for pointers. Write string to P.
  * P must point to the *end* of the buffer
  * initially; the output is written backwards!
  */
@@ -184,7 +206,8 @@ int _vformat(int mode, int max, void *dest, char *fmt, void **varg) {
 				p = itoa(end, olen, 10, sgnch);
 				break;
 			case 'o':
-				p = itoa(end, (int) *varg++, 8, sgnch);
+				*sgnch = 0;
+				p = utoa(end, (unsigned int) *varg++, 8);
 				if (alt) pfx = "0";
 				na++;
 				break;
@@ -204,8 +227,9 @@ int _vformat(int mode, int max, void *dest, char *fmt, void **varg) {
 				break;
 			case 'x':
 			case 'X':
+				*sgnch = 0;
 				k = 'X' == fmt[-1]? -16: 16;
-				p = itoa(end, (int) *varg++, k, sgnch);
+				p = utoa(end, (unsigned int) *varg++, k);
 				if (alt) pfx = k<0? "0X": "0x";
 				na++;
 				break;

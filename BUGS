@@ -6,24 +6,6 @@
 	Thanks to all submitters!
 
 
-	*** Submitted by Volkmar Klatt in 12/2016
-
-	main() {
-	    char c;
-	    int	 i;
-	    i = (c = -777);
-	    printf("%d\n", i);
-	}
-
-	Prints -777, but should print 247, because c = (-777)&0xff.
-
-
-	*** Submitted by Alexey Frunze in 09/2016
-
-	printf("%x", -1); prints a negative decimal number, which it
-	shouldn't according to K&R2.
-
-
 	*** Submitted by Quan Tran in 10/2015
 
 	Dont miss his improved Go version of SubC at:

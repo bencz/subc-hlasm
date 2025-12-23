@@ -477,6 +477,9 @@ static void emittree1(node *a) {
 			lv[LVPRIM] = a->args[0];
 			lv[LVSYM] = a->args[1];
 			genstore(lv);
+			/* Truncate result to char size if assigning to char */
+			if (PCHAR == lv[LVPRIM] || PUCHAR == lv[LVPRIM] || PSCHAR == lv[LVPRIM])
+				gentrunc(CHARSIZE);
 			break;
 	}
 }

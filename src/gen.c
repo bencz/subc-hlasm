@@ -860,6 +860,16 @@ void genstore(int *lv) {
 	}
 }
 
+/* Truncate accumulator to specified size (for char assignment result) */
+void gentrunc(int size) {
+	gentext();
+	commit();
+	if (size == CHARSIZE) {
+		cgpushlit(0xff);
+		cgand();
+	}
+}
+
 /* genrval computation */
 
 void genrval(int *lv) {
