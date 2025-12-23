@@ -1,3 +1,15 @@
+2025-12-23 Implemented #if, #elif, and defined() for C89 preprocessor compliance:
+           - Full constant expression evaluator in prep.c
+           - Supports: integers (decimal, hex, octal), character constants
+           - Operators: +, -, *, /, %, <<, >>, <, <=, >, >=, ==, !=
+           - Bitwise: &, |, ^, ~
+           - Logical: &&, ||, !
+           - Ternary: ? :
+           - defined(MACRO) and defined MACRO syntax
+           - Macro expansion in expressions (e.g., #if VALUE == 2)
+           - Proper #elif chaining with #else support
+           - New tokens: P_IF, P_ELIF, P_DEFINED in tokens.h
+           - Added 8 test files in tests/preproc_suite/ for expression evaluator
 2025-12-23 Added predefined macros system for cross-compilation:
            - New struct cg_predef_macro in cgtarget.h for macro definitions
            - OS-specific macros in cg_os_configs.c:

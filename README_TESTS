@@ -232,6 +232,14 @@ cd tests/preproc_suite
 | `t_ifdef_ifndef.c` | `#ifdef` and `#ifndef` |
 | `t_ifdef_else.c` | `#ifdef` with `#else` |
 | `t_ifdef_nested.c` | Nested `#ifdef` directives |
+| `t_if_basic.c` | Basic `#if` with 0/1 |
+| `t_if_expr.c` | `#if` with arithmetic expressions |
+| `t_if_logical.c` | `#if` with logical/bitwise operators |
+| `t_if_defined.c` | `#if` with `defined()` operator |
+| `t_if_ternary.c` | `#if` with ternary operator |
+| `t_if_nested.c` | Nested `#if` directives |
+| `t_if_hex_oct.c` | `#if` with hex, octal, char literals |
+| `t_elif.c` | `#elif` chains |
 
 ### Include
 | Test | Description |

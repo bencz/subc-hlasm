@@ -322,10 +322,12 @@ static int keyword(char *s) {
 			break;
 		case 'e':
 			if (!strcmp(s, "#else")) return P_ELSE;
+			if (!strcmp(s, "#elif")) return P_ELIF;
 			if (!strcmp(s, "#endif")) return P_ENDIF;
 			if (!strcmp(s, "#error")) return P_ERROR;
 			break;
 		case 'i':
+			if (!strcmp(s, "#if")) return P_IF;
 			if (!strcmp(s, "#ifdef")) return P_IFDEF;
 			if (!strcmp(s, "#ifndef")) return P_IFNDEF;
 			if (!strcmp(s, "#include")) return P_INCLUDE;

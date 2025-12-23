@@ -29,8 +29,11 @@ enum {
 	FLOATLIT,           /* floating-point literal */
 
 	/* Preprocessor directives */
-	P_DEFINE, P_ELSE, P_ELSENOT, P_ENDIF, P_ERROR, P_IFDEF,
-	P_IFNDEF, P_INCLUDE, P_LINE, P_PRAGMA, P_UNDEF
+	P_DEFINE, P_ELSE, P_ELIF, P_ELSENOT, P_ENDIF, P_ERROR, P_IF,
+	P_IFDEF, P_IFNDEF, P_INCLUDE, P_LINE, P_PRAGMA, P_UNDEF,
+	
+	/* Preprocessor operators */
+	P_DEFINED
 };
 
 #endif /* TOKENS_H */
