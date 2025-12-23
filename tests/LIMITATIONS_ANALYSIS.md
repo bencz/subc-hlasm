@@ -54,14 +54,19 @@ struct point *make_point(int x, int y); /* OK - return pointer */
 void use_point(struct point *p);        /* OK - pass pointer */
 ```
 
-### 1.5 No Parameterized Macros
+### 1.5 Global Initializers Limited to Constants
 
-The preprocessor does not support function-like macros.
+Global variables can only be initialized with constant expressions.
+Ternary operator (`?:`) and function calls are not allowed in global initializers.
 
 ```c
-#define MAX(a,b) ((a)>(b)?(a):(b))  /* NOT supported */
-#define PI 3.14159                   /* OK - object-like macro */
+int x = 10;                      /* OK - constant */
+int y = 10 + 20;                 /* OK - constant expression */
+int z = (10 > 5) ? 10 : 5;       /* NOT supported - ternary in global */
+int w = MAX(10, 20);             /* NOT supported - macro with ternary */
 ```
+
+**Workaround**: Initialize in `main()` or use simpler expressions.
 
 ### 1.6 Function-Level Declarations Only
 
@@ -124,6 +129,9 @@ typedef struct {
 ## 3. Preprocessor Limitations
 
 - No `#warning` directive (not part of C89, but common extension)
+- Macros with empty argument list `MACRO()` may not work correctly
+- `#line` directive with filename argument not fully supported
+- Comments not allowed on `#include` lines: `#include <file.h> /* comment */` fails
 
 ---
 
