@@ -177,15 +177,40 @@ static node *fnargs(int fn, int *na) {
 int deref(int p) {
 	int	y;
 
+	/* Handle pointer-to-pointer -> pointer */
 	switch (p) {
-	case INTPP:	return INTPTR;
-	case INTPTR:	return PINT;
-	case CHARPP:	return CHARPTR;
-	case CHARPTR:	return PCHAR;
-	case VOIDPP:	return VOIDPTR;
-	case VOIDPTR:	return PCHAR;
-	case FUNPTR:	return PCHAR;
+	case INTPP:     return INTPTR;
+	case CHARPP:    return CHARPTR;
+	case VOIDPP:    return VOIDPTR;
+	case SCHARPP:   return SCHARPTR;
+	case UCHARPP:   return UCHARPTR;
+	case SHORTPP:   return SHORTPTR;
+	case USHORTPP:  return USHORTPTR;
+	case UINTPP:    return UINTPTR;
+	case LONGPP:    return LONGPTR;
+	case ULONGPP:   return ULONGPTR;
+	case FLOATPP:   return FLOATPTR;
+	case DOUBLEPP:  return DOUBLEPTR;
 	}
+
+	/* Handle pointer -> base type */
+	switch (p) {
+	case INTPTR:    return PINT;
+	case CHARPTR:   return PCHAR;
+	case VOIDPTR:   return PCHAR;  /* void* derefs to char */
+	case SCHARPTR:  return PSCHAR;
+	case UCHARPTR:  return PUCHAR;
+	case SHORTPTR:  return PSHORT;
+	case USHORTPTR: return PUSHORT;
+	case UINTPTR:   return PUINT;
+	case LONGPTR:   return PLONG;
+	case ULONGPTR:  return PULONG;
+	case FLOATPTR:  return PFLOAT;
+	case DOUBLEPTR: return PDOUBLE;
+	case FUNPTR:    return PCHAR;
+	}
+
+	/* Handle struct/union pointers */
 	y = p & ~STCMASK;
 	switch (p & STCMASK) {
 	case STCPP:	return STCPTR | y;

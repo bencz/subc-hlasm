@@ -267,10 +267,13 @@
  * ============================================================================
  */
 #define cgdefb(v)       (CG->vtable->cgdefb(v))
-#define cgdefw(v)       (CG->vtable->cgdefw(v))
+#define cgdefh(v)       (CG->vtable->cgdefh(v))    /* half-word (2 bytes) */
+#define cgdefw(v)       (CG->vtable->cgdefw(v))    /* word (native int size) */
+#define cgdefd(v)       (CG->vtable->cgdefd(v))    /* double-word (4 bytes) */
 #define cgdefp(v)       (CG->vtable->cgdefp(v))
 #define cgdefl(v)       (CG->vtable->cgdefl(v))
 #define cgdefc(c)       (CG->vtable->cgdefc(c))
+#define cgdefq(v)       (CG->vtable->cgdefq(v))    /* quad-word (8 bytes) */
 #define cggbss(s,z)     (CG->vtable->cggbss(s,z))
 #define cglbss(s,z)     (CG->vtable->cglbss(s,z))
 

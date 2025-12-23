@@ -86,14 +86,22 @@ static int scanch(void) {
 	}
 }
 
-static int scanint(int c) {
+/*
+ * Scan a numeric literal (integer or floating-point)
+ * Returns 0 for integer, 1 for float, 2 for double
+ */
+static int scannumber(int c, int *ival) {
 	int	val, radix, k, i = 0;
+	int	is_float = 0;
+	int	has_exp = 0;
+	double	fval = 0.0;
+	double	frac = 0.1;
 
 	val = 0;
 	radix = 10;
 	if ('0' == c) {
 		Text[i++] = '0';
-		if ((c = next()) == 'x') {
+		if ((c = next()) == 'x' || c == 'X') {
 			radix = 16;
 			Text[i++] = c;
 			c = next();
@@ -102,15 +110,113 @@ static int scanint(int c) {
 			radix = 8;
 		}
 	}
+	/* Integer part */
 	while ((k = chrpos("0123456789abcdef", tolower(c))) >= 0) {
 		Text[i++] = c;
 		if (k >= radix)
 			scnerror("invalid digit in integer literal: %s", c);
 		val = val * radix + k;
+		fval = fval * radix + k;
 		c = next();
+	}
+	/* Check for decimal point (only for base 10) */
+	if (c == '.' && radix == 10) {
+		is_float = 1;
+		Text[i++] = c;
+		c = next();
+		/* Fractional part */
+		while (isdigit(c)) {
+			Text[i++] = c;
+			fval = fval + (c - '0') * frac;
+			frac *= 0.1;
+			c = next();
+		}
+	}
+	/* Check for exponent (only for base 10) */
+	if ((c == 'e' || c == 'E') && radix == 10) {
+		int	exp_sign = 1;
+		int	exp_val = 0;
+		is_float = 1;
+		has_exp = 1;
+		Text[i++] = c;
+		c = next();
+		if (c == '+' || c == '-') {
+			if (c == '-') exp_sign = -1;
+			Text[i++] = c;
+			c = next();
+		}
+		if (!isdigit(c)) {
+			scnerror("invalid exponent in floating literal: %s", c);
+		}
+		while (isdigit(c)) {
+			Text[i++] = c;
+			exp_val = exp_val * 10 + (c - '0');
+			c = next();
+		}
+		/* Apply exponent */
+		exp_val *= exp_sign;
+		while (exp_val > 0) { fval *= 10.0; exp_val--; }
+		while (exp_val < 0) { fval /= 10.0; exp_val++; }
+	}
+	/* Check for type suffix */
+	if (c == 'f' || c == 'F') {
+		is_float = 1;  /* float suffix */
+		Text[i++] = c;
+		c = next();
+		Fvalue = fval;
+		putback(c);
+		Text[i] = 0;
+		*ival = 0;
+		return 1;  /* float */
+	}
+	else if (c == 'l' || c == 'L') {
+		Text[i++] = c;
+		c = next();
+		if (is_float) {
+			/* long double - treat as double for now */
+			Fvalue = fval;
+			putback(c);
+			Text[i] = 0;
+			*ival = 0;
+			return 2;  /* double */
+		}
+		/* Check for UL or LU suffix */
+		if (c == 'u' || c == 'U') {
+			Text[i++] = c;
+			c = next();
+		}
+		putback(c);
+		Text[i] = 0;
+		*ival = val;
+		return 0;  /* long integer */
+	}
+	else if (c == 'u' || c == 'U') {
+		Text[i++] = c;
+		c = next();
+		/* Check for UL suffix */
+		if (c == 'l' || c == 'L') {
+			Text[i++] = c;
+			c = next();
+		}
+		putback(c);
+		Text[i] = 0;
+		*ival = val;
+		return 0;  /* unsigned integer */
 	}
 	putback(c);
 	Text[i] = 0;
+	if (is_float) {
+		Fvalue = fval;
+		*ival = 0;
+		return 2;  /* double (default for floating literals) */
+	}
+	*ival = val;
+	return 0;  /* integer */
+}
+
+static int scanint(int c) {
+	int	val;
+	scannumber(c, &val);
 	return val;
 }
 
@@ -234,11 +340,13 @@ static int keyword(char *s) {
 	case 'c':
 		if (!strcmp(s, "case")) return CASE;
 		if (!strcmp(s, "char")) return CHAR;
+		if (!strcmp(s, "const")) return CONST;
 		if (!strcmp(s, "continue")) return CONTINUE;
 		break;
 	case 'd':
 		if (!strcmp(s, "default")) return DEFAULT;
 		if (!strcmp(s, "do")) return DO;
+		if (!strcmp(s, "double")) return DOUBLE;
 		break;
 	case 'e':
 		if (!strcmp(s, "else")) return ELSE;
@@ -246,17 +354,23 @@ static int keyword(char *s) {
 		if (!strcmp(s, "extern")) return EXTERN;
 		break;
 	case 'f':
+		if (!strcmp(s, "float")) return FLOAT;
 		if (!strcmp(s, "for")) return FOR;
 		break;
 	case 'i':
 		if (!strcmp(s, "if")) return IF;
 		if (!strcmp(s, "int")) return INT;
 		break;
+	case 'l':
+		if (!strcmp(s, "long")) return LONG;
+		break;
 	case 'r':
 		if (!strcmp(s, "register")) return REGISTER;
 		if (!strcmp(s, "return")) return RETURN;
 		break;
 	case 's':
+		if (!strcmp(s, "short")) return SHORT;
+		if (!strcmp(s, "signed")) return SIGNED;
 		if (!strcmp(s, "sizeof")) return SIZEOF;
 		if (!strcmp(s, "static")) return STATIC;
 		if (!strcmp(s, "struct")) return STRUCT;
@@ -267,6 +381,7 @@ static int keyword(char *s) {
 		break;
 	case 'u':
 		if (!strcmp(s, "union")) return UNION;
+		if (!strcmp(s, "unsigned")) return UNSIGNED;
 		break;
 	case 'v':
 		if (!strcmp(s, "void")) return VOID;
@@ -508,11 +623,23 @@ static int scanpp(void) {
 				error("incomplete '...'", NULL);
 				return ELLIPSIS;
 			}
+			/* Check for floating literal starting with '.' (e.g., .5) */
+			if (isdigit(c)) {
+				putback(c);
+				putback('.');
+				putback('0');
+				c = next();
+				scannumber(c, &Value);
+				return FLOATLIT;
+			}
 			putback(c);
 			return DOT;
 		default:
 			if (isdigit(c)) {
-				Value = scanint(c);
+				int numtype = scannumber(c, &Value);
+				if (numtype > 0) {
+					return FLOATLIT;
+				}
 				return INTLIT;
 			}
 			else if (isalpha(c) || '_' == c) {

@@ -318,9 +318,12 @@ static void x64_cgexit(void) {
 }
 
 static void x64_cgdefb(int v)       { ngen("%s\t%d", ".byte", v); }
-static void x64_cgdefw(int v)       { ngen("%s\t%d", ".quad", v); }
+static void x64_cgdefh(int v)       { ngen("%s\t%d", ".word", v); }   /* 2 bytes */
+static void x64_cgdefw(int v)       { ngen("%s\t%d", ".quad", v); }   /* 8 bytes on x86-64 (native int) */
+static void x64_cgdefd(int v)       { ngen("%s\t%d", ".long", v); }   /* 4 bytes */
 static void x64_cgdefp(int v)       { ngen("%s\t%d", ".quad", v); }
 static void x64_cgdefl(int v)       { lgen("%s\t%c%d", ".quad", v); }
+static void x64_cgdefq(int v)       { ngen("%s\t%d", ".quad", v); }   /* 8 bytes */
 static void x64_cgdefc(int c)       { ngen("%s\t'%c'", ".byte", c); }
 static void x64_cggbss(char *s, int z) { ngen(".comm\t%s,%d", s, z); }
 static void x64_cglbss(char *s, int z) { ngen(".lcomm\t%s,%d", s, z); }
@@ -467,8 +470,12 @@ struct cg_arch cg_arch_x86_64 = {
     "x86-64",           /* name */
     64,                 /* bits */
     1,                  /* char_size */
-    8,                  /* int_size */
+    2,                  /* short_size */
+    8,                  /* int_size (SubC uses 64-bit int on x86-64) */
+    8,                  /* long_size */
     8,                  /* ptr_size */
+    4,                  /* float_size */
+    8,                  /* double_size */
     8,                  /* bpw */
     ENDIAN_LITTLE,      /* endian */
     STACK_DOWN,         /* stack_dir */
@@ -496,8 +503,12 @@ struct cg_arch cg_arch_x86_64_darwin = {
     "x86-64-darwin",    /* name */
     64,                 /* bits */
     1,                  /* char_size */
-    8,                  /* int_size */
+    2,                  /* short_size */
+    8,                  /* int_size (SubC uses 64-bit int on x86-64) */
+    8,                  /* long_size */
     8,                  /* ptr_size */
+    4,                  /* float_size */
+    8,                  /* double_size */
     8,                  /* bpw */
     ENDIAN_LITTLE,      /* endian */
     STACK_DOWN,         /* stack_dir */
@@ -710,10 +721,13 @@ struct cg_vtable cg_vtable_x86_64 = {
     
     /* Data Definition */
     x64_cgdefb,
+    x64_cgdefh,
     x64_cgdefw,
+    x64_cgdefd,
     x64_cgdefp,
     x64_cgdefl,
     x64_cgdefc,
+    x64_cgdefq,
     x64_cggbss,
     x64_cglbss,
     

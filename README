@@ -132,14 +132,17 @@
 
 	DIFFERENCES BETWEEN SUBC (THIS VERSION) AND FULL C89
 
-	o  The following keywords are not recognized:
-	   const, double, float, goto, long, short, signed,
-	   unsigned.
+	o  The goto keyword is not recognized.
 
-	o  There are only two primitive data types: the signed int and
-	   the unsigned char; there are also void pointers, and there
-	   is limited support for int(*)() (pointers to functions
-	   of type int).
+	o  All C89 primitive data types are now supported: char, short,
+	   int, long (signed and unsigned variants), float, and double.
+	   Type sizes are architecture-specific. There are also void
+	   pointers, and there is limited support for int(*)() (pointers
+	   to functions of type int).
+
+	o  Note: While float and double types are parsed and stored
+	   correctly, floating-point arithmetic operations are not yet
+	   implemented in the code generators.
 
 	o  No more than two levels of indirection are supported, and
 	   arrays are limited to one dimension, i.e. valid declarators
@@ -149,10 +152,7 @@
 	   between the parameter list and function body) are not
 	   accepted.
 
-	o  There are no ``const'' variables.
-
-	o  There are no unsigned integers, long integers, or signed
-	   chars.
+	o  The const keyword is recognized but ignored (no enforcement).
 
 	o  Struct/union declarations must be global (struct and union
 	   objects may be declared locally, though).

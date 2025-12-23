@@ -34,7 +34,15 @@
 #define PREFIX		'C'
 #define LPREFIX		'L'
 
-#define CHARSIZE	1
+/*
+ * Type sizes - use architecture-specific values from cgtarget.h
+ * These macros access CG->arch->* for cross-compilation support
+ */
+#define CHARSIZE	CG_CHARSIZE
+#define SHORTSIZE	CG_SHORTSIZE
+#define LONGSIZE	CG_LONGSIZE
+#define FLOATSIZE	CG_FLOATSIZE
+#define DOUBLESIZE	CG_DOUBLESIZE
 
 #define TEXTLEN		512
 #define NAMELEN		16

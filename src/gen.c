@@ -640,9 +640,24 @@ void gendefs(char *s, int len) {
 	}
 }
 
+void gendefh(int v) {
+	gendata();
+	cgdefh(v);
+}
+
 void gendefw(int v) {
 	gendata();
 	cgdefw(v);
+}
+
+void gendefd(int v) {
+	gendata();
+	cgdefd(v);
+}
+
+void gendefq(int v) {
+	gendata();
+	cgdefq(v);
 }
 
 /* increment ops */

@@ -1,3 +1,16 @@
+2025-12-23 Added full C89 type support:
+           - New primitive types: short, long, unsigned variants, float, double
+           - New keywords: SHORT, LONG, UNSIGNED, SIGNED, FLOAT, DOUBLE, CONST
+           - Scanner updated to recognize floating-point literals with suffixes
+           - Type specifier combinations: "unsigned int", "long int", "signed char", etc.
+           - Architecture-specific type sizes in cg_arch structure:
+             short_size, long_size, float_size, double_size
+           - New code generation functions: cgdefh (2 bytes), cgdefd (4 bytes), cgdefq (8 bytes)
+           - Type sizes now use CG_SHORTSIZE, CG_LONGSIZE, etc. macros
+           - Correct code generation for all architectures:
+             8086: short=dw(2), int=dw(2), long=dd(4)
+             i386: short=.word(2), int=.long(4), long=.long(4)
+             x86-64: short=.word(2), int=.quad(8), long=.quad(8)
 2025-12-23 Increased compiler limits for better compatibility:
            - MAXFNARGS: 32 → 127 (max function parameters)
            - MAXCASE: 256 → 1024 (max cases in switch)

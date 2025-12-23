@@ -101,16 +101,55 @@ static int initlist(char *name, int prim) {
 	return n;
 }
 
+/*
+ * Type specifier flags for combining type keywords
+ */
+#define TS_VOID     0x0001
+#define TS_CHAR     0x0002
+#define TS_SHORT    0x0004
+#define TS_INT      0x0008
+#define TS_LONG     0x0010
+#define TS_FLOAT    0x0020
+#define TS_DOUBLE   0x0040
+#define TS_SIGNED   0x0080
+#define TS_UNSIGNED 0x0100
+#define TS_STRUCT   0x0200
+#define TS_UNION    0x0400
+
+/*
+ * Check if token is a type specifier keyword
+ */
+int istypespec(int t) {
+	return t == CHAR || t == INT || t == SHORT || t == LONG ||
+	       t == FLOAT || t == DOUBLE || t == SIGNED || t == UNSIGNED ||
+	       t == VOID || t == STRUCT || t == UNION || t == CONST;
+}
+
+/*
+ * Parse type specifiers and return primitive type
+ * Handles combinations like: unsigned int, long int, signed char, etc.
+ *
+ * C89 valid combinations:
+ *   void
+ *   char, signed char, unsigned char
+ *   short, short int, signed short, signed short int, unsigned short, unsigned short int
+ *   int, signed, signed int, unsigned, unsigned int
+ *   long, long int, signed long, signed long int, unsigned long, unsigned long int
+ *   float
+ *   double
+ *   struct/union
+ *
+ * NOTE: This function expects Token to already contain the first type specifier.
+ *       It does NOT consume the token after the type - caller must call scan() after.
+ */
 int primtype(int t, char *s) {
 	int	p, y;
 	char	sname[NAMELEN+1];
+	int	flags = 0;
 
-	p = t == CHAR? PCHAR:
-		t == INT? PINT:
-		t == STRUCT? PSTRUCT:
-		t == UNION? PUNION:
-		PVOID;
-	if (PUNION == p || PSTRUCT == p) {
+	/* Handle struct/union specially */
+	if (t == STRUCT || t == UNION) {
+		p = (t == STRUCT) ? PSTRUCT : PUNION;
 		if (!s) {
 			Token = scan();
 			copyname(sname, Text);
@@ -123,8 +162,98 @@ int primtype(int t, char *s) {
 		if ((y = findstruct(s)) == 0 || Prims[y] != p)
 			error("no such struct/union: %s", s);
 		p |= y;
+		return p;
 	}
-	return p;
+
+	/* Collect type specifier flags from first token */
+	switch (t) {
+	case VOID:     flags |= TS_VOID; break;
+	case CHAR:     flags |= TS_CHAR; break;
+	case SHORT:    flags |= TS_SHORT; break;
+	case INT:      flags |= TS_INT; break;
+	case LONG:     flags |= TS_LONG; break;
+	case FLOAT:    flags |= TS_FLOAT; break;
+	case DOUBLE:   flags |= TS_DOUBLE; break;
+	case SIGNED:   flags |= TS_SIGNED; break;
+	case UNSIGNED: flags |= TS_UNSIGNED; break;
+	case CONST:    break;  /* const is ignored (no-op) */
+	default:       return PINT;  /* default to int */
+	}
+
+	/* Look ahead for more type specifiers */
+	for (;;) {
+		Token = scan();
+		switch (Token) {
+		case CHAR:     flags |= TS_CHAR; continue;
+		case SHORT:    flags |= TS_SHORT; continue;
+		case INT:      flags |= TS_INT; continue;
+		case LONG:     flags |= TS_LONG; continue;
+		case SIGNED:   flags |= TS_SIGNED; continue;
+		case UNSIGNED: flags |= TS_UNSIGNED; continue;
+		case CONST:    continue;  /* const is ignored */
+		default:
+			/* Not a type specifier - put it back */
+			reject();
+			break;
+		}
+		break;
+	}
+
+	/* Validate and convert flags to primitive type */
+	if (flags & TS_VOID) {
+		if (flags & ~TS_VOID)
+			error("invalid type combination with void", NULL);
+		return PVOID;
+	}
+
+	if (flags & TS_FLOAT) {
+		if (flags & ~TS_FLOAT)
+			error("invalid type combination with float", NULL);
+		return PFLOAT;
+	}
+
+	if (flags & TS_DOUBLE) {
+		if (flags & ~(TS_DOUBLE | TS_LONG))
+			error("invalid type combination with double", NULL);
+		return PDOUBLE;  /* long double treated as double */
+	}
+
+	if (flags & TS_CHAR) {
+		if (flags & ~(TS_CHAR | TS_SIGNED | TS_UNSIGNED))
+			error("invalid type combination with char", NULL);
+		if (flags & TS_UNSIGNED)
+			return PUCHAR;
+		if (flags & TS_SIGNED)
+			return PSCHAR;
+		return PCHAR;  /* plain char */
+	}
+
+	if (flags & TS_SHORT) {
+		if (flags & ~(TS_SHORT | TS_INT | TS_SIGNED | TS_UNSIGNED))
+			error("invalid type combination with short", NULL);
+		if (flags & TS_UNSIGNED)
+			return PUSHORT;
+		return PSHORT;
+	}
+
+	if (flags & TS_LONG) {
+		if (flags & ~(TS_LONG | TS_INT | TS_SIGNED | TS_UNSIGNED))
+			error("invalid type combination with long", NULL);
+		if (flags & TS_UNSIGNED)
+			return PULONG;
+		return PLONG;
+	}
+
+	/* int or signed/unsigned alone */
+	if (flags & TS_UNSIGNED)
+		return PUINT;
+	if (flags & TS_SIGNED)
+		return PINT;
+	if (flags & TS_INT)
+		return PINT;
+
+	/* No type specifiers - default to int */
+	return PINT;
 }
 
 int usertype(char *s) {
@@ -195,9 +324,7 @@ static int pmtrdecls(void) {
 			prim = PINT;
 		}
 		else {
-			if (	CHAR == Token || INT == Token ||
-				VOID == Token ||
-				STRUCT == Token || UNION == Token ||
+			if (	istypespec(Token) ||
 				(IDENT == Token && utype != 0)
 			) {
 				name[0] = 0;
@@ -259,11 +386,18 @@ static int pmtrdecls(void) {
 int pointerto(int prim) {
 	int	y;
 
+	/* Check for too many levels of indirection */
 	if (CHARPP == prim || INTPP == prim || VOIDPP == prim ||
+	    UCHARPP == prim || SCHARPP == prim ||
+	    SHORTPP == prim || USHORTPP == prim ||
+	    UINTPP == prim || LONGPP == prim || ULONGPP == prim ||
+	    FLOATPP == prim || DOUBLEPP == prim ||
 	    FUNPTR == prim ||
 	    (prim & STCMASK) == STCPP || (prim & STCMASK) == UNIPP
 	)
 		error("too many levels of indirection", NULL);
+
+	/* Handle struct/union types */
 	y = prim & ~STCMASK;
 	switch (prim & STCMASK) {
 	case PSTRUCT:	return STCPTR | y;
@@ -271,11 +405,36 @@ int pointerto(int prim) {
 	case PUNION:	return UNIPTR | y;
 	case UNIPTR:	return UNIPP | y;
 	}
-	return PINT == prim? INTPTR:
-		PCHAR == prim? CHARPTR:
-		PVOID == prim? VOIDPTR:
-		INTPTR == prim? INTPP:
-		CHARPTR == prim? CHARPP: VOIDPP;
+
+	/* Handle base types -> pointer */
+	switch (prim) {
+	case PCHAR:     return CHARPTR;
+	case PSCHAR:    return SCHARPTR;
+	case PUCHAR:    return UCHARPTR;
+	case PSHORT:    return SHORTPTR;
+	case PUSHORT:   return USHORTPTR;
+	case PINT:      return INTPTR;
+	case PUINT:     return UINTPTR;
+	case PLONG:     return LONGPTR;
+	case PULONG:    return ULONGPTR;
+	case PFLOAT:    return FLOATPTR;
+	case PDOUBLE:   return DOUBLEPTR;
+	case PVOID:     return VOIDPTR;
+	/* Handle pointer -> pointer-to-pointer */
+	case CHARPTR:   return CHARPP;
+	case SCHARPTR:  return SCHARPP;
+	case UCHARPTR:  return UCHARPP;
+	case SHORTPTR:  return SHORTPP;
+	case USHORTPTR: return USHORTPP;
+	case INTPTR:    return INTPP;
+	case UINTPTR:   return UINTPP;
+	case LONGPTR:   return LONGPP;
+	case ULONGPTR:  return ULONGPP;
+	case FLOATPTR:  return FLOATPP;
+	case DOUBLEPTR: return DOUBLEPP;
+	case VOIDPTR:   return VOIDPP;
+	default:        return VOIDPP;
+	}
 }
 
 /*
@@ -453,10 +612,8 @@ static int localdecls(void) {
 	Nli = 0;
 	utype = 0;
 	while ( AUTO == Token || EXTERN == Token || REGISTER == Token ||
-		STATIC == Token || VOLATILE == Token ||
-		INT == Token || CHAR == Token || VOID == Token ||
-		ENUM == Token ||
-		STRUCT == Token || UNION == Token ||
+		STATIC == Token || VOLATILE == Token || CONST == Token ||
+		istypespec(Token) || ENUM == Token ||
 		(IDENT == Token && (utype = usertype(Text)) != 0)
 	) {
 		if (ENUM == Token) {
@@ -465,15 +622,12 @@ static int localdecls(void) {
 		}
 		extn = stat = 0;
 		if (AUTO == Token || REGISTER == Token || STATIC == Token ||
-			VOLATILE == Token || EXTERN == Token
+			VOLATILE == Token || EXTERN == Token || CONST == Token
 		) {
 			stat = STATIC == Token;
 			extn = EXTERN == Token;
 			Token = scan();
-			if (	INT == Token || CHAR == Token ||
-				VOID == Token ||
-				STRUCT == Token || UNION == Token
-			) {
+			if (istypespec(Token)) {
 				prim = primtype(Token, NULL);
 				Token = scan();
 			}
@@ -672,8 +826,7 @@ void structdecl(int clss, int uniondecl) {
 			CMEMBER, 0, 0, NULL, 0);
 	Token = scan();
 	utype = 0;
-	while (	INT == Token || CHAR == Token || VOID == Token ||
-		STRUCT == Token || UNION == Token ||
+	while (	istypespec(Token) ||
 		(IDENT == Token && (utype = usertype(Text)) != 0)
 	) {
 		base = utype? Prims[utype]: primtype(Token, NULL);
@@ -756,11 +909,14 @@ void typedecl(void) {
 void top(void) {
 	int	utype, prim, clss = CPUBLIC;
 
-	switch (Token) {
-	case EXTERN:	clss = CEXTERN; Token = scan(); break;
-	case STATIC:	clss = CSTATIC; Token = scan(); break;
-	case VOLATILE:	Token = scan(); break;
+	/* Handle storage class specifiers */
+	while (Token == EXTERN || Token == STATIC || Token == VOLATILE || Token == CONST) {
+		if (Token == EXTERN) clss = CEXTERN;
+		else if (Token == STATIC) clss = CSTATIC;
+		/* VOLATILE and CONST are no-ops */
+		Token = scan();
 	}
+
 	switch (Token) {
 	case ENUM:
 		enumdecl(1);
@@ -772,13 +928,6 @@ void top(void) {
 	case UNION:
 		structdecl(clss, UNION == Token);
 		break;
-	case CHAR:
-	case INT:
-	case VOID:
-		prim = primtype(Token, NULL);
-		Token = scan();
-		decl(clss, prim, 0);
-		break;
 	case IDENT:
 		if ((utype = usertype(Text)) != 0) {
 			Token = scan();
@@ -788,8 +937,17 @@ void top(void) {
 			decl(clss, PINT, 0);
 		break;
 	default:
-		error("type specifier expected at: %s", Text);
-		Token = synch(SEMI);
+		/* Check for type specifiers (char, int, short, long, etc.) */
+		if (istypespec(Token)) {
+			prim = primtype(Token, NULL);
+			/* primtype() already scanned ahead and rejected the next token */
+			Token = scan();
+			decl(clss, prim, 0);
+		}
+		else {
+			error("type specifier expected at: %s", Text);
+			Token = synch(SEMI);
+		}
 		break;
 	}
 }

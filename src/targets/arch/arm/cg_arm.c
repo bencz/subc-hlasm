@@ -631,9 +631,12 @@ static void arm_cgentry(void) {
 static void arm_cgexit(void)        { gen("pop\t{r11,pc}"); }
 
 static void arm_cgdefb(int v)       { ngen("%s\t%d", ".byte", v); }
-static void arm_cgdefw(int v)       { ngen("%s\t%d", ".long", v); }
+static void arm_cgdefh(int v)       { ngen("%s\t%d", ".short", v); }  /* 2 bytes */
+static void arm_cgdefw(int v)       { ngen("%s\t%d", ".long", v); }   /* 4 bytes (native int) */
+static void arm_cgdefd(int v)       { ngen("%s\t%d", ".long", v); }   /* 4 bytes (for long) */
 static void arm_cgdefp(int v)       { ngen("%s\t%d", ".long", v); }
 static void arm_cgdefl(int v)       { lgen("%s\t%c%d", ".long", v); }
+static void arm_cgdefq(int v)       { ngen("%s\t%d", ".long", v); ngen("%s\t%d", ".long", 0); } /* 8 bytes */
 static void arm_cgdefc(int c)       { ngen("%s\t'%c'", ".byte", c); }
 static void arm_cggbss(char *s, int z) { ngen(".comm\t%s,%d", s, z); }
 static void arm_cglbss(char *s, int z) { ngen(".lcomm\t%s,%d", s, z); }
@@ -761,8 +764,12 @@ struct cg_arch cg_arch_armv6 = {
     "armv6",            /* name */
     32,                 /* bits */
     1,                  /* char_size */
+    2,                  /* short_size */
     4,                  /* int_size */
+    4,                  /* long_size */
     4,                  /* ptr_size */
+    4,                  /* float_size */
+    8,                  /* double_size */
     4,                  /* bpw */
     ENDIAN_LITTLE,      /* endian */
     STACK_DOWN,         /* stack_dir */
@@ -975,10 +982,13 @@ struct cg_vtable cg_vtable_armv6 = {
     
     /* Data Definition */
     arm_cgdefb,
+    arm_cgdefh,
     arm_cgdefw,
+    arm_cgdefd,
     arm_cgdefp,
     arm_cgdefl,
     arm_cgdefc,
+    arm_cgdefq,
     arm_cggbss,
     arm_cglbss,
     

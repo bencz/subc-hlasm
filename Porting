@@ -40,8 +40,12 @@
 		    "NEWCPU",        /* name */
 		    32,              /* bits */
 		    1,               /* char_size */
+		    2,               /* short_size */
 		    4,               /* int_size */
+		    4,               /* long_size */
 		    4,               /* ptr_size */
+		    4,               /* float_size */
+		    8,               /* double_size */
 		    4,               /* bpw (bytes per word) */
 		    ENDIAN_LITTLE,   /* endian */
 		    STACK_DOWN,      /* stack_dir */
@@ -49,6 +53,11 @@
 		    CC_CDECL,        /* call_conv */
 		    ...
 		};
+
+	Note: Type sizes are architecture-specific. For example:
+	  - 8086: int=2, long=4
+	  - i386: int=4, long=4
+	  - x86-64: int=8, long=8 (SubC uses 64-bit int on x86-64)
 
 
 	(3) Add OS configuration (if needed)

@@ -339,11 +339,14 @@ struct cg_vtable {
     void (*cgfnentry)(int nparams);
     
     /* Data Definition */
-    void (*cgdefb)(int v);
-    void (*cgdefw)(int v);
-    void (*cgdefp)(int v);
-    void (*cgdefl)(int v);
-    void (*cgdefc)(int c);
+    void (*cgdefb)(int v);      /* Define byte (1 byte) */
+    void (*cgdefh)(int v);      /* Define half-word (2 bytes) - for short */
+    void (*cgdefw)(int v);      /* Define word (native int size) */
+    void (*cgdefd)(int v);      /* Define double-word (4 bytes) - for long on 16-bit */
+    void (*cgdefp)(int v);      /* Define pointer */
+    void (*cgdefl)(int v);      /* Define label reference */
+    void (*cgdefc)(int c);      /* Define character */
+    void (*cgdefq)(int v);      /* Define quad-word (8 bytes) - for double/long long */
     void (*cggbss)(char *s, int z);
     void (*cglbss)(char *s, int z);
     
@@ -364,9 +367,13 @@ struct cg_arch {
     
     /* Data type sizes (in bytes) */
     int  bits;              /* Architecture bits (16, 32, 64) */
-    int  char_size;
-    int  int_size;
-    int  ptr_size;
+    int  char_size;         /* sizeof(char) - always 1 */
+    int  short_size;        /* sizeof(short) */
+    int  int_size;          /* sizeof(int) */
+    int  long_size;         /* sizeof(long) */
+    int  ptr_size;          /* sizeof(void*) */
+    int  float_size;        /* sizeof(float) */
+    int  double_size;       /* sizeof(double) */
     int  bpw;               /* Bytes per word */
     
     /* Architecture characteristics */
@@ -501,8 +508,16 @@ extern struct cg_target *CG;
 #define CG_NAME         (CG->name)
 #define CG_BITS         (CG->arch->bits)
 #define CG_BPW          (CG->arch->bpw)
+
+/* Type size accessor macros - use these instead of hardcoded values */
+#define CG_CHARSIZE     (CG->arch->char_size)
+#define CG_SHORTSIZE    (CG->arch->short_size)
 #define CG_INTSIZE      (CG->arch->int_size)
+#define CG_LONGSIZE     (CG->arch->long_size)
 #define CG_PTRSIZE      (CG->arch->ptr_size)
+#define CG_FLOATSIZE    (CG->arch->float_size)
+#define CG_DOUBLESIZE   (CG->arch->double_size)
+
 #define CG_ENDIAN       (CG->arch->endian)
 #define CG_STACK_DIR    (CG->arch->stack_dir)
 #define CG_ASM_SYNTAX   (CG->arch->asm_syntax)

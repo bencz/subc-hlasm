@@ -318,9 +318,12 @@ static void i386_cgexit(void) {
 }
 
 static void i386_cgdefb(int v)      { ngen("%s\t%d", ".byte", v); }
-static void i386_cgdefw(int v)      { ngen("%s\t%d", ".long", v); }
+static void i386_cgdefh(int v)      { ngen("%s\t%d", ".word", v); }   /* 2 bytes */
+static void i386_cgdefw(int v)      { ngen("%s\t%d", ".long", v); }   /* 4 bytes (native int) */
+static void i386_cgdefd(int v)      { ngen("%s\t%d", ".long", v); }   /* 4 bytes (for long) */
 static void i386_cgdefp(int v)      { ngen("%s\t%d", ".long", v); }
 static void i386_cgdefl(int v)      { lgen("%s\t%c%d", ".long", v); }
+static void i386_cgdefq(int v)      { ngen("%s\t%d", ".long", v); ngen("%s\t%d", ".long", 0); } /* 8 bytes */
 static void i386_cgdefc(int c)      { ngen("%s\t'%c'", ".byte", c); }
 static void i386_cggbss(char *s, int z) { ngen(".comm\t%s,%d", s, z); }
 static void i386_cglbss(char *s, int z) { ngen(".lcomm\t%s,%d", s, z); }
@@ -383,8 +386,12 @@ struct cg_arch cg_arch_i386 = {
     "i386",             /* name */
     32,                 /* bits */
     1,                  /* char_size */
+    2,                  /* short_size */
     4,                  /* int_size */
+    4,                  /* long_size */
     4,                  /* ptr_size */
+    4,                  /* float_size */
+    8,                  /* double_size */
     4,                  /* bpw */
     ENDIAN_LITTLE,      /* endian */
     STACK_DOWN,         /* stack_dir */
@@ -412,8 +419,12 @@ struct cg_arch cg_arch_i386_windows = {
     "i386-windows",     /* name */
     32,                 /* bits */
     1,                  /* char_size */
+    2,                  /* short_size */
     4,                  /* int_size */
+    4,                  /* long_size */
     4,                  /* ptr_size */
+    4,                  /* float_size */
+    8,                  /* double_size */
     4,                  /* bpw */
     ENDIAN_LITTLE,      /* endian */
     STACK_DOWN,         /* stack_dir */
@@ -626,10 +637,13 @@ struct cg_vtable cg_vtable_i386 = {
     
     /* Data Definition */
     i386_cgdefb,
+    i386_cgdefh,
     i386_cgdefw,
+    i386_cgdefd,
     i386_cgdefp,
     i386_cgdefl,
     i386_cgdefc,
+    i386_cgdefq,
     i386_cggbss,
     i386_cglbss,
     

@@ -386,9 +386,12 @@ static void m86_cgexit(void) {
 }
 
 static void m86_cgdefb(int v)       { ngen("%s\t%d", "db", v); }
-static void m86_cgdefw(int v)       { ngen("%s\t%d", "dw", v); }
-static void m86_cgdefp(int v)       { ngen("%s\t%d", "dw", v); }
+static void m86_cgdefh(int v)       { ngen("%s\t%d", "dw", v); }   /* 2 bytes */
+static void m86_cgdefw(int v)       { ngen("%s\t%d", "dw", v); }   /* 2 bytes on 8086 (native int) */
+static void m86_cgdefd(int v)       { ngen("%s\t%d", "dd", v); }   /* 4 bytes (for long) */
+static void m86_cgdefp(int v)       { ngen("%s\t%d", "dw", v); }   /* 2 bytes (near pointer) */
 static void m86_cgdefl(int v)       { lgen("%s\t%c%d", "dw", v); }
+static void m86_cgdefq(int v)       { ngen("%s\t%d", "dd", v); ngen("%s\t%d", "dd", 0); } /* 8 bytes (2x dd) */
 static void m86_cgdefc(int c)       { ngen("%s\t'%c'", "db", c); }
 
 static void m86_cggbss(char *s, int z) {
@@ -443,8 +446,12 @@ struct cg_arch cg_arch_8086 = {
     "8086",             /* name */
     16,                 /* bits */
     1,                  /* char_size */
+    2,                  /* short_size */
     2,                  /* int_size */
+    4,                  /* long_size (32-bit on 16-bit arch) */
     2,                  /* ptr_size */
+    4,                  /* float_size (if supported) */
+    8,                  /* double_size (if supported) */
     2,                  /* bpw */
     ENDIAN_LITTLE,      /* endian */
     STACK_DOWN,         /* stack_dir */
@@ -657,10 +664,13 @@ struct cg_vtable cg_vtable_8086 = {
     
     /* Data Definition */
     m86_cgdefb,
+    m86_cgdefh,
     m86_cgdefw,
+    m86_cgdefd,
     m86_cgdefp,
     m86_cgdefl,
     m86_cgdefc,
+    m86_cgdefq,
     m86_cggbss,
     m86_cglbss,
     

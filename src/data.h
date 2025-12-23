@@ -12,6 +12,7 @@ extern_ FILE	*Outfile;
 extern_ int	Token;
 extern_ char	Text[TEXTLEN+1];
 extern_ int	Value;
+extern_ double	Fvalue;		/* floating-point literal value */
 extern_ int	Line;
 extern_ int	Errors;
 extern_ int	Syntoken;

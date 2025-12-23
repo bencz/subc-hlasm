@@ -9,11 +9,12 @@
 		? RISC-V (rv32/rv64)
 		? MIPS
 		? PowerPC
-
-	- Create crt0 modules for non-DOS platforms (removed in 2025-12-22)
+		? IBM S/370 / z/Architecture (HLASM)
 
 	- Implement runtime library cross-compilation support
 	  (currently only code generation is cross-platform)
 
-	? clean up sym.c
+	- Implement floating-point arithmetic operations in code generators
+	  (float/double types are parsed but arithmetic not yet implemented)
 
+	? clean up sym.c
