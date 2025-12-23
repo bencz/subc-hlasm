@@ -123,7 +123,7 @@ typedef struct {
 
 ## 3. Preprocessor Limitations
 
-- No `#warning`
+- No `#warning` directive (not part of C89, but common extension)
 
 ---
 

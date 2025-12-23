@@ -6,6 +6,7 @@
 #include "defs.h"
 #include "data.h"
 #include "decl.h"
+#include <time.h>
 
 int next(void) {
 	int	c;
@@ -634,9 +635,53 @@ static char *expand_funclike_macro(char *mtext) {
 	return expanded;
 }
 
+/*
+ * Handle special predefined macros that need dynamic values
+ * Returns 1 if handled, 0 otherwise
+ */
+static int special_macro(char *name) {
+	static char buf[TEXTLEN+1];
+	time_t now;
+	struct tm *tm;
+	
+	if (!strcmp(name, "__FILE__")) {
+		/* Return current filename as string literal */
+		sprintf(buf, "\"%s\"", File ? File : "(stdin)");
+		playmac(buf);
+		return 1;
+	}
+	if (!strcmp(name, "__LINE__")) {
+		/* Return current line number */
+		sprintf(buf, "%d", Line);
+		playmac(buf);
+		return 1;
+	}
+	if (!strcmp(name, "__DATE__")) {
+		/* Return compilation date as "Mmm dd yyyy" */
+		now = time(NULL);
+		tm = localtime(&now);
+		strftime(buf, sizeof(buf), "\"%b %d %Y\"", tm);
+		playmac(buf);
+		return 1;
+	}
+	if (!strcmp(name, "__TIME__")) {
+		/* Return compilation time as "hh:mm:ss" */
+		now = time(NULL);
+		tm = localtime(&now);
+		strftime(buf, sizeof(buf), "\"%H:%M:%S\"", tm);
+		playmac(buf);
+		return 1;
+	}
+	return 0;
+}
+
 static int macro(char *name) {
 	int	y;
 	char	*mtext, *expanded;
+
+	/* Check for special predefined macros first */
+	if (special_macro(name))
+		return 1;
 
 	y = findmac(name);
 	if (!y || Types[y] != TMACRO)
