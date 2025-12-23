@@ -19,7 +19,7 @@
 /*
  * Forward declarations for internal helper functions
  */
-static void arm_cglit2(int v, int aux);
+static void arm_cglit2(long v, int aux);
 static void arm_cglocladdr(int n, int aux);
 static void arm_cgstataddr(int n, int aux);
 static void arm_cgglobaddr(char *s, int aux);
@@ -52,7 +52,7 @@ static void arm_cgpublic(char *s)   { ngen(".globl\t%s", s, 0); }
 /*
  * Functions dealing with PC-relative addressing
  */
-static void arm_cglit2(int v, int aux) {
+static void arm_cglit2(long v, int aux) {
     int l, skip;
     if (0 <= v && v <= 127) {
         if (aux == 2)
@@ -183,7 +183,7 @@ static int arm_cgload2(void) {
     return empty == q;
 }
 
-static void arm_cglit(int v)        { arm_cglit2(v, 0); }
+static void arm_cglit(long v)       { arm_cglit2(v, 0); }
 static void arm_cgclear(void)       { /* unused */ }
 static void arm_cgclear2(void)      { /* unused */ }
 

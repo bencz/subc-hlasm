@@ -174,7 +174,7 @@ void commit(void) {
 	Q_type = empty;
 }
 
-void queue(int type, int val, char *name) {
+void queue(int type, long val, char *name) {
 	commit();
 	Q_type = type;
 	Q_val = val;
@@ -196,7 +196,7 @@ void genldlab(int id) {
 	queue(addr_label, id, NULL);
 }
 
-void genlit(int v) {
+void genlit(long v) {
 	gentext();
 	queue(literal, v, NULL);
 }

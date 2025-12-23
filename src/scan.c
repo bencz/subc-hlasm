@@ -90,8 +90,9 @@ static int scanch(void) {
  * Scan a numeric literal (integer or floating-point)
  * Returns 0 for integer, 1 for float, 2 for double
  */
-static int scannumber(int c, int *ival) {
-	int	val, radix, k, i = 0;
+static int scannumber(int c, long *ival) {
+	long	val;
+	int	radix, k, i = 0;
 	int	is_float = 0;
 	int	has_exp = 0;
 	double	fval = 0.0;
@@ -223,8 +224,8 @@ static int scannumber(int c, int *ival) {
 	return 0;  /* integer */
 }
 
-static int scanint(int c) {
-	int	val;
+static long scanint(int c) {
+	long	val;
 	scannumber(c, &val);
 	return val;
 }

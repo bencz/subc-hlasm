@@ -162,7 +162,7 @@ struct cg_vtable {
     int  (*cgload2)(void);
     
     /* Literal and Clear */
-    void (*cglit)(int v);
+    void (*cglit)(long v);
     void (*cgclear)(void);
     void (*cgclear2)(void);
     

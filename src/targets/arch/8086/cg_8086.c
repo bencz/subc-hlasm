@@ -26,7 +26,7 @@ static void m86_cgbr(char *how, int n);
 static int  m86_cgload2(void);
 static void m86_cgclear2(void);
 static void m86_cgpop2(void);
-static void m86_cglit(int v);
+static void m86_cglit(long v);
 static void m86_cgpush(void);
 static void m86_cgstorlw(int n);
 
@@ -117,7 +117,7 @@ static int m86_cgload2(void) {
     return empty == q;
 }
 
-static void m86_cglit(int v)        { ngen("%s\tax,%d", "mov", v); }
+static void m86_cglit(long v)       { ngen("%s\tax,%ld", "mov", v); }
 static void m86_cgclear(void)       { gen("xor\tax,ax"); }
 static void m86_cgclear2(void)      { gen("xor\tcx,cx"); }
 static void m86_cgldgb(char *s)     { sgen("%s\tal,%s", "mov", s); }

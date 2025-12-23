@@ -1,3 +1,7 @@
+2025-12-23 Fixed bootstrap bug: 64-bit integer literals now work correctly
+           - Changed Value, Q_val, node.args from int to long
+           - Updated mkleaf, mkunop1/2, mkbinop1/2, genlit, cglit signatures
+           - Fixes truncation of literals > 2^31 when bootstrapping with gcc/clang
 2025-12-23 Fixed multiple bugs:
            - Fix: //-comments in macros now stripped during definition (prep.c)
            - Fix: Switch statements now detect duplicate case values (stmt.c)

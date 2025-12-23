@@ -14,25 +14,25 @@ char	Bars[MAXBARS];
 
 static void emittree1(node *a);
 
-static node *mknode(int op, int na, int *args, node *left, node *right) {
+static node *mknode(int op, int na, long *args, node *left, node *right) {
 	node	*n;
 	int	hdrlen;
 
 	hdrlen = sizeof(node) / sizeof(int) - 1;
-	if (Ndtop + hdrlen + na >= NODEPOOLSZ)
+	if (Ndtop + hdrlen + na * (sizeof(long)/sizeof(int)) >= NODEPOOLSZ)
 		fatal("expression too complex (out of nodes)");
 	n = (node *) &Nodes[Ndtop];
-	Ndtop += hdrlen + na;
+	Ndtop += hdrlen + na * (sizeof(long)/sizeof(int));
 	if (Ndtop > Ndmax) Ndmax = Ndtop;
 	n->op = op;
 	n->left = left,
 	n->right = right;
-	memcpy(n->args, args, na * sizeof(int));
+	memcpy(n->args, args, na * sizeof(long));
 	return n;
 }
 
-node *mkleaf(int op, int n) {
-	int	a[1];
+node *mkleaf(int op, long n) {
+	long	a[1];
 
 	a[0] = n;
 	return mknode(op, 1, a, NULL, NULL);
@@ -42,15 +42,15 @@ node *mkunop(int op, node *left) {
 	return mknode(op, 0, NULL, left, NULL);
 }
 
-node *mkunop1(int op, int n, node *left) {
-	int	a[1];
+node *mkunop1(int op, long n, node *left) {
+	long	a[1];
 
 	a[0] = n;
 	return mknode(op, 1, a, left, NULL);
 }
 
-node *mkunop2(int op, int n1, int n2, node *left) {
-	int	a[2];
+node *mkunop2(int op, long n1, long n2, node *left) {
+	long	a[2];
 
 	a[0] = n1;
 	a[1] = n2;
@@ -61,15 +61,15 @@ node *mkbinop(int op, node *left, node *right) {
 	return mknode(op, 0, NULL, left, right);
 }
 
-node *mkbinop1(int op, int n, node *left, node *right) {
-	int	a[1];
+node *mkbinop1(int op, long n, node *left, node *right) {
+	long	a[1];
 
 	a[0] = n;
 	return mknode(op, 1, a, left, right);
 }
 
-node *mkbinop2(int op, int n1, int n2, node *left, node *right) {
-	int	a[2];
+node *mkbinop2(int op, long n1, long n2, node *left, node *right) {
+	long	a[2];
 
 	a[0] = n1;
 	a[1] = n2;

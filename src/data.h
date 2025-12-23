@@ -11,14 +11,14 @@ extern_ FILE	*Infile;
 extern_ FILE	*Outfile;
 extern_ int	Token;
 extern_ char	Text[TEXTLEN+1];
-extern_ int	Value;
+extern_ long	Value;
 extern_ double	Fvalue;		/* floating-point literal value */
 extern_ int	Line;
 extern_ int	Errors;
 extern_ int	Syntoken;
 extern_ int	Putback;
 extern_ int	Rejected;
-extern_ int	Rejval;
+extern_ long	Rejval;
 extern_ char	Rejtext[TEXTLEN+1];
 extern_ char	*File;
 extern_ char	*Basefile;
@@ -63,7 +63,7 @@ extern_ int	Nli;
 
 /* synthesizer operand queue */
 extern_ int	Q_type;
-extern_ int	Q_val;
+extern_ long	Q_val;
 extern_ char	Q_name[NAMELEN+1];
 extern_ int	Q_cmp;
 extern_ int	Q_bool;

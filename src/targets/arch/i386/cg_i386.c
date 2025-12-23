@@ -105,7 +105,7 @@ static int i386_cgload2(void) {
     return empty == q;
 }
 
-static void i386_cglit(int v)       { ngen("%s\t$%d,%%eax", "movl", v); }
+static void i386_cglit(long v)      { ngen("%s\t$%ld,%%eax", "movl", v); }
 static void i386_cgclear(void)      { gen("xorl\t%eax,%eax"); }
 static void i386_cgclear2(void)     { gen("xorl\t%ecx,%ecx"); }
 static void i386_cgldgb(char *s)    { sgen("%s\t%s,%%al", "movb", s); }

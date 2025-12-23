@@ -87,7 +87,7 @@ void cgldsb(int n);
 void cgldsw(int n);
 void cgldswtch(int n);
 void cgle(void);
-void cglit(int v);
+void cglit(long v);
 int  cgload2(void);
 void cglognot(void);
 void cglt(void);

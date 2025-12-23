@@ -140,10 +140,51 @@ adicionar tipo `intptr_t` / `uintptr_t` para conversões ponteiro↔inteiro.
 
 ---
 
-## 8. Resumo das Limitações
+## 8. Bootstrap (Auto-compilação)
+
+O SubC atualmente **não consegue se auto-compilar** devido a refatorações no código
+que introduziram features não suportadas pelo próprio SubC:
+
+### 8.1 Ponteiros de Função Tipados
+
+O `cgtarget.h` usa vtables com ponteiros de função tipados:
+
+```c
+struct cg_vtable {
+    void (*cgdata)(void);      /* SubC só aceita int (*)() */
+    void (*cgtext)(void);
+    void (*cglit)(int v);      /* parâmetros tipados não suportados */
+    ...
+};
+```
+
+O SubC original só suporta `int (*)()` para ponteiros de função.
+
+### 8.2 Arquivos Necessários
+
+O Makefile original compilava arquivos mais simples:
+- `cg386.c` (code generator único)
+- Sem vtables, sem cross-compilation
+
+A arquitetura atual usa:
+- `cgtarget.c` + `targets/arch/*/cg_*.c`
+- Vtables para seleção de target em runtime
+
+### 8.3 Solução Futura
+
+Para restaurar o bootstrap, seria necessário:
+
+1. **Opção A**: Modificar `cgtarget.h` para usar `int (*)()` em todos os ponteiros
+2. **Opção B**: Manter uma versão "bootstrap" separada com code generator único
+3. **Opção C**: Implementar suporte a ponteiros de função tipados no SubC
+
+---
+
+## 9. Resumo das Limitações
 
 | Limitação | Severidade | Arquivo |
 |-----------|------------|---------|
+| Bootstrap não funciona | Alto | cgtarget.h |
 | _va_arg aritmética de ponteiro | Médio | varargs.c |
 | Struct/union por valor | Médio | decl.c |
 | Cast ponteiro→inteiro (64-bit) | Médio | sym.c |

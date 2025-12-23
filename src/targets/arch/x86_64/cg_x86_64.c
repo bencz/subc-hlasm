@@ -105,7 +105,7 @@ static int x64_cgload2(void) {
     return empty == q;
 }
 
-static void x64_cglit(int v)        { ngen("%s\t$%d,%%rax", "movq", v); }
+static void x64_cglit(long v)       { ngen("%s\t$%ld,%%rax", "movq", v); }
 static void x64_cgclear(void)       { gen("xorq\t%rax,%rax"); }
 static void x64_cgclear2(void)      { gen("xorq\t%rcx,%rcx"); }
 static void x64_cgldgb(char *s)     { sgen("%s\t%s,%%al", "movb", s); }

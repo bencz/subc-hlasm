@@ -162,7 +162,7 @@ enum {
 struct node_stc {
 	int		op;
 	struct node_stc	*left, *right;
-	int		args[1];
+	long		args[1];
 };
 
 #define node	struct node_stc
