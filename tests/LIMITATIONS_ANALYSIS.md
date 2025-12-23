@@ -1,71 +1,71 @@
-# SubC Compiler - Limitações Pendentes
+# SubC Compiler - Pending Limitations
 
-## Versão: 2025-12-23
+## Version: 2025-12-23
 
-Este documento lista as limitações ainda existentes no compilador SubC.
+This document lists the remaining limitations in the SubC compiler.
 
 ---
 
-## 1. Bootstrap (Auto-compilação)
+## 1. Bootstrap (Self-compilation)
 
-### 1.1 Includes do Sistema
+### 1.1 System Includes
 
-O SubC não consegue compilar arquivos que incluem headers do sistema:
+SubC cannot compile files that include system headers:
 - `stdlib.h`, `stdio.h`, `string.h`, `ctype.h`, `stddef.h`
 
-Para bootstrap, seria necessário usar os headers próprios do SubC em `runtime/include/`.
+For bootstrap, you must use SubC's own headers in `runtime/include/`.
 
-### 1.2 Macros com Chamadas via Ponteiro
+### 1.2 Macros with Pointer Calls
 
-O `cgen_compat.h` usa macros como:
+The `cgen_compat.h` uses macros like:
 ```c
 #define cgdata()  (CG->vtable->cgdata())
 ```
 
-Isso requer parsing de expressões complexas com `->` encadeado e chamada de função.
+This requires parsing complex expressions with chained `->` and function calls.
 
-### 1.3 Retorno de Ponteiro de Função
+### 1.3 Function Pointer Return Types
 
-O SubC trata todos os ponteiros de função como retornando `int` internamente.
-Atribuições como `char *str = vtable.fn_retstr("x");` geram erro de tipo.
-
----
-
-## 2. Limitações de Linguagem (Design)
-
-Estas são limitações intencionais do SubC, não bugs:
-
-| Limitação | Descrição |
-|-----------|-----------|
-| Máximo 2 níveis de indireção | `int **` válido, `int ***` inválido |
-| Arrays apenas 1D | `int a[10]` válido, `int a[10][20]` inválido |
-| Sem goto | Keyword `goto` não reconhecido |
-| Struct/union por valor | Usar ponteiros: `void fn(struct x *p)` |
+SubC treats all function pointers as returning `int` internally.
+Assignments like `char *str = vtable.fn_retstr("x");` generate type errors.
 
 ---
 
-## 3. Campos de Alinhamento (Futuro)
+## 2. Language Limitations (By Design)
 
-| Campo | Status |
+These are intentional SubC limitations, not bugs:
+
+| Limitation | Description |
+|------------|-------------|
+| Max 2 levels of indirection | `int **` valid, `int ***` invalid |
+| 1D arrays only | `int a[10]` valid, `int a[10][20]` invalid |
+| No goto | `goto` keyword not recognized |
+| Struct/union by value | Use pointers: `void fn(struct x *p)` |
+
+---
+
+## 3. Alignment Fields (Future)
+
+| Field | Status |
 |-------|--------|
-| `align_stack` | Definido, uso futuro para arquiteturas com requisitos rigorosos |
-| `align_data` | Definido, uso futuro para alinhamento de dados |
-| `align_func` | Definido, uso futuro para alinhamento de funções |
+| `align_stack` | Defined, future use for strict alignment architectures |
+| `align_data` | Defined, future use for data alignment |
+| `align_func` | Defined, future use for function alignment |
 
-**Prioridade**: Baixa - as arquiteturas atuais (x86, ARM) funcionam sem isso.
-Necessário para IBM S/370 / z/Architecture.
+**Priority**: Low - current architectures (x86, ARM) work without this.
+Required for IBM S/370 / z/Architecture.
 
 ---
 
-## 4. Resumo
+## 4. Summary
 
-| Limitação | Severidade | Status |
-|-----------|------------|--------|
-| Bootstrap (includes) | Alta | Pendente |
-| Bootstrap (macros vtable) | Alta | Pendente |
-| Retorno fn ptr != int | Média | Pendente |
-| Campos align_* | Baixa | Futuro |
-| 2 níveis indireção | Baixa | Design |
-| Arrays 1D | Baixa | Design |
-| Sem goto | Baixa | Design |
-| Struct por valor | Baixa | Design |
+| Limitation | Severity | Status |
+|------------|----------|--------|
+| Bootstrap (includes) | High | Pending |
+| Bootstrap (vtable macros) | High | Pending |
+| fn ptr return != int | Medium | Pending |
+| align_* fields | Low | Future |
+| 2 levels indirection | Low | Design |
+| 1D arrays | Low | Design |
+| No goto | Low | Design |
+| Struct by value | Low | Design |

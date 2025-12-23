@@ -32,5 +32,8 @@ systest
 stdio.ok
 test.s
 
+tests/*.s
+tests/c89_suite/output
+
 # Archive
 subc-b2022.zip

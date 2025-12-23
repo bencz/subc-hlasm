@@ -24,6 +24,14 @@
 		ptr-to-int	fixed (64-bit cast issue resolved)
 		fn pointers	extended (any return type, typed params)
 
+	C89 Test Suite (2025-12-23):
+		location	tests/c89_suite/
+		tests		38 test files
+		categories	operators, control flow, types, functions,
+				stdlib, preprocessor, complex patterns
+		runner		./run_tests.sh (-c compile, -C compare, -k keep)
+		docs		README_TESTS
+
 	Available cross-compilation targets (12):
 		linux-386	Linux i386 (ELF, GAS syntax)
 		linux-x86-64	Linux x86-64 (ELF, GAS syntax)

@@ -1,3 +1,9 @@
+2025-12-23 Added comprehensive C89 test suite in tests/c89_suite/:
+           - 38 test files covering operators, control flow, types, functions
+           - Complex tests: vtables, linked lists, state machines, callbacks
+           - run_tests.sh script with compare mode (SubC vs GCC/Clang)
+           - Assembly output saved to tests/c89_suite/output/
+           - See README_TESTS for full documentation
 2025-12-23 Fixed function pointer call via struct member (vtable pattern):
            - OP_CALR in tree.c now properly separates fn ptr eval from args
            - Added cgindw() to dereference the struct member address
