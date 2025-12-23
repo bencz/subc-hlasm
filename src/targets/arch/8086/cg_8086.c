@@ -403,6 +403,11 @@ static void m86_cgdefp(int v)       { ngen("%s\t%d", "dw", v); }   /* 2 bytes (n
 static void m86_cgdefl(int v, int tbl) { (void)tbl; lgen("%s\t%c%d", "dw", v); }
 static void m86_cgdefq(int v)       { ngen("%s\t%d", "dd", v); ngen("%s\t%d", "dd", 0); } /* 8 bytes (2x dd) */
 static void m86_cgdefc(int c)       { ngen("%s\t'%c'", "db", c); }
+static void m86_cgdefs(char *s, int len) {
+    /* TASM syntax: db "string" */
+    fprintf(Outfile, "\tdb\t\"%s\"\n", s);
+    (void)len;
+}
 
 static void m86_cggbss(char *s, int z) {
     genraw(s);
@@ -1383,6 +1388,7 @@ struct cg_vtable cg_vtable_8086 = {
     m86_cgdefp,
     m86_cgdefl,
     m86_cgdefc,
+    m86_cgdefs,
     m86_cgdefq,
     m86_cggbss,
     m86_cglbss,
@@ -1637,6 +1643,7 @@ struct cg_vtable cg_vtable_8086_x87 = {
     m86_cgdefp,
     m86_cgdefl,
     m86_cgdefc,
+    m86_cgdefs,
     m86_cgdefq,
     m86_cggbss,
     m86_cglbss,

@@ -335,6 +335,12 @@ static void i386_cgdefp(int v)      { ngen("%s\t%d", ".long", v); }
 static void i386_cgdefl(int v, int tbl) { (void)tbl; lgen("%s\t%c%d", ".long", v); }
 static void i386_cgdefq(int v)      { ngen("%s\t%d", ".long", v); ngen("%s\t%d", ".long", 0); } /* 8 bytes */
 static void i386_cgdefc(int c)      { ngen("%s\t'%c'", ".byte", c); }
+static void i386_cgdefs(char *s, int len) {
+    /* Generate string literal: .ascii "escaped_string" */
+    /* s is already escaped, just output it */
+    fprintf(Outfile, "\t.ascii\t\"%s\"\n", s);
+    (void)len;
+}
 static void i386_cggbss(char *s, int z) { ngen(".comm\t%s,%d", s, z); }
 static void i386_cglbss(char *s, int z) { ngen(".lcomm\t%s,%d", s, z); }
 static void i386_cgalign(void)      { /* unused */ }
@@ -1064,6 +1070,7 @@ struct cg_vtable cg_vtable_i386 = {
     i386_cgdefp,
     i386_cgdefl,
     i386_cgdefc,
+    i386_cgdefs,
     i386_cgdefq,
     i386_cggbss,
     i386_cglbss,

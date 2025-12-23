@@ -648,6 +648,10 @@ static void arm_cgdefp(int v)       { ngen("%s\t%d", ".long", v); }
 static void arm_cgdefl(int v, int tbl) { (void)tbl; lgen("%s\t%c%d", ".long", v); }
 static void arm_cgdefq(int v)       { ngen("%s\t%d", ".long", v); ngen("%s\t%d", ".long", 0); } /* 8 bytes */
 static void arm_cgdefc(int c)       { ngen("%s\t'%c'", ".byte", c); }
+static void arm_cgdefs(char *s, int len) {
+    fprintf(Outfile, "\t.ascii\t\"%s\"\n", s);
+    (void)len;
+}
 static void arm_cggbss(char *s, int z) { ngen(".comm\t%s,%d", s, z); }
 static void arm_cglbss(char *s, int z) { ngen(".lcomm\t%s,%d", s, z); }
 static void arm_cgalign(void)       { gen(".align 2"); }
@@ -1373,6 +1377,7 @@ struct cg_vtable cg_vtable_armv6 = {
     arm_cgdefp,
     arm_cgdefl,
     arm_cgdefc,
+    arm_cgdefs,
     arm_cgdefq,
     arm_cggbss,
     arm_cglbss,

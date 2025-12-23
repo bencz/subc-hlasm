@@ -292,6 +292,7 @@
 #define cgdefp(v)       (CG->vtable->cgdefp(v))
 #define cgdefl(v,t)     (CG->vtable->cgdefl(v,t))
 #define cgdefc(c)       (CG->vtable->cgdefc(c))
+#define cgdefs(s,l)     (CG->vtable->cgdefs(s,l))  /* string literal */
 #define cgdefq(v)       (CG->vtable->cgdefq(v))    /* quad-word (8 bytes) */
 #define cggbss(s,z)     (CG->vtable->cggbss(s,z))
 #define cglbss(s,z)     (CG->vtable->cglbss(s,z))

@@ -16,8 +16,3 @@
 	  (t_array_complex.c, t_const_expr.c, t_global.c, t_state_machine.c)
 
 	- Add block-scoped variable declarations (C89 feature)
-
-	- Optimize string literal code generation:
-	  Currently strings are generated char-by-char (.byte 'h', .byte 'e', ...)
-	  Could use .ascii "hello" or .asciz "hello\0" for more compact output
-	  See gendefs() in gen.c and cgdefc()/cgdefb() in code generators

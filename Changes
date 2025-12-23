@@ -1,3 +1,9 @@
+2025-12-23 Optimized string literal code generation:
+           - Strings now use .ascii "string" instead of byte-by-byte
+           - Added cgdefs() to vtable for direct string output
+           - Escape sequences (\n, \r, \t, etc.) properly escaped in gen.c
+           - Removed unnecessary alignment padding after strings
+           - Much cleaner and smaller assembly output
 2025-12-23 Implemented char* pointer initialization with string literals (C89):
            - char *str = "hello"; now works correctly
            - const char *str = "hello"; also supported

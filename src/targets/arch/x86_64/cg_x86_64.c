@@ -337,6 +337,10 @@ static void x64_cgdefp(int v)       { ngen("%s\t%d", ".quad", v); }
 static void x64_cgdefl(int v, int tbl) { (void)tbl; lgen("%s\t%c%d", ".quad", v); }
 static void x64_cgdefq(int v)       { ngen("%s\t%d", ".quad", v); }   /* 8 bytes */
 static void x64_cgdefc(int c)       { ngen("%s\t'%c'", ".byte", c); }
+static void x64_cgdefs(char *s, int len) {
+    fprintf(Outfile, "\t.ascii\t\"%s\"\n", s);
+    (void)len;
+}
 static void x64_cggbss(char *s, int z) { ngen(".comm\t%s,%d", s, z); }
 static void x64_cglbss(char *s, int z) { ngen(".lcomm\t%s,%d", s, z); }
 static void x64_cgalign(void)       { /* unused */ }
@@ -1158,6 +1162,7 @@ struct cg_vtable cg_vtable_x86_64 = {
     x64_cgdefp,
     x64_cgdefl,
     x64_cgdefc,
+    x64_cgdefs,
     x64_cgdefq,
     x64_cggbss,
     x64_cglbss,

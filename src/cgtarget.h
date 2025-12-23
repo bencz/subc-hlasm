@@ -470,6 +470,7 @@ struct cg_vtable {
     void (*cgdefp)(int v);      /* Define pointer */
     void (*cgdefl)(int v, int tbl);  /* Define label reference (tbl for relative offset) */
     void (*cgdefc)(int c);      /* Define character */
+    void (*cgdefs)(char *s, int len); /* Define string (without quotes, len includes quotes) */
     void (*cgdefq)(int v);      /* Define quad-word (8 bytes) - for double/long long */
     void (*cggbss)(char *s, int z);
     void (*cglbss)(char *s, int z);

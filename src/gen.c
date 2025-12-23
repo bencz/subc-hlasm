@@ -651,15 +651,37 @@ void gendefp(int v) {
 }
 
 void gendefs(char *s, int len) {
-	int	i;
+	static char buf[TEXTLEN * 4];  /* worst case: all chars escaped */
+	int i, j, c;
 
 	gendata();
-	for (i=1; i<len-1; i++) {
-		if (isalnum(s[i]))
-			cgdefc(s[i]);
-		else
-			cgdefb(s[i]);
+	/* Escape special characters before passing to code generator */
+	j = 0;
+	for (i = 1; i < len - 1; i++) {
+		c = s[i];
+		switch (c) {
+		case '\n': buf[j++] = '\\'; buf[j++] = 'n'; break;
+		case '\r': buf[j++] = '\\'; buf[j++] = 'r'; break;
+		case '\t': buf[j++] = '\\'; buf[j++] = 't'; break;
+		case '\b': buf[j++] = '\\'; buf[j++] = 'b'; break;
+		case '\f': buf[j++] = '\\'; buf[j++] = 'f'; break;
+		case '\\': buf[j++] = '\\'; buf[j++] = '\\'; break;
+		case '"':  buf[j++] = '\\'; buf[j++] = '"'; break;
+		default:
+			if (c >= 32 && c < 127)
+				buf[j++] = c;
+			else {
+				/* Octal escape for non-printable chars */
+				buf[j++] = '\\';
+				buf[j++] = '0' + ((c >> 6) & 7);
+				buf[j++] = '0' + ((c >> 3) & 7);
+				buf[j++] = '0' + (c & 7);
+			}
+			break;
+		}
 	}
+	buf[j] = 0;
+	cgdefs(buf, j);
 }
 
 /*
@@ -674,8 +696,8 @@ int genstrlit(char *s, int len) {
 	lab = label();
 	genlab(lab);
 	gendefs(s, len);
-	gendefb(0);
-	genalign(len - 1);
+	gendefb(0);  /* null terminator */
+	/* No alignment needed for string literals - they're byte arrays */
 	return lab;
 }
 
