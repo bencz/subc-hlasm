@@ -1,3 +1,13 @@
+2025-12-23 Added symbol_transform callback to cg_arch structure for custom symbol
+           name transformation. This allows architectures like HLASM to implement
+           their own symbol naming conventions (uppercase, 8-char limit, etc.).
+           Modified gsym() in gen.c to use the callback when available.
+           Removed hardcoded 'C' prefix - symbols now follow standard ABI:
+           - ELF targets (Linux, FreeBSD, etc.): no prefix (main, printf)
+           - Darwin/macOS: underscore prefix (_main, _printf)
+           - Windows: underscore prefix (_main, _printf)
+           Created cg_arch_x86_64_darwin and cg_arch_i386_windows with
+           appropriate symbol_transform callbacks.
 2025-12-23 Implemented ABI-compliant calling conventions:
            - x86-64: System V AMD64 ABI with args in rdi,rsi,rdx,rcx,r8,r9
            - ARM: AAPCS with args in r0,r1,r2,r3

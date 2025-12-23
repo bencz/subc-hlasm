@@ -424,6 +424,22 @@ struct cg_arch {
      *   - cgargstack(int nargs): Adjust stack after call (only for stack args)
      */
     int  num_arg_regs;        /* Number of registers for integer arguments */
+    
+    /*
+     * Symbol Transformation Callback
+     * 
+     * Custom function to transform C symbol names to assembler symbol names.
+     * If NULL, the default transformation is used (PREFIX + name).
+     * 
+     * Use cases:
+     *   - HLASM: Convert to uppercase, limit to 8 chars, hash long names
+     *   - Darwin: Add underscore prefix
+     *   - Custom naming conventions
+     * 
+     * The function receives the original C symbol name and returns a pointer
+     * to a static buffer containing the transformed name.
+     */
+    char *(*symbol_transform)(char *name);
 };
 
 /*
@@ -497,6 +513,9 @@ extern struct cg_target *CG;
 #define CG_PARAM_OFFSET_DIR   (CG->arch->param_offset_dir)
 #define CG_LOCAL_OFFSET_BASE  (CG->arch->local_offset_base)
 #define CG_LOCAL_OFFSET_DIR   (CG->arch->local_offset_dir)
+
+/* Symbol transformation accessor macro */
+#define CG_SYMBOL_TRANSFORM   (CG->arch->symbol_transform)
 
 /* OS property accessor macros */
 #define CG_OS_TYPE      (CG->os->os_type)

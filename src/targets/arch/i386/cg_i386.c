@@ -362,6 +362,20 @@ static void i386_cgfnentry(int nparams) {
 
 /*
  * ============================================================================
+ * Symbol Transform Functions
+ * ============================================================================
+ */
+
+/* Windows requires underscore prefix for C symbols */
+static char *i386_windows_symbol_transform(char *s) {
+    static char name[NAMELEN+2];
+    name[0] = '_';
+    copyname(&name[1], s);
+    return name;
+}
+
+/*
+ * ============================================================================
  * i386 Architecture Description
  * ============================================================================
  */
@@ -389,7 +403,37 @@ struct cg_arch cg_arch_i386 = {
     1,                  /* param_offset_dir (positive: 8, 12, 16...) */
     0,                  /* local_offset_base */
     -1,                 /* local_offset_dir (negative: -4, -8, -12...) */
-    0                   /* num_arg_regs (cdecl: all args on stack) */
+    0,                  /* num_arg_regs (cdecl: all args on stack) */
+    NULL                /* symbol_transform (use default) */
+};
+
+/* Windows i386: same as i386 but with underscore prefix */
+struct cg_arch cg_arch_i386_windows = {
+    "i386-windows",     /* name */
+    32,                 /* bits */
+    1,                  /* char_size */
+    4,                  /* int_size */
+    4,                  /* ptr_size */
+    4,                  /* bpw */
+    ENDIAN_LITTLE,      /* endian */
+    STACK_DOWN,         /* stack_dir */
+    ASM_GAS,            /* asm_syntax */
+    CC_CDECL,           /* call_conv */
+    FLOAT_IEEE754,      /* float_format */
+    4,                  /* align_stack */
+    4,                  /* align_data */
+    4,                  /* align_func */
+    1,                  /* has_mul */
+    1,                  /* has_div */
+    1,                  /* has_mod */
+    1,                  /* has_byte_ops */
+    0,                  /* needs_alignment */
+    8,                  /* param_offset_base (return addr + saved ebp) */
+    1,                  /* param_offset_dir (positive: 8, 12, 16...) */
+    0,                  /* local_offset_base */
+    -1,                 /* local_offset_dir (negative: -4, -8, -12...) */
+    0,                  /* num_arg_regs (cdecl: all args on stack) */
+    i386_windows_symbol_transform  /* symbol_transform (underscore prefix) */
 };
 
 /*
@@ -652,7 +696,7 @@ struct cg_target cg_target_openbsd_386 = {
 struct cg_target cg_target_windows_386 = {
     "windows-386",
     "Windows i386 (PE, GAS syntax)",
-    &cg_arch_i386,
+    &cg_arch_i386_windows,
     &cg_os_windows,
     &cg_vtable_i386,
     NULL,

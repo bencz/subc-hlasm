@@ -781,7 +781,8 @@ struct cg_arch cg_arch_armv6 = {
     1,                  /* param_offset_dir */
     0,                  /* local_offset_base - adjusted by cgfnentry */
     -1,                 /* local_offset_dir (negative: -4, -8, -12...) */
-    4                   /* num_arg_regs (r0, r1, r2, r3) */
+    4,                  /* num_arg_regs (r0, r1, r2, r3) */
+    NULL                /* symbol_transform (use default) */
 };
 
 /*

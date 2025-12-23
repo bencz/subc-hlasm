@@ -102,8 +102,13 @@ char *labname(int id) {
 char *gsym(char *s) {
 	static char	name[NAMELEN+2];
 
-	name[0] = PREFIX;
-	copyname(&name[1], s);
+	/* Check if architecture provides custom symbol transformation */
+	if (CG_SYMBOL_TRANSFORM != NULL) {
+		return CG_SYMBOL_TRANSFORM(s);
+	}
+
+	/* Default: no prefix (standard ABI) */
+	copyname(name, s);
 	return name;
 }
 

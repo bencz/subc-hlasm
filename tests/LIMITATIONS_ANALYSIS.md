@@ -1,9 +1,16 @@
 # SubC Compiler - Análise Detalhada de Limitações
 
-## Versão: 2025-12-22 (Cross-compilation support)
+## Versão: 2025-12-23 (ABI-compliant calling conventions)
 
 Este documento analisa em profundidade as limitações do compilador SubC,
 especialmente relacionadas a parâmetros de função, va_args e convenções de chamada.
+
+### ✅ Correções Implementadas em 2025-12-23
+
+- **Convenções de chamada ABI-compliant** para x86-64 (System V AMD64) e ARM (AAPCS)
+- **Passagem de argumentos via registradores** conforme ABI padrão
+- **Prólogo de função** salva registradores de argumentos na stack para acesso uniforme
+- **Offsets de parâmetros** calculados corretamente para ABIs com registradores
 
 ---
 
@@ -95,10 +102,15 @@ void _va_end(void **ap) {}
 
 ### 3.3 PROBLEMAS IDENTIFICADOS
 
-#### Problema 1: Incompatibilidade com x86-64 ABI
-- **x86-64 System V ABI** passa os primeiros 6 argumentos inteiros em registradores (rdi, rsi, rdx, rcx, r8, r9)
-- A implementação de `_va_start` assume que TODOS os argumentos estão na stack
-- **Resultado**: va_args não funciona corretamente em x86-64!
+#### ~~Problema 1: Incompatibilidade com x86-64 ABI~~ ✅ CORRIGIDO
+
+- ~~**x86-64 System V ABI** passa os primeiros 6 argumentos inteiros em registradores (rdi, rsi, rdx, rcx, r8, r9)~~
+- ~~A implementação de `_va_start` assume que TODOS os argumentos estão na stack~~
+- ~~**Resultado**: va_args não funciona corretamente em x86-64!~~
+
+**Status (2025-12-23)**: O compilador agora salva os registradores de argumentos na stack
+no prólogo da função via `cgfnentry()`. Os argumentos ficam acessíveis em offsets
+negativos do frame pointer, permitindo que `_va_start` funcione corretamente.
 
 #### Problema 2: Aritmética de ponteiro incorreta
 ```c
@@ -163,42 +175,44 @@ void emitargs(node *a) {
 }
 ```
 
-### 4.2 Problema: Todos os Argumentos na Stack
+### ~~4.2 Problema: Todos os Argumentos na Stack~~ ✅ CORRIGIDO
 
-O SubC **sempre** empilha todos os argumentos, independente da arquitetura:
+~~O SubC **sempre** empilha todos os argumentos, independente da arquitetura.~~
+
+**Status (2025-12-23)**: Implementado suporte ABI-compliant:
 
 ```c
-// Em gen.c:576
-void genstack(int n) {
-    if (n) {
-        gentext();
-        cgstack(n);  // Ajusta stack após chamada
-    }
-}
+// Novas funções na vtable (cgtarget.h):
+void (*cgpusharg)(int argnum);   // Move arg para registrador ou stack
+void (*cgcallprep)(int nargs);   // Prepara chamada (alinhamento)
+void (*cgcallend)(int nargs);    // Limpa stack após chamada
+void (*cgfnentry)(int nparams);  // Prólogo com salvamento de regs
 ```
 
-Isso significa que:
-- **i386**: Funciona corretamente (cdecl usa stack)
-- **x86-64**: **INCORRETO** - deveria usar rdi, rsi, rdx, rcx, r8, r9
-- **ARM**: **INCORRETO** - deveria usar r0-r3
+Comportamento atual:
+- **i386**: Todos args na stack (cdecl) ✓
+- **8086**: Todos args na stack (cdecl) ✓
+- **x86-64**: Args 1-6 em rdi,rsi,rdx,rcx,r8,r9; resto na stack ✓
+- **ARM**: Args 1-4 em r0-r3; resto na stack ✓
 
-### 4.3 Declaração de Convenção (Não Utilizada)
+### 4.3 Declaração de Convenção
 
 Em `cgtarget.h`:
 ```c
 enum cg_call_conv {
-    CC_CDECL = 0,
+    CC_CDECL = 0,      // i386, 8086 - todos args na stack
     CC_STDCALL,
     CC_FASTCALL,
-    CC_SYSV_AMD64,   // Declarado mas não implementado!
+    CC_SYSV_AMD64,     // x86-64 - ✅ IMPLEMENTADO
     CC_WIN64,
-    CC_AAPCS,
+    CC_AAPCS,          // ARM - ✅ IMPLEMENTADO
     CC_AAPCS64,
     CC_HLASM
 };
 ```
 
-A arquitetura x86-64 declara `CC_SYSV_AMD64` mas o código gerado **não segue** essa convenção!
+**Status (2025-12-23)**: As convenções `CC_SYSV_AMD64` e `CC_AAPCS` agora estão
+implementadas corretamente com passagem de argumentos via registradores.
 
 ---
 
@@ -277,16 +291,18 @@ Não suporta `int a[10][20]`
 
 ---
 
-## 7. Resumo dos Problemas Críticos
+## 7. Resumo dos Problemas (Atualizado 2025-12-23)
 
-| Problema | Severidade | Impacto |
-|----------|------------|---------|
-| va_args em x86-64 | **CRÍTICO** | Não funciona |
-| Convenção de chamada x86-64 | **CRÍTICO** | Incompatível com ABI |
-| MAXFNARGS = 32 | Médio | Limita funções complexas |
-| _va_arg implementação | **CRÍTICO** | Comportamento indefinido |
-| MAXCASE = 256 | Baixo | Limita switches grandes |
-| MAXBREAK = 16 | Baixo | Limita aninhamento |
+| Problema | Severidade | Status |
+|----------|------------|--------|
+| ~~va_args em x86-64~~ | ~~CRÍTICO~~ | ✅ CORRIGIDO |
+| ~~Convenção de chamada x86-64~~ | ~~CRÍTICO~~ | ✅ CORRIGIDO |
+| ~~Convenção de chamada ARM~~ | ~~CRÍTICO~~ | ✅ CORRIGIDO |
+| ~~Stack direction hardcoded~~ | ~~CRÍTICO~~ | ✅ CORRIGIDO |
+| MAXFNARGS = 32 | Médio | Pendente |
+| _va_arg aritmética de ponteiro | Médio | Pendente |
+| MAXCASE = 256 | Baixo | Pendente |
+| MAXBREAK = 16 | Baixo | Pendente |
 
 ---
 
@@ -318,13 +334,32 @@ struct cg_arch {
 **Parâmetros de função (`pmtrdecls()`):**
 ```c
 static int pmtrdecls(void) {
-    // ...
-    addr = CG_PARAM_OFFSET_BASE;  // Usa campo da arquitetura
+    num_arg_regs = CG_NUM_ARG_REGS;
+    
+    // Para ABIs com registradores (x86-64, ARM):
+    // Parâmetros salvos em offsets negativos (-8, -16, -24...)
+    if (num_arg_regs > 0) {
+        addr = -BPW;  // Primeiro param em -8(%rbp)
+    } else {
+        addr = CG_PARAM_OFFSET_BASE;  // Stack-based ABI
+    }
+    
     for (;;) {
-        // ...
         addloc(name, prim, type, CAUTO, size, addr, 0);
-        addr += CG_PARAM_OFFSET_DIR * BPW;  // Usa direção da arquitetura
-        // ...
+        na++;
+        
+        // Calcula offset do próximo parâmetro
+        if (num_arg_regs > 0) {
+            if (na < num_arg_regs) {
+                addr -= BPW;  // Continua em offsets negativos
+            } else if (na == num_arg_regs) {
+                addr = CG_PARAM_OFFSET_BASE;  // Transição para stack
+            } else {
+                addr += BPW;  // Args na stack do chamador
+            }
+        } else {
+            addr += CG_PARAM_OFFSET_DIR * BPW;
+        }
     }
 }
 ```
@@ -361,34 +396,47 @@ Agora é possível implementar arquiteturas onde a stack cresce para CIMA:
 
 ### 9.5 Configuração por Arquitetura
 
-Cada code generator agora define os valores corretos:
+Cada code generator agora define os valores corretos incluindo `num_arg_regs`:
 
 ```c
-// i386: params em 8, 12, 16...; locals em -4, -8, -12...
+// i386: cdecl - todos args na stack
 struct cg_arch cg_arch_i386 = {
     // ...
     8,   /* param_offset_base */
     1,   /* param_offset_dir */
     0,   /* local_offset_base */
-    -1   /* local_offset_dir */
+    -1,  /* local_offset_dir */
+    0    /* num_arg_regs (cdecl: tudo na stack) */
 };
 
-// x86-64: params em 16, 24, 32...; locals em -8, -16, -24...
+// x86-64: System V AMD64 - 6 args em registradores
 struct cg_arch cg_arch_x86_64 = {
     // ...
-    16,  /* param_offset_base */
+    16,  /* param_offset_base (para args 7+) */
     1,   /* param_offset_dir */
     0,   /* local_offset_base */
-    -1   /* local_offset_dir */
+    -1,  /* local_offset_dir */
+    6    /* num_arg_regs (rdi, rsi, rdx, rcx, r8, r9) */
 };
 
-// 8086: params em 4, 6, 8...; locals em -2, -4, -6...
+// ARM: AAPCS - 4 args em registradores
+struct cg_arch cg_arch_armv6 = {
+    // ...
+    8,   /* param_offset_base (para args 5+) */
+    1,   /* param_offset_dir */
+    0,   /* local_offset_base */
+    -1,  /* local_offset_dir */
+    4    /* num_arg_regs (r0, r1, r2, r3) */
+};
+
+// 8086: cdecl - todos args na stack
 struct cg_arch cg_arch_8086 = {
     // ...
     4,   /* param_offset_base */
     1,   /* param_offset_dir */
     0,   /* local_offset_base */
-    -1   /* local_offset_dir */
+    -1,  /* local_offset_dir */
+    0    /* num_arg_regs (cdecl: tudo na stack) */
 };
 ```
 
@@ -405,7 +453,8 @@ struct cg_arch cg_arch_8086 = {
 | `param_offset_dir` | `cg_arch` | ✅ **SIM** | Corrigido em 2025-12-23 |
 | `local_offset_base` | `cg_arch` | ✅ **SIM** | Corrigido em 2025-12-23 |
 | `local_offset_dir` | `cg_arch` | ✅ **SIM** | Adicionado em 2025-12-23 |
-| `call_conv` | `cg_arch` | **NÃO** | Declarado mas não implementado |
+| `num_arg_regs` | `cg_arch` | ✅ **SIM** | Adicionado em 2025-12-23 |
+| `call_conv` | `cg_arch` | Parcial | Usado para determinar comportamento |
 | `align_stack` | `cg_arch` | **NÃO** | Declarado mas não implementado |
 | `align_data` | `cg_arch` | **NÃO** | Declarado mas não implementado |
 | `align_func` | `cg_arch` | **NÃO** | Declarado mas não implementado |
@@ -420,6 +469,7 @@ struct cg_arch cg_arch_8086 = {
 #define CG_PARAM_OFFSET_DIR   (CG->arch->param_offset_dir)   // ✅ USADO
 #define CG_LOCAL_OFFSET_BASE  (CG->arch->local_offset_base)  // ✅ USADO
 #define CG_LOCAL_OFFSET_DIR   (CG->arch->local_offset_dir)   // ✅ USADO
+#define CG_NUM_ARG_REGS       (CG->arch->num_arg_regs)       // ✅ USADO
 ```
 
 ---
@@ -490,57 +540,29 @@ corretamente usando a convenção stack-based do SubC.
 
 ---
 
-## 13. LIMITAÇÃO: Transformação de Símbolos Hardcoded
+## 13. ~~LIMITAÇÃO: Transformação de Símbolos Hardcoded~~ ✅ CORRIGIDO
 
-### 13.1 O Problema
+### 13.1 O Problema (RESOLVIDO)
 
 A função `gsym()` em `gen.c` é responsável por transformar nomes de símbolos
-para o formato do assembler alvo. Porém, ela usa uma transformação **fixa**:
+para o formato do assembler alvo. ~~Porém, ela usava uma transformação **fixa**~~.
 
+**Status (2025-12-23)**: Implementado callback `symbol_transform` na estrutura `cg_arch`.
+Cada arquitetura pode agora fornecer sua própria função de transformação de símbolos.
+
+### 13.2 Solução Implementada
+
+**Em `cgtarget.h`:**
 ```c
-// Em gen.c:102-108
-char *gsym(char *s) {
-    static char name[NAMELEN+2];
-
-    name[0] = PREFIX;           // PREFIX = 'C' (hardcoded em defs.h)
-    copyname(&name[1], s);
-    return name;
-}
-```
-
-### 13.2 Limitações da Implementação Atual
-
-1. **PREFIX fixo**: Sempre adiciona 'C' antes do nome
-2. **Sem transformação de case**: Não converte para maiúsculas (necessário para HLASM)
-3. **Sem limite de tamanho**: HLASM limita símbolos a 8 caracteres
-4. **Sem hash para nomes longos**: Nomes > 8 chars precisam ser truncados com hash
-5. **Sem callback por arquitetura**: Não há como customizar por target
-
-### 13.3 Campos Existentes mas Não Utilizados
-
-Em `cg_os_config`:
-```c
-int underscore_sym;   /* Prefix symbols with underscore? */
-```
-
-Este campo existe mas **NÃO É USADO** pela função `gsym()`!
-
-### 13.4 Solução Proposta
-
-Adicionar callback de transformação de símbolos na estrutura `cg_arch`:
-
-```c
-// Em cgtarget.h
 struct cg_arch {
     // ...
-    char *(*symbol_transform)(char *s);  /* Custom symbol transformation */
+    char *(*symbol_transform)(char *name);  /* Custom symbol transformation */
 };
 
 #define CG_SYMBOL_TRANSFORM   (CG->arch->symbol_transform)
 ```
 
-Modificar `gsym()`:
-
+**Em `gen.c`:**
 ```c
 char *gsym(char *s) {
     static char name[NAMELEN+2];
@@ -549,18 +571,38 @@ char *gsym(char *s) {
     if (CG_SYMBOL_TRANSFORM != NULL) {
         return CG_SYMBOL_TRANSFORM(s);
     }
-    
-    /* When using system runtime, don't add prefix */
-    if (O_sysrt) {
-        copyname(name, s);
-        return name;
-    }
-    
+
     /* Default transformation: PREFIX + name */
     name[0] = PREFIX;
     copyname(&name[1], s);
     return name;
 }
+```
+
+### 13.3 Como Usar
+
+Para implementar transformação customizada em uma nova arquitetura:
+
+```c
+/* Exemplo: transformação para HLASM (S/370) */
+static char *s370_symbol_transform(char *s) {
+    static char name[12];
+    /* ... implementação customizada ... */
+    return name;
+}
+
+struct cg_arch cg_arch_s370 = {
+    // ... outros campos ...
+    s370_symbol_transform    /* symbol_transform */
+};
+```
+
+Para arquiteturas que usam a transformação padrão (PREFIX + nome):
+```c
+struct cg_arch cg_arch_i386 = {
+    // ... outros campos ...
+    NULL                /* symbol_transform (use default) */
+};
 ```
 
 ### 13.5 Exemplo para S/370 (HLASM)
@@ -751,8 +793,8 @@ struct cg_arch {
 
 | Limitação | Arquivo | Impacto | Status |
 |-----------|---------|---------|--------|
-| `gsym()` hardcoded | gen.c | Não suporta HLASM (8 chars, uppercase) | PENDENTE |
-| `PREFIX` fixo | defs.h | Sempre 'C', não configurável | PENDENTE |
+| ~~`gsym()` hardcoded~~ | gen.c | ~~Não suporta HLASM~~ | ✅ CORRIGIDO |
+| ~~`PREFIX` fixo~~ | defs.h | ~~Sempre 'C'~~ | ✅ CORRIGIDO (via callback) |
 | `LPREFIX` fixo | defs.h | Sempre 'L', não configurável | PENDENTE |
 | `underscore_sym` não usado | cgtarget.h | Campo existe mas é ignorado | PENDENTE |
 | Stack slot size fixo | decl.c | Assume sempre BPW | PENDENTE |
@@ -765,15 +807,15 @@ struct cg_arch {
 
 | Arquitetura | Status | Limitações Restantes |
 |-------------|--------|---------------------|
-| IBM S/370 | ✅ Possível | symbol_transform, HLASM labels |
-| IBM z/Architecture | ✅ Possível | symbol_transform, HLASM labels |
+| IBM S/370 | ✅ Possível | HLASM labels |
+| IBM z/Architecture | ✅ Possível | HLASM labels |
 | HP PA-RISC | ✅ Possível | Nenhuma crítica |
 | x86-64 (ABI correto) | Parcial | Registradores para args (usa stack) |
 | ARM (ABI correto) | Parcial | Registradores para args (usa stack) |
 | RISC-V | Parcial | Convenção de chamada (usa stack) |
-| Qualquer HLASM | ✅ Possível | Symbol transform, label format |
+| Qualquer HLASM | ✅ Possível | Label format |
 
 **Legenda**:
-- ✅ **Possível**: Pode ser implementado com as correções de stack direction
+- ✅ **Possível**: Pode ser implementado com as correções de stack direction e symbol_transform
 - **Parcial**: Funciona mas não segue ABI padrão (usa convenção stack-based)
 

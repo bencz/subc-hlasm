@@ -446,6 +446,20 @@ static void x64_cgfnentry(int nparams) {
 
 /*
  * ============================================================================
+ * Symbol Transform Functions
+ * ============================================================================
+ */
+
+/* Darwin/macOS requires underscore prefix for C symbols */
+static char *x64_darwin_symbol_transform(char *s) {
+    static char name[NAMELEN+2];
+    name[0] = '_';
+    copyname(&name[1], s);
+    return name;
+}
+
+/*
+ * ============================================================================
  * x86-64 Architecture Description
  * ============================================================================
  */
@@ -473,7 +487,37 @@ struct cg_arch cg_arch_x86_64 = {
     1,                  /* param_offset_dir */
     0,                  /* local_offset_base - adjusted by cgfnentry */
     -1,                 /* local_offset_dir (negative: -8, -16, -24...) */
-    6                   /* num_arg_regs (rdi, rsi, rdx, rcx, r8, r9) */
+    6,                  /* num_arg_regs (rdi, rsi, rdx, rcx, r8, r9) */
+    NULL                /* symbol_transform (use default) */
+};
+
+/* Darwin/macOS x86-64: same as x86-64 but with underscore prefix */
+struct cg_arch cg_arch_x86_64_darwin = {
+    "x86-64-darwin",    /* name */
+    64,                 /* bits */
+    1,                  /* char_size */
+    8,                  /* int_size */
+    8,                  /* ptr_size */
+    8,                  /* bpw */
+    ENDIAN_LITTLE,      /* endian */
+    STACK_DOWN,         /* stack_dir */
+    ASM_GAS,            /* asm_syntax */
+    CC_SYSV_AMD64,      /* call_conv */
+    FLOAT_IEEE754,      /* float_format */
+    16,                 /* align_stack */
+    8,                  /* align_data */
+    16,                 /* align_func */
+    1,                  /* has_mul */
+    1,                  /* has_div */
+    1,                  /* has_mod */
+    1,                  /* has_byte_ops */
+    0,                  /* needs_alignment */
+    16,                 /* param_offset_base - NOT USED for register args */
+    1,                  /* param_offset_dir */
+    0,                  /* local_offset_base - adjusted by cgfnentry */
+    -1,                 /* local_offset_dir (negative: -8, -16, -24...) */
+    6,                  /* num_arg_regs (rdi, rsi, rdx, rcx, r8, r9) */
+    x64_darwin_symbol_transform  /* symbol_transform (underscore prefix) */
 };
 
 /*
@@ -725,7 +769,7 @@ struct cg_target cg_target_netbsd_x86_64 = {
 struct cg_target cg_target_darwin_x86_64 = {
     "darwin-x86-64",
     "Darwin/macOS x86-64 (Mach-O, GAS syntax)",
-    &cg_arch_x86_64,
+    &cg_arch_x86_64_darwin,
     &cg_os_darwin,
     &cg_vtable_x86_64,
     NULL,

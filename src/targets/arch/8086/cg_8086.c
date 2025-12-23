@@ -463,7 +463,8 @@ struct cg_arch cg_arch_8086 = {
     1,                  /* param_offset_dir (positive: 4, 6, 8...) */
     0,                  /* local_offset_base */
     -1,                 /* local_offset_dir (negative: -2, -4, -6...) */
-    0                   /* num_arg_regs (cdecl: all args on stack) */
+    0,                  /* num_arg_regs (cdecl: all args on stack) */
+    NULL                /* symbol_transform (use default) */
 };
 
 /*
