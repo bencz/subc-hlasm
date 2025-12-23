@@ -84,14 +84,9 @@ int newloc(void) {
 	return p;
 }
 
-#ifdef __SUBC__
- #define PTR_INT_CAST	(int)
-#else
- #define PTR_INT_CAST	(int) (long)
-#endif
-
 char *galloc(int k, int align) {
-	int	p, mask;
+	int	p;
+	long	mask;
 
 	k += align * sizeof(int);
 	if (Nbot + k >= Ntop)
@@ -100,7 +95,7 @@ char *galloc(int k, int align) {
 	Nbot += k;
 	mask = sizeof(int)-1;
 	if (align)
-		while (PTR_INT_CAST &Nlist[p] & mask)
+		while ((long) &Nlist[p] & mask)
 			p++;
 	return &Nlist[p];
 }

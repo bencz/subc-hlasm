@@ -19,6 +19,11 @@
 		-T flag		works (tested all targets)
 		cross-compile	passed (generates correct asm for all targets)
 
+	Bug fixes (2025-12-23 session 2):
+		_va_arg		fixed (pointer arithmetic corrected)
+		ptr-to-int	fixed (64-bit cast issue resolved)
+		fn pointers	extended (any return type, typed params)
+
 	Available cross-compilation targets (12):
 		linux-386	Linux i386 (ELF, GAS syntax)
 		linux-x86-64	Linux x86-64 (ELF, GAS syntax)

@@ -1,3 +1,20 @@
+2025-12-23 Fixed function pointer call via struct member (vtable pattern):
+           - OP_CALR in tree.c now properly separates fn ptr eval from args
+           - Added cgindw() to dereference the struct member address
+           - Enables vtable-based dispatch: vtable.fn(args) now works correctly
+2025-12-23 Fixed _va_arg() pointer arithmetic bug in runtime/lib/varargs.c:
+           - Old code incorrectly incremented *ap instead of advancing pointer
+           - New implementation properly reads value then advances to next arg
+2025-12-23 Fixed pointer-to-integer cast issue on 64-bit systems:
+           - Removed PTR_INT_CAST macro from src/sym.c
+           - Now uses (long) cast directly which works on both 32/64-bit
+2025-12-23 Extended function pointer support for bootstrap compatibility:
+           - Removed restriction limiting function pointers to int(*)()
+           - Now accepts any return type: void(*fn)(void), char*(*fn)(char*)
+           - Added skip_fnptr_params() in decl.c to handle typed parameters
+           - Modified declarator() to parse function pointers with pointer returns
+           - Added skip_fnptr_params_expr() in expr.c for cast expressions
+           - Created tests/test_fnptr.c with comprehensive vtable test
 2025-12-23 Made compiler limits configurable per architecture:
            - Added fields to cg_arch: namelen, max_case, max_break, max_locinit,
              max_fnargs, nsymbols, poolsize, nodepoolsz, label_prefix

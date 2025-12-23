@@ -11,6 +11,36 @@ static int declarator(int arg, int scls, char *name, int *pprim, int *psize,
 			int *pval, int *pinit);
 
 /*
+ * Skip parameter types in function pointer declarations.
+ * Handles: (*fn)(void), (*fn)(int), (*fn)(int, char*), etc.
+ * We parse but ignore the parameter types since SubC doesn't
+ * do type checking on function pointer calls.
+ * Called after lparen() consumed the '(', so Token is first param token.
+ */
+static void skip_fnptr_params(void) {
+	int	depth = 1;
+	
+	/* Already past the opening '(' - scan until matching ')' */
+	while (depth > 0 && Token != XEOF) {
+		if (Token == LPAREN) {
+			depth++;
+			Token = scan();
+		}
+		else if (Token == RPAREN) {
+			depth--;
+			if (depth == 0) {
+				Token = scan();
+				return;
+			}
+			Token = scan();
+		}
+		else {
+			Token = scan();
+		}
+	}
+}
+
+/*
  * enumdecl := { enumlist } ;
  *
  * enumlist :=
@@ -459,9 +489,12 @@ static int declarator(int pmtr, int scls, char *name, int *pprim, int *psize,
 {
 	int	type = TVARIABLE;
 	int	ptrptr = 0;
+	int	is_fnptr = 0;
 	char	*unsupp;
 
 	unsupp = "unsupported typedef syntax";
+	
+	/* Handle pointer prefix(es) for return type: char *, int **, etc. */
 	if (STAR == Token) {
 		Token = scan();
 		*pprim = pointerto(*pprim);
@@ -471,16 +504,25 @@ static int declarator(int pmtr, int scls, char *name, int *pprim, int *psize,
 			ptrptr = 1;
 		}
 	}
-	else if (LPAREN == Token) {
+	
+	/* Check for function pointer: (*name)(...) */
+	if (LPAREN == Token) {
 		if (CTYPE == scls)
 			error(unsupp, NULL);
-		if (*pprim != PINT)
-			error("function pointers are limited to type 'int'",
-				NULL);
+		/* This is a function pointer declaration */
+		/* The return type (*pprim) is preserved but we mark as FUNPTR */
 		Token = scan();
-		*pprim = FUNPTR;
-		match(STAR, "(*name)()");
+		if (STAR == Token) {
+			is_fnptr = 1;
+			*pprim = FUNPTR;
+			Token = scan();
+		}
+		else {
+			/* Not a function pointer, syntax error or something else */
+			error("'*' expected in function pointer declaration", NULL);
+		}
 	}
+	
 	if (IDENT != Token) {
 		error("missing identifier at: %s", Text);
 		name[0] = 0;
@@ -489,10 +531,13 @@ static int declarator(int pmtr, int scls, char *name, int *pprim, int *psize,
 		copyname(name, Text);
 		Token = scan();
 	}
-	if (FUNPTR == *pprim) {
+	
+	if (is_fnptr) {
 		rparen();
 		lparen();
-		rparen();
+		/* Skip any parameter types in function pointer declaration */
+		/* e.g., void (*fn)(int, char*) - we ignore the parameter types */
+		skip_fnptr_params();
 	}
 	if (!pmtr && ASSIGN == Token) {
 		if (CTYPE == scls)

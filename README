@@ -137,8 +137,9 @@
 	o  All C89 primitive data types are now supported: char, short,
 	   int, long (signed and unsigned variants), float, and double.
 	   Type sizes are architecture-specific. There are also void
-	   pointers, and there is limited support for int(*)() (pointers
-	   to functions of type int).
+	   pointers, and function pointers with any return type and
+	   typed parameters: void(*fn)(void), char*(*fn)(char*), etc.
+	   Note: All function pointer calls are treated as returning int.
 
 	o  Note: While float and double types are parsed and stored
 	   correctly, floating-point arithmetic operations are not yet

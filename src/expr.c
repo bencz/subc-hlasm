@@ -12,6 +12,32 @@ static node *asgmnt(int *lv);
 static node *cast(int *lv);
 static node *exprlist(int *lv, int ckvoid);
 
+/*
+ * Skip parameter types in function pointer casts.
+ * Handles: (type (*)(void)), (type (*)(int, char*)), etc.
+ */
+static void skip_fnptr_params_expr(void) {
+	int	depth = 1;
+	
+	while (depth > 0 && Token != XEOF) {
+		if (Token == LPAREN) {
+			depth++;
+			Token = scan();
+		}
+		else if (Token == RPAREN) {
+			depth--;
+			if (depth == 0) {
+				Token = scan();
+				return;
+			}
+			Token = scan();
+		}
+		else {
+			Token = scan();
+		}
+	}
+}
+
 static node *rvalue(node *n, int *lv) {
 	if (lv[LVADDR]) {
 		lv[LVADDR] = 0;
@@ -604,13 +630,22 @@ static node *cast(int *lv) {
 			strcpy(Text, "(");
 			return prefix(lv);
 		}
-		if (PINT == t && LPAREN == Token) {
+		if (LPAREN == Token) {
+			/* Function pointer cast: (type (*)(params)) */
 			Token = scan();
-			match(STAR, "int(*)()");
-			rparen();
-			lparen();
-			rparen();
-			t = FUNPTR;
+			if (STAR == Token) {
+				Token = scan();
+				rparen();
+				lparen();
+				/* Skip parameter types */
+				skip_fnptr_params_expr();
+				t = FUNPTR;
+			}
+			else {
+				/* Not a function pointer, put back and continue */
+				reject();
+				Token = LPAREN;
+			}
 		}
 		else if (STAR == Token) {
 			t = pointerto(t);

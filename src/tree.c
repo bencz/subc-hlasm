@@ -453,12 +453,24 @@ static void emittree1(node *a) {
 			break;
 	case OP_CALR:	{
 			int nargs = a->args[1];
-			cgcallprep(nargs);
-			emitargs_abi(a->left, nargs - 1);
+			node *glue = a->left;
+			node *args = glue->left;   /* arguments */
+			node *fnexpr = glue->right; /* function pointer expression */
+			
+			/* First, evaluate the function pointer address and load the pointer */
 			clear(0);
-			lv[LVPRIM] = FUNPTR;
-			lv[LVSYM] = a->args[0];
-			genrval(lv);
+			emittree1(fnexpr);
+			commit();
+			cgindw();  /* dereference: load the function pointer from the address */
+			cgpush();  /* save function pointer on stack */
+			
+			/* Now emit arguments */
+			cgcallprep(nargs);
+			emitargs_abi(args, nargs - 1);
+			
+			/* Pop the function pointer and call */
+			cgpop2();  /* restore function pointer to secondary reg */
+			cgswap();  /* move to primary reg */
 			gencalr();
 			cgcallend(nargs);
 			}
