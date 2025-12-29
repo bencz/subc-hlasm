@@ -3,7 +3,9 @@
  *	stdio.h
  */
 
-#define NULL	(void *)0
+#ifndef NULL
+#define NULL	((void *)0)
+#endif
 #define EOF	(-1)
 
 #define FOPEN_MAX	20

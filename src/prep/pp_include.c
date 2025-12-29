@@ -36,19 +36,22 @@ FILE *try_open_include(char *file, char *path, int pathlen) {
 }
 
 void include(void) {
-	char	file[TEXTLEN+1], path[TEXTLEN+1];
-	int	c, k;
+	char	file[TEXTLEN+1], path[TEXTLEN+1], line[TEXTLEN+1];
+	int	c, k, i;
 	FILE	*inc, *oinfile;
 	char	*ofile;
 	int	oc, oline;
 
 	if ((c = skip()) == '<')
 		c = '>';
-	k = getln(file, TEXTLEN-strlen(SCCDIR)-9);
+	k = getln(line, TEXTLEN-strlen(SCCDIR)-9);
 	Line++;
-	if (!k || file[k-1] != c)
+	/* Extract filename up to closing delimiter, ignore rest (comments) */
+	for (i = 0; i < k && line[i] != c; i++)
+		file[i] = line[i];
+	if (i == 0 || i >= k || line[i] != c)
 		error("missing delimiter in '#include'", NULL);
-	if (k) file[k-1] = 0;
+	file[i] = 0;
 	if (c == '"') {
 		/* For "file", try current directory first */
 		strcpy(path, file);

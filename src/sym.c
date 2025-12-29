@@ -169,6 +169,18 @@ static void defglob(char *name, int prim, int type, int size, int val,
 		gendeflabel(-val);
 		return;
 	}
+	/*
+	 * C89: float f = 3.14F; double d = 3.14;
+	 * For float/double with init, val is a marker (1 = has init).
+	 * The actual value is stored in Fvalue global by declarator.
+	 */
+	if ((PFLOAT == prim || PDOUBLE == prim) && init) {
+		if (PFLOAT == prim)
+			cgdeffloat(Fvalue);
+		else
+			cgdefdouble(Fvalue);
+		return;
+	}
 	emitdef(objsz, val);
 }
 

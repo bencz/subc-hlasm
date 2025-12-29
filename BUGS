@@ -1,7 +1,7 @@
 
 	UNRESOLVED BUGS
 
-	(As of version 2025-12-23)
+	(As of version 2025-12-29)
 
 	Thanks to all submitters!
 
@@ -13,4 +13,9 @@
 	     - t_global.c (global variable initialization)
 	     - t_state_machine.c (enum with function pointer arrays)
 	     Workaround: None. These patterns should be avoided until fixed.
+
+	BUG: x86-64 code generator produces incorrect code for float/double
+	     The x86-64 backend does not generate correct assembly for
+	     floating-point operations. The i386 backend works correctly.
+	     Workaround: Use -T linux-386 target for float/double code.
 

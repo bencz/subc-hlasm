@@ -61,6 +61,7 @@ void	gendefp(int v);
 void	gendefq(int v);
 void	gendefs(char *s, int len);
 int	genstrlit(char *s, int len);
+int	genfloatlit(double val, int is_float);
 void	gendeflabel(int lab);
 void	gendefw(int v);
 void	gendiv(int swap);

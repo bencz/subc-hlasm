@@ -92,6 +92,7 @@ static void enumdecl(int glob) {
 
 static int initlist(char *name, int prim) {
 	int	n = 0, v;
+	int	is_neg;
 	char	buf[30];
 
 	gendata();
@@ -107,16 +108,36 @@ static int initlist(char *name, int prim) {
 	}
 	lbrace();
 	while (Token != RBRACE) {
-		v = constexpr();
-		if (PCHAR == prim) {
-			if (v < 0 || v > 255) {
-				sprintf(buf, "%d", v);
-				error("initializer out of range: %s", buf);
+		/* Handle float/double array initializers */
+		if (floattype(prim)) {
+			is_neg = 0;
+			if (MINUS == Token) {
+				is_neg = 1;
+				Token = scan();
 			}
-			gendefb(v);
-		}
-		else {
-			gendefw(v);
+			if (FLOATLIT == Token) {
+				if (is_neg) Fvalue = -Fvalue;
+				if (PFLOAT == prim)
+					gendeffloat(Fvalue);
+				else
+					gendefdouble(Fvalue);
+				Token = scan();
+			} else {
+				error("float literal expected in initializer", NULL);
+				break;
+			}
+		} else {
+			v = constexpr();
+			if (PCHAR == prim) {
+				if (v < 0 || v > 255) {
+					sprintf(buf, "%d", v);
+					error("initializer out of range: %s", buf);
+				}
+				gendefb(v);
+			}
+			else {
+				gendefw(v);
+			}
 		}
 		n++;
 		if (COMMA == Token)
@@ -218,6 +239,8 @@ int primtype(int t, char *s) {
 		case SHORT:    flags |= TS_SHORT; continue;
 		case INT:      flags |= TS_INT; continue;
 		case LONG:     flags |= TS_LONG; continue;
+		case FLOAT:    flags |= TS_FLOAT; continue;
+		case DOUBLE:   flags |= TS_DOUBLE; continue;
 		case SIGNED:   flags |= TS_SIGNED; continue;
 		case UNSIGNED: flags |= TS_UNSIGNED; continue;
 		case CONST:    continue;  /* const is ignored */
@@ -511,6 +534,26 @@ static int declarator(int pmtr, int scls, char *name, int *pprim, int *psize,
 			*pval = -genstrlit(Text, Value);
 			Token = scan();
 		}
+		/*
+		 * C89: float/double initialization with literal
+		 * Store the value in Fvalue global for defglob() to emit.
+		 */
+		else if (FLOATLIT == Token && floattype(*pprim)) {
+			/* Fvalue already set by scanner */
+			*pval = 1;  /* marker: has initializer */
+			Token = scan();
+		}
+		else if (MINUS == Token && floattype(*pprim)) {
+			/* Handle negative float literals: -3.14 */
+			Token = scan();
+			if (FLOATLIT == Token) {
+				Fvalue = -Fvalue;  /* negate the value */
+				*pval = 1;  /* marker: has initializer */
+				Token = scan();
+			} else {
+				error("constant expression expected", NULL);
+			}
+		}
 		else {
 			*pval = constexpr();
 			if (PCHAR == *pprim)
@@ -544,7 +587,7 @@ static int declarator(int pmtr, int scls, char *name, int *pprim, int *psize,
 				*psize = 1;
 				if (ASSIGN == Token) {
 					Token = scan();
-					if (!inttype(*pprim))
+					if (!inttype(*pprim) && !floattype(*pprim))
 						error("initialization of"
 							" pointer array not"
 							" supported",
@@ -572,6 +615,22 @@ static int declarator(int pmtr, int scls, char *name, int *pprim, int *psize,
 			}
 			type = TARRAY;
 			rbrack();
+			/* Handle initializer for fixed-size arrays: int arr[5] = {...} */
+			if (ASSIGN == Token && !pmtr) {
+				Token = scan();
+				if (!inttype(*pprim) && !floattype(*pprim))
+					error("initialization of"
+						" pointer array not"
+						" supported",
+						NULL);
+				initlist(name, *pprim);
+				if (CAUTO == scls)
+					error("initialization of"
+						" local arrays"
+						" not supported: %s",
+						name);
+				*pinit = 1;
+			}
 		}
 	}
 	if (PVOID == *pprim)

@@ -711,6 +711,24 @@ void gendeflabel(int lab) {
 	cgdefl(lab, 0);
 }
 
+/*
+ * Generate a float/double literal in the data section and return its label.
+ * Used for initializing float/double variables with literals.
+ * C89: float f = 3.14F; double d = 3.14;
+ */
+int genfloatlit(double val, int is_float) {
+	int	lab;
+
+	gendata();
+	lab = label();
+	genlab(lab);
+	if (is_float)
+		gendeffloat(val);
+	else
+		gendefdouble(val);
+	return lab;
+}
+
 void gendefh(int v) {
 	gendata();
 	cgdefh(v);

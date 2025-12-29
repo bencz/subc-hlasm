@@ -131,7 +131,6 @@ typedef struct {
 - No `#warning` directive (not part of C89, but common extension)
 - Macros with empty argument list `MACRO()` may not work correctly
 - `#line` directive with filename argument not fully supported
-- Comments not allowed on `#include` lines: `#include <file.h> /* comment */` fails
 
 ---
 

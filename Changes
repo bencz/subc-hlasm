@@ -1,3 +1,24 @@
+2025-12-29 Implemented float/double global variable initialization (C89):
+           - float f = 3.14F; and double d = 3.14; now work correctly
+           - Negative literals supported: float f = -2.5F;
+           - Modified declarator() in decl.c to detect FLOATLIT tokens
+           - Modified defglob() in sym.c to emit float/double values
+           - Value stored in Fvalue global, emitted via cgdeffloat/cgdefdouble
+2025-12-29 Implemented float/double array initialization (C89):
+           - float arr[] = {1.0F, 2.0F}; now works correctly
+           - double arr[3] = {1.0, 2.0, 3.0}; now works correctly
+           - Modified initlist() in decl.c to handle FLOATLIT tokens
+           - Added support for fixed-size array initializers in declarator()
+2025-12-29 Added long double support (C89):
+           - long double now recognized as a type (treated as double)
+           - Added FLOAT and DOUBLE to primtype() look-ahead loop in decl.c
+2025-12-29 Fixed preprocessor: comments now allowed on #include lines:
+           - #include <file.h> /* comment */ now works correctly
+           - Modified include() in pp_include.c to extract filename up to delimiter
+           - Ignores any content after closing delimiter (>, ")
+2025-12-29 Fixed NULL macro redefinition warning:
+           - Added #ifndef NULL guard in runtime/include/stdio.h
+           - Standardized NULL definition to ((void *)0)
 2025-12-23 Optimized string literal code generation:
            - Strings now use .ascii "string" instead of byte-by-byte
            - Added cgdefs() to vtable for direct string output

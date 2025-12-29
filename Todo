@@ -16,3 +16,6 @@
 	  (t_array_complex.c, t_const_expr.c, t_global.c, t_state_machine.c)
 
 	- Add block-scoped variable declarations (C89 feature)
+
+	- Fix x86-64 code generator for float/double operations
+	  (i386 backend works correctly, x86-64 generates incorrect code)
