@@ -175,16 +175,6 @@
 
 	o  There is no goto.
 
-	o  There are no parameterized macros.
-
-	o  The #if and #elif preprocessor commands are not recognized.
-
-	o  The preprocessor does not accept multi-line commands.
-
-	o  The preprocessor does not accept comments in (some) commands.
-
-	o  The preprocessor does not recognize the # and ## operators.
-
 	o  There may not be any blanks between the # that introduces
 	   a preprocessor command and the subsequent command (e.g.:
 	   "# define" would not be recognized as a valid command).

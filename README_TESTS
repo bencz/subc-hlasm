@@ -251,6 +251,7 @@ cd tests/preproc_suite
 | Test | Description |
 |------|-------------|
 | `t_line_comment.c` | `//` comments stripped from macro definitions |
+| `t_comments_after_directive.c` | Comments after `#include`, `#define`, `#ifdef`, etc. |
 
 ## Predefined Macros Reference
 
