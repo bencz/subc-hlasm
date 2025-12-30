@@ -83,14 +83,30 @@ static struct cg_predef_macro predef_mvs[] = {
  * ============================================================================
  */
 
+/* Linux i386 (32-bit) */
 struct cg_os_config cg_os_linux = {
     OS_LINUX,           /* os_type */
     OBJ_ELF,            /* obj_format */
     0,                  /* underscore_sym */
     "Linux",            /* os_name */
-    "as -o %s %s",      /* asm_cmd */
-    "ld -o %s -dynamic-linker /lib64/ld-linux-x86-64.so.2 " 
+    "as --32 -o %s %s", /* asm_cmd */
+    "ld -o %s -m elf_i386 -dynamic-linker /lib/ld-linux.so.2 "
         "/usr/lib/crt1.o /usr/lib/crti.o -lc /usr/lib/crtn.o",  /* ld_cmd */
+    "-lc",              /* sys_libc */
+    NULL,               /* scc_libc - not needed, uses system libc */
+    "a.out",            /* aout_name */
+    predef_linux        /* predef_macros */
+};
+
+/* Linux x86-64 (64-bit) */
+struct cg_os_config cg_os_linux_64 = {
+    OS_LINUX,           /* os_type */
+    OBJ_ELF,            /* obj_format */
+    0,                  /* underscore_sym */
+    "Linux",            /* os_name */
+    "as --64 -o %s %s", /* asm_cmd */
+    "ld -o %s -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 "
+        "/usr/lib64/crt1.o /usr/lib64/crti.o -lc /usr/lib64/crtn.o",  /* ld_cmd */
     "-lc",              /* sys_libc */
     NULL,               /* scc_libc - not needed, uses system libc */
     "a.out",            /* aout_name */

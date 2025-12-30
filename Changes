@@ -1,3 +1,16 @@
+2025-12-29 Fixed variadic function calls on x86-64 Linux (System V ABI):
+           - Added cgprecall() to vtable for pre-call setup
+           - x86-64: emits "xorl %eax,%eax" before variadic calls (AL=0)
+           - System V AMD64 ABI requires AL to contain XMM register count
+           - printf() and other variadic functions now work correctly
+           - Other backends use NULL (no pre-call setup needed)
+2025-12-29 Fixed Linux x86-64 linker configuration:
+           - Created separate cg_os_linux_64 configuration for 64-bit
+           - Uses correct paths: /usr/lib64/crt1.o, crti.o, crtn.o
+           - Uses correct linker: ld -m elf_x86_64
+           - Uses correct dynamic linker: /lib64/ld-linux-x86-64.so.2
+           - cg_os_linux now correctly configured for 32-bit (i386)
+           - Fixes "incompatible i386:x86-64 vs i386" linker errors
 2025-12-29 Implemented float/double global variable initialization (C89):
            - float f = 3.14F; and double d = 3.14; now work correctly
            - Negative literals supported: float f = -2.5F;

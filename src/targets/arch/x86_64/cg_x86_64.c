@@ -55,7 +55,7 @@ static void x64_cgsynth(char *op) {
     int n;
     char *s;
 
-    n = Q_val;
+    n = (int)Q_val;
     s = gsym(Q_name);
     switch (Q_type) {
     case addr_auto:     ngen("%s\t%d(%%rbp),%%rcx", "leaq", n);
@@ -64,7 +64,7 @@ static void x64_cgsynth(char *op) {
     case addr_static:   lgen("%s\t$%c%d,%%rax", op, n); break;
     case addr_globl:    sgen("%s\t$%s,%%rax", op, s); break;
     case addr_label:    lgen("%s\t$%c%d,%%rax", op, n); break;
-    case literal:       ngen("%s\t$%d,%%rax", op, n); break;
+    case literal:       ngenl("%s\t$%ld,%%rax", op, Q_val); break;
     case auto_word:     ngen("%s\t%d(%%rbp),%%rax", op, n); break;
     case static_word:   lgen("%s\t%c%d,%%rax", op, n); break;
     case globl_word:    sgen("%s\t%s,%%rax", op, s); break;
@@ -87,7 +87,7 @@ static int x64_cgload2(void) {
 
     op = "movq";
     opb = "movb";
-    n = Q_val;
+    n = (int)Q_val;
     s = gsym(Q_name);
     switch (Q_type) {
     case addr_auto:     ngen("%s\t%d(%%rbp),%%rcx", "leaq", n);
@@ -95,7 +95,7 @@ static int x64_cgload2(void) {
     case addr_static:   lgen("%s\t$%c%d,%%rcx", op, n); break;
     case addr_globl:    sgen("%s\t$%s,%%rcx", op, s); break;
     case addr_label:    lgen("%s\t$%c%d,%%rcx", op, n); break;
-    case literal:       ngen("%s\t$%d,%%rcx", op, n); break;
+    case literal:       ngenl("%s\t$%ld,%%rcx", op, Q_val); break;
     case auto_byte:     x64_cgclear2();
                         ngen("%s\t%d(%%rbp),%%cl", opb, n);
                         break;
@@ -117,7 +117,7 @@ static int x64_cgload2(void) {
     return empty == q;
 }
 
-static void x64_cglit(long v)       { ngen("%s\t$%ld,%%rax", "movq", v); }
+static void x64_cglit(long v)       { ngenl("%s\t$%ld,%%rax", "movq", v); }
 static void x64_cgclear(void)       { gen("xorq\t%rax,%rax"); }
 static void x64_cgclear2(void)      { gen("xorq\t%rcx,%rcx"); }
 static void x64_cgldgb(char *s)     { sgen("%s\t%s,%%al", "movb", s); }
@@ -695,7 +695,7 @@ static void x64_cgpusharg(int argnum) {
  */
 static void x64_cgcallprep(int nargs) {
     int stack_args;
-    
+
     if (nargs <= 6) {
         stack_args = 0;
     } else {
@@ -704,6 +704,20 @@ static void x64_cgcallprep(int nargs) {
         if (stack_args & 1) {
             gen("subq\t$8,%rsp");
         }
+    }
+}
+
+/*
+ * cgprecall - Called immediately before the call instruction
+ * For variadic functions, AL must contain the number of XMM registers
+ * used for floating-point arguments. Since SubC doesn't pass floats
+ * in XMM registers, we always set AL=0 for variadic calls.
+ *
+ * fixed_args: number of fixed parameters, or -1 if not variadic
+ */
+static void x64_cgprecall(int fixed_args) {
+    if (fixed_args >= 0) {
+        gen("xorl\t%eax,%eax");
     }
 }
 
@@ -1145,6 +1159,7 @@ struct cg_vtable cg_vtable_x86_64 = {
     x64_cgpusharg,
     NULL,  /* cgpusharg_vararg - use default (x86-64 varargs use registers) */
     x64_cgcallprep,
+    x64_cgprecall,
     x64_cgcallend,
     x64_cgfnentry,
     
@@ -1224,6 +1239,7 @@ struct cg_vtable cg_vtable_x86_64 = {
  * ============================================================================
  */
 extern struct cg_os_config cg_os_linux;
+extern struct cg_os_config cg_os_linux_64;
 extern struct cg_os_config cg_os_freebsd;
 extern struct cg_os_config cg_os_netbsd;
 extern struct cg_os_config cg_os_darwin;
@@ -1237,7 +1253,7 @@ struct cg_target cg_target_linux_x86_64 = {
     "linux-x86-64",
     "Linux x86-64 (ELF, GAS syntax)",
     &cg_arch_x86_64,
-    &cg_os_linux,
+    &cg_os_linux_64,
     &cg_vtable_x86_64,
     NULL,
     NULL

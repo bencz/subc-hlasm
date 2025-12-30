@@ -266,6 +266,7 @@
         _cg_pusharg_fn(n); \
 } while(0)
 #define cgcallprep(n)   (CG->vtable->cgcallprep(n))
+#define cgprecall(f)    do { if (CG->vtable->cgprecall) CG->vtable->cgprecall(f); } while(0)
 #define cgcallend(n)    (CG->vtable->cgcallend(n))
 #define cgfnentry(n)    (CG->vtable->cgfnentry(n))
 #define CG_NUM_ARG_REGS (CG->arch->num_arg_regs)

@@ -416,6 +416,10 @@ struct cg_vtable {
      *   - nargs: total number of arguments
      *   - May need to align stack for some ABIs
      *
+     * cgprecall: Called immediately before the call instruction
+     *   - fixed_args: number of fixed (non-variadic) args, or -1 if not variadic
+     *   - For variadic calls on x86-64: sets AL=0 (no XMM args)
+     *
      * cgcallend: Clean up after function call
      *   - nargs: total number of arguments
      *   - Adjusts stack pointer for stack-passed arguments only
@@ -427,6 +431,7 @@ struct cg_vtable {
     void (*cgpusharg)(int argnum);
     void (*cgpusharg_vararg)(int argnum);  /* For variadic args - may differ on some ABIs */
     void (*cgcallprep)(int nargs);
+    void (*cgprecall)(int fixed_args);     /* Called immediately before call instruction */
     void (*cgcallend)(int nargs);
     void (*cgfnentry)(int nparams);
     

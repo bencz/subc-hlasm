@@ -1,4 +1,4 @@
-/*
+	/*
  *	NMH's Simple C Compiler, 2014--2016
  *	Syntax tree construction
  */
@@ -477,6 +477,7 @@ static void emittree1(node *a) {
 			
 			cgcallprep(nargs);
 			emitargs_abi_ex(a->left, nargs - 1, fixed_args);
+			cgprecall(fixed_args);
 			gencall(fn);
 			cgcallend(nargs);
 			}
@@ -494,9 +495,10 @@ static void emittree1(node *a) {
 			cgindw();  /* dereference: load the function pointer from the address */
 			cgpush();  /* save function pointer on stack */
 			
-			/* Now emit arguments */
+			/* Now emit arguments - assume non-variadic for indirect calls */
 			cgcallprep(nargs);
 			emitargs_abi(args, nargs - 1);
+			cgprecall(-1);
 			
 			/* Pop the function pointer and call */
 			cgpop2();  /* restore function pointer to secondary reg */

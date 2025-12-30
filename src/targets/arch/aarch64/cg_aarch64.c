@@ -1,3 +1,4 @@
+
 /*
  * SubC Compiler - AArch64 (ARM64) Code Generator
  *
@@ -1170,11 +1171,11 @@ static void a64_cgpusharg_vararg(int argnum) {
 /* cgcallprep - Prepare for function call (align stack if needed) */
 static void a64_cgcallprep(int nargs) {
     int stack_args;
-    
+
     if (nargs <= 8) {
         return;
     }
-    
+
     stack_args = nargs - 8;
     /* Ensure 16-byte stack alignment for AAPCS64 */
     if (stack_args & 1) {
@@ -1659,6 +1660,7 @@ struct cg_vtable cg_vtable_aarch64 = {
     a64_cgpusharg,
     a64_cgpusharg_vararg,
     a64_cgcallprep,
+    NULL,  /* cgprecall - AArch64 handles varargs via cgpusharg_vararg */
     a64_cgcallend,
     a64_cgfnentry,
     

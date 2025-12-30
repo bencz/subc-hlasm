@@ -1053,6 +1053,7 @@ struct cg_vtable cg_vtable_i386 = {
     i386_cgpusharg,
     NULL,  /* cgpusharg_vararg - use default (same as cgpusharg for cdecl) */
     i386_cgcallprep,
+    NULL,  /* cgprecall - not needed for cdecl */
     i386_cgcallend,
     i386_cgfnentry,
     

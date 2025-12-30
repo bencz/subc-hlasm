@@ -1371,9 +1371,10 @@ struct cg_vtable cg_vtable_8086 = {
     m86_cgpusharg,
     NULL,  /* cgpusharg_vararg - use default (8086 cdecl uses stack) */
     m86_cgcallprep,
+    NULL,  /* cgprecall - not needed for cdecl */
     m86_cgcallend,
     m86_cgfnentry,
-    
+
     /* Stack Frame Layout */
     m86_cggetframeinfo,
     m86_cgparamoffset,
@@ -1626,9 +1627,10 @@ struct cg_vtable cg_vtable_8086_x87 = {
     m86_cgpusharg,
     NULL,  /* cgpusharg_vararg - use default (8086 cdecl uses stack) */
     m86_cgcallprep,
+    NULL,  /* cgprecall - not needed for cdecl */
     m86_cgcallend,
     m86_cgfnentry,
-    
+
     /* Stack Frame Layout */
     m86_cggetframeinfo,
     m86_cgparamoffset,

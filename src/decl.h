@@ -130,6 +130,7 @@ void	match(int t, char *what);
 char	*newfilename(char *name, int sfx);
 int	next(void);
 void	ngen(char *s, char *inst, int n);
+void	ngenl(char *s, char *inst, long n);
 void	ngen2(char *s, char *inst, int n, int a);
 void	notvoid(int p);
 int	objsize(int prim, int type, int size);

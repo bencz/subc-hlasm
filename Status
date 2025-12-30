@@ -30,6 +30,12 @@
 		ptr-to-int	fixed (64-bit cast issue resolved)
 		fn pointers	extended (any return type, typed params)
 
+	Bug fixes (2025-12-29):
+		variadic	fixed (x86-64 printf/varargs now work - AL=0 per ABI)
+		cgprecall	added to vtable for pre-call setup
+		linux-x86-64	fixed linker paths (/usr/lib64/ vs /usr/lib/)
+		cg_os_linux_64	new config for 64-bit Linux
+
 	Bug fixes (2025-12-23 session 3):
 		32+ params	fixed (AArch64 stack param offset calculation)
 		refactored	all targets now use CG->arch macros for offsets

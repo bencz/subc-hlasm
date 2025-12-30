@@ -52,6 +52,13 @@ void ngen(char *s, char *inst, int n) {
 	fputc('\n', Outfile);
 }
 
+void ngenl(char *s, char *inst, long n) {
+	if (NULL == Outfile) return;
+	fputc('\t', Outfile);
+	fprintf(Outfile, s, inst, n);
+	fputc('\n', Outfile);
+}
+
 void ngen2(char *s, char *inst, int n, int a) {
 	if (NULL == Outfile) return;
 	fputc('\t', Outfile);

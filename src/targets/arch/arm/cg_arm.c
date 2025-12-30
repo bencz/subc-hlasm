@@ -972,11 +972,11 @@ static void arm_cgpusharg(int argnum) {
 /* cgcallprep - Prepare for function call (align stack if needed) */
 static void arm_cgcallprep(int nargs) {
     int stack_args;
-    
+
     if (nargs <= 4) {
         return;
     }
-    
+
     stack_args = nargs - 4;
     /* Ensure 8-byte stack alignment for AAPCS */
     if (stack_args & 1) {
@@ -1360,6 +1360,7 @@ struct cg_vtable cg_vtable_armv6 = {
     arm_cgpusharg,
     NULL,  /* cgpusharg_vararg - use default (ARM varargs use registers) */
     arm_cgcallprep,
+    NULL,  /* cgprecall - not needed for ARM AAPCS */
     arm_cgcallend,
     arm_cgfnentry,
     
