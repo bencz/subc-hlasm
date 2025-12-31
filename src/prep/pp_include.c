@@ -2,8 +2,6 @@
  * SubC Compiler - Preprocessor Include Processing
  *
  * Handles #include directive.
- *
- * Copyright (c) 2011-2025 - Public Domain (CC0)
  */
 
 #include "prep.h"

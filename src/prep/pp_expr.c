@@ -4,8 +4,6 @@
  * Evaluates constant expressions for #if and #elif directives.
  * Supports: integers, defined(), !, ~, *, /, %, +, -, <<, >>,
  *           <, <=, >, >=, ==, !=, &, ^, |, &&, ||, ?:
- *
- * Copyright (c) 2011-2025 - Public Domain (CC0)
  */
 
 #include "prep.h"

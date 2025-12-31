@@ -5,8 +5,6 @@
 # Use 'scc -L' to list available targets.
 # Use 'scc -T <target>' to select a target.
 #
-# Copyright (c) 2011-2025 - Public Domain (CC0)
-#
 
 VERSION=	2025-cross
 ARC=		subc-$(VERSION).tgz

@@ -3,8 +3,6 @@
  *
  * Modular preprocessor implementation for C89 compliance.
  * Split into multiple files for maintainability.
- *
- * Copyright (c) 2011-2025 - Public Domain (CC0)
  */
 
 #ifndef PREP_H

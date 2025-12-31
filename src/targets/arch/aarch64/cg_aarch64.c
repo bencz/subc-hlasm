@@ -31,8 +31,6 @@
  *   x2:  Tertiary scratch register
  *   x29: Frame pointer
  *   x30: Link register
- *
- * Copyright (c) 2011-2025 - Public Domain (CC0)
  */
 
 #include <stdio.h>

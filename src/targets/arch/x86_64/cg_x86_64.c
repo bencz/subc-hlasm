@@ -4,8 +4,6 @@
  * This file implements the code generator for x86-64 architecture.
  * It provides the vtable, architecture description, and all code
  * generation functions for x86-64 targets.
- *
- * Copyright (c) 2011-2025 - Public Domain (CC0)
  */
 
 #include <stdio.h>

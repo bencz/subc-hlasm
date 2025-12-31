@@ -10,8 +10,6 @@
  *
  * This allows existing code to work unchanged while supporting
  * multiple targets through the vtable mechanism.
- *
- * Copyright (c) 2011-2025 - Public Domain (CC0)
  */
 
 #ifndef CGEN_COMPAT_H

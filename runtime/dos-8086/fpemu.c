@@ -18,8 +18,6 @@
  *   Float (32-bit): passed/returned in DX:AX (DX=high, AX=low)
  *   Double (64-bit): passed on stack, returned on stack
  *   Second operand for binary ops: CX:BX for float
- *
- * Copyright (c) 2025 - Public Domain (CC0)
  */
 
 /*

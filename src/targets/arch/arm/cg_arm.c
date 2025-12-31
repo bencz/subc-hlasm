@@ -4,8 +4,6 @@
  * This file implements the code generator for ARMv6 architecture.
  * It provides the vtable, architecture description, and all code
  * generation functions for ARM targets.
- *
- * Copyright (c) 2011-2025 - Public Domain (CC0)
  */
 
 #include <stdio.h>

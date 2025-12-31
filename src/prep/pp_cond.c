@@ -2,8 +2,6 @@
  * SubC Compiler - Preprocessor Conditional Compilation
  *
  * Handles #if, #ifdef, #ifndef, #elif, #else, #endif directives.
- *
- * Copyright (c) 2011-2025 - Public Domain (CC0)
  */
 
 #include "prep.h"

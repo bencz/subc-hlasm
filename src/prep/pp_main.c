@@ -2,8 +2,6 @@
  * SubC Compiler - Preprocessor Main Module
  *
  * Main preprocessor entry points and utility functions.
- *
- * Copyright (c) 2011-2025 - Public Domain (CC0)
  */
 
 #include "prep.h"

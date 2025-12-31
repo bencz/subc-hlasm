@@ -3,8 +3,6 @@
  *
  * This header declares the software floating-point emulation functions
  * for 8086 systems without an 8087 coprocessor.
- *
- * Copyright (c) 2025 - Public Domain (CC0)
  */
 
 #ifndef FPEMU_H

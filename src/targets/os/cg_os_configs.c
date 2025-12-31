@@ -3,8 +3,6 @@
  *
  * This file defines pre-defined OS configurations that can be shared
  * across multiple target architectures.
- *
- * Copyright (c) 2011-2025 - Public Domain (CC0)
  */
 
 #include "cgtarget.h"

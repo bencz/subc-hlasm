@@ -2,8 +2,6 @@
  * SubC Compiler - Preprocessor Macro Management
  *
  * Handles #define and #undef directives, including function-like macros.
- *
- * Copyright (c) 2011-2025 - Public Domain (CC0)
  */
 
 #include "prep.h"

@@ -33,8 +33,6 @@
  *     1. Create cg_ARCH.c with code generation functions
  *     2. Create cg_ARCH_arch and cg_ARCH_vtable
  *     3. Create target files for each supported OS
- *
- * Copyright (c) 2011-2025 - Public Domain (CC0)
  */
 
 #ifndef CGTARGET_H

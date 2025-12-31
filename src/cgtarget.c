@@ -3,8 +3,6 @@
  *
  * This file implements the target management functions for the
  * cross-compilation framework.
- *
- * Copyright (c) 2011-2025 - Public Domain (CC0)
  */
 
 #include <stdio.h>

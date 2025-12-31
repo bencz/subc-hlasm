@@ -4,8 +4,6 @@
 # This builds the cross-compiler that supports all targets in a single binary.
 # No configure script needed - just run 'make scc0'.
 #
-# Copyright (c) 2011-2025 - Public Domain (CC0)
-#
 
 # Installation paths (optional - for 'make install')
 PREFIX=		/usr/local
